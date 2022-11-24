@@ -28,26 +28,14 @@ const Mint = () => {
             maxWidth: 1200,
             margin: '0 auto',
           }}
-        >
-          <Image
-            src="/images/hedgehog-head.png"
-            sx={{
-              width: 200,
-              [`@media screen and (min-width: 700px)`]: {
-                width: 300,
-              },
-              [`@media screen and (min-width: 992px)`]: {
-                width: 'auto',
-              },
-            }}
-          />
-        </Box>
+        ></Box>
       </Box>
       <Box
         sx={{
           position: 'relative',
           padding: '0 16px',
-          paddingTop: 80,
+          paddingTop: 0,
+          marginTop: '-40px',
           paddingBottom: 40,
           overflow: 'hidden',
         }}
@@ -82,16 +70,16 @@ const Mint = () => {
             src="/images/pie-eaten.png"
             sx={{
               position: 'absolute',
-              width: 200,
-              top: -40,
-              right: 0,
+              width: 300,
+              top: -80,
+              right: 50,
               [`@media screen and (min-width: 600px)`]: {
                 width: 300,
-                right: -40,
+                right: 100,
               },
               [`@media screen and (min-width: 1200px)`]: {
                 width: 400,
-                right: -200,
+                right: -100,
               },
             }}
           />

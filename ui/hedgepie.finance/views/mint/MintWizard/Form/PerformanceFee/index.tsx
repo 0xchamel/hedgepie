@@ -20,6 +20,8 @@ const PerformanceFee = () => {
       sx={{
         padding: 3,
         backgroundColor: '#E5F6FF',
+        border: '2px solid #BAB9C5',
+        background: '#FFFFFF',
         borderRadius: 8,
         [`@media screen and (min-width: 500px)`]: {
           padding: 24,
@@ -28,9 +30,9 @@ const PerformanceFee = () => {
     >
       <Box
         sx={{
-          fontSize: 16,
+          fontSize: 24,
           fontWeight: 700,
-          color: '#16103A',
+          color: '#1380B9',
           [`@media screen and (min-width: 500px)`]: {
             fontSize: 24,
           },
@@ -40,9 +42,9 @@ const PerformanceFee = () => {
       </Box>
       <Box
         sx={{
-          fontSize: 12,
-          fontWeight: 500,
-          color: '#DF4886',
+          fontSize: 16,
+          fontWeight: 600,
+          color: '#3B3969',
           [`@media screen and (min-width: 500px)`]: {
             fontSize: 16,
           },
@@ -52,17 +54,18 @@ const PerformanceFee = () => {
       </Box>
       <Box
         sx={{
-          fontSize: 12,
+          fontSize: 16,
           mt: 22,
-          color: '#8E8DA0',
+          color: '#1A1A1A',
           [`@media screen and (min-width: 500px)`]: {
             fontSize: 16,
+            fontWeight: '600',
           },
         }}
       >
-        It is a long established fact that a reader will be distracted by the readable content of a page when looking at
-        its layout. The point of using Lorem Ipsum is that it has a more-or-less normal distribution of letters, as
-        opposed to using 'Content here, content here', making it look like readable English.
+        Aside gaining profit from investing in your strategies, you also gain profit from other investors interested in
+        your strategy. A performance fee is a percentage that you set, to be deducted from the profits of those who
+        invest in your strategy. We do not remove performance fee from your principal.
       </Box>
       <Box mt={36}>
         <Box
@@ -76,9 +79,11 @@ const PerformanceFee = () => {
             fontSize: 30,
             fontWeight: 700,
             backgroundColor: '#fff',
-            borderRadius: 62,
+            borderRadius: 8,
             display: 'flex',
             alignItems: 'center',
+            border: '1px solid #E3E3E3',
+            background: '#F3F3F3',
           }}
         >
           <Input
@@ -92,9 +97,10 @@ const PerformanceFee = () => {
             }}
             type="number"
             min={0}
-            max={99}
+            max={10}
             value={formData.performanceFee}
             onChange={handleChange}
+            onWheel={(e) => e.currentTarget.blur()}
           />
           %
         </Box>

@@ -5,4 +5,17 @@ interface IPancakePair {
     function token0() external view returns (address);
 
     function token1() external view returns (address);
+
+    function totalSupply() external view returns (uint256);
+
+    function fee() external view returns (uint24);
+
+    function getReserves()
+        external
+        view
+        returns (
+            uint112,
+            uint112,
+            uint32
+        );
 }

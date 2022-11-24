@@ -16,18 +16,23 @@ const CustomOption = ({ data, setValue }) => {
       }}
       onClick={() => setValue(data)}
     >
-      <Image
-        src={data.icon}
-        sx={{
-          width: 30,
-          height: 30,
-        }}
-      />
+      {data.icon ? (
+        <Image
+          src={data.icon}
+          sx={{
+            width: 20,
+            height: 20,
+          }}
+        />
+      ) : (
+        ''
+      )}
       <Box
         sx={{
           ml: 2,
           color: '#0A3F5C',
           fontWeight: 700,
+          fontSize: 14,
         }}
       >
         {data.name}

@@ -16,8 +16,9 @@ const YbNftSummaryArt = () => {
   return (
     <Box
       sx={{
-        border: '1px solid #D8D8D8',
+        border: '1px solid #FEF2D7',
         borderRadius: 8,
+        backgroundColor: '#FEF2D7',
       }}
     >
       <Box
@@ -39,7 +40,7 @@ const YbNftSummaryArt = () => {
             },
           }}
         >
-          YB NFT Summary
+          {formData.nftName ? formData.nftName : 'Strategy'}
         </Box>
         <Box mt={22}>
           <Box
@@ -78,8 +79,8 @@ const YbNftSummaryArt = () => {
       <Box
         sx={{
           fontSize: 14,
-          padding: '10px 10px',
           borderTop: '1px solid #D8D8D8',
+          padding: '10px 10px',
           [`@media screen and (min-width: 400px)`]: {
             fontSize: 16,
           },
@@ -89,7 +90,7 @@ const YbNftSummaryArt = () => {
           sx={{
             width: '100%',
             height: 100,
-            fontFamily: 'Noto Sans',
+            fontFamily: 'Plus Jakarta Sans',
             border: '1px solid #e9e9e9',
             color: '#0A3F5C',
             ':focus': {
@@ -99,6 +100,8 @@ const YbNftSummaryArt = () => {
           cols={40}
           rows={5}
           onChange={setDescription}
+          placeholder="Provide a description for your Yield Bearing NFT..."
+          value={formData.description}
         />
       </Box>
     </Box>

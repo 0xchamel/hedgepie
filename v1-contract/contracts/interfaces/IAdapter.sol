@@ -1,11 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.4;
 
-interface IWrap {
-    function deposit(uint256 amount) external;
-
-    function withdraw(uint256 share) external;
-}
+import "./IWrap.sol";
 
 interface IAdapter {
     function getPaths(address _inToken, address _outToken)
@@ -31,15 +27,13 @@ interface IAdapter {
 
     function stakingToken() external view returns (address);
 
-    function poolID() external view returns (address);
+    function strategy() external view returns (address);
 
-    function strategy() external view returns (address strategy);
+    function vStrategy() external view returns (address);
 
-    function vStrategy() external view returns (address vStrategy);
+    function pendingReward() external view returns (uint256);
 
-    function pendingReward() external view returns (uint256 reward);
-
-    function pendingShares() external view returns (uint256 shares);
+    function pendingShares() external view returns (uint256);
 
     function name() external view returns (string memory);
 
@@ -54,12 +48,12 @@ interface IAdapter {
     function getAdapterStrategy(uint256 _adapter)
         external
         view
-        returns (address strategy);
+        returns (address);
 
     function getWithdrawalAmount(address _user, uint256 _nftId)
         external
         view
-        returns (uint256 amount);
+        returns (uint256);
 
     function getInvestCallData(uint256 _amount)
         external

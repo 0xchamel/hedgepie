@@ -6,6 +6,8 @@ interface IYBNFT {
         uint256 allocation;
         address token;
         address addr;
+        uint96 created;
+        uint96 modified;
     }
 
     function getCurrentTokenId() external view returns (uint256);
@@ -17,13 +19,13 @@ interface IYBNFT {
         view
         returns (Adapter[] memory);
 
-    function exists(uint256) external returns (bool);
+    function exists(uint256) external view returns (bool);
 
     function mint(
-        uint256[] calldata adapterAllocations,
-        address[] calldata adapterTokens,
-        address[] calldata adapterAddrs,
-        uint256 performanceFee,
-        string memory tokenURI
+        uint256[] calldata,
+        address[] calldata,
+        address[] calldata,
+        uint256,
+        string memory
     ) external;
 }

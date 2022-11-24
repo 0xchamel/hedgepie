@@ -4,7 +4,7 @@ pragma solidity ^0.8.4;
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 abstract contract BaseAdapter is Ownable {
-    uint256 pid;
+    uint256 public pid;
 
     address public stakingToken;
 
@@ -113,6 +113,7 @@ abstract contract BaseAdapter is Ownable {
      * @notice Set investor
      * @param _investor  address of investor
      */
+    /// #if_succeeds {:msg "Investor not set correctly"} investor != old(investor);
     function setInvestor(address _investor) external onlyOwner {
         require(_investor != address(0), "Error: Investor zero address");
         investor = _investor;
@@ -120,9 +121,8 @@ abstract contract BaseAdapter is Ownable {
 
     /**
      * @notice Get pending reward
-     * @param _user  address of investor
      */
-    function getReward(address _user) external view virtual returns (uint256) {
+    function getReward(address) external view virtual returns (uint256) {
         return 0;
     }
 

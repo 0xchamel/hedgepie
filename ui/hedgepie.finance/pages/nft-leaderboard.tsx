@@ -8,7 +8,7 @@ import LeaderboardMain from 'views/nft-leaderboard/LeaderBoard'
 
 const FinishedLotteries: NextPage = () => {
   return (
-    <HedgePieFinance title="YB NFT leaderboard">
+    <HedgePieFinance title="Strategy Leaderboard">
       <LeaderboardMain />
     </HedgePieFinance>
   )

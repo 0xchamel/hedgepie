@@ -41,24 +41,38 @@ const FormArtNameAndSubmit = () => {
         [`@media screen and (min-width: 1200px)`]: {
           flexDirection: 'row',
         },
+        width: '100%',
       }}
     >
-      <Box sx={{ flex: 1 }}>
-        <Box>
+      <Box sx={{ width: '40rem' }}>
+        <Box
+          sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '20px',
+            border: '2px solid #D9D9D9',
+            borderRadius: '8px',
+            backgroundColor: '#FFFFFF',
+          }}
+        >
+          {/* <Box> */}
           <UploadArtwork />
-        </Box>
-        <Box mt={3}>
+          {/* </Box> */}
+          {/* <Box mt={3}> */}
           <NftName />
+          {/* </Box> */}
         </Box>
         <Box mt={24}>
           <SubmitMint />
         </Box>
       </Box>
       <Box
-        sx={{
-          maxWidth: 334,
-          flexShrink: 0,
-        }}
+        sx={
+          {
+            // maxWidth: 334,
+            // flexShrink: 0,
+          }
+        }
       >
         <YbNftSummaryArt />
       </Box>
