@@ -4,6 +4,19 @@ pragma solidity ^0.8.4;
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 abstract contract BaseAdapterMatic is Ownable {
+    struct UserAdapterInfo {
+        uint256 amount; // Current staking token amount
+        uint256 invested; // Current staked ether amount
+        uint256 userShares; // First reward token share
+        uint256 userShares1; // Second reward token share
+    }
+
+    struct AdapterInfo {
+        uint256 accTokenPerShare; // Accumulated per share for first reward token
+        uint256 accTokenPerShare1; // Accumulated per share for second reward token
+        uint256 totalStaked; // Total staked staking token
+    }
+
     uint256 public pid;
 
     address public stakingToken;
@@ -20,30 +33,26 @@ abstract contract BaseAdapterMatic is Ownable {
 
     address public router;
 
+    address public swapRouter;
+
     address public investor;
 
-    address public lpStakingToken;
-
-    address public lpProvider;
-
-    uint256 public lpPoolId;
+    address public wmatic;
 
     string public name;
-
-    bool public isReward;
-
-    bool public isVault;
-
-    bool public noDeposit;
 
     // inToken => outToken => paths
     mapping(address => mapping(address => address[])) public paths;
 
-    // user => nft id => withdrawal amount
-    mapping(address => mapping(uint256 => uint256)) public withdrawalAmount;
+    // user => nft id => UserAdapterInfo
+    mapping(address => mapping(uint256 => UserAdapterInfo))
+        public userAdapterInfos;
+
+    // nft id => AdapterInfo
+    mapping(uint256 => AdapterInfo) public adapterInfos;
 
     modifier onlyInvestor() {
-        require(msg.sender == investor, "Error: Caller is not investor");
+        require(msg.sender == investor, "Not investor");
         _;
     }
 
@@ -53,9 +62,8 @@ abstract contract BaseAdapterMatic is Ownable {
      * @param _outToken token address of outToken
      */
     function getPaths(address _inToken, address _outToken)
-        external
+        public
         view
-        onlyInvestor
         returns (address[] memory)
     {
         require(
@@ -94,8 +102,7 @@ abstract contract BaseAdapterMatic is Ownable {
         );
 
         uint8 i;
-
-        for (i = 0; i < _paths.length; i++) {
+        for (i; i < _paths.length; i++) {
             if (i < paths[_inToken][_outToken].length) {
                 paths[_inToken][_outToken][i] = _paths[i];
             } else {
@@ -115,72 +122,56 @@ abstract contract BaseAdapterMatic is Ownable {
      * @notice Set investor
      * @param _investor  address of investor
      */
-    /// #if_succeeds {:msg "Investor not set correctly"} investor != old(investor);
     function setInvestor(address _investor) external onlyOwner {
         require(_investor != address(0), "Error: Investor zero address");
         investor = _investor;
     }
 
     /**
-     * @notice Get pending reward
+     * @notice deposit to strategy
+     * @param _tokenId YBNFT token id
+     * @param _account address of user
+     * @param _amountIn payable eth from Investor
      */
-    function getReward(address) external view virtual returns (uint256) {
-        return 0;
-    }
+    function deposit(
+        uint256 _tokenId,
+        uint256 _amountIn,
+        address _account
+    ) external payable virtual returns (uint256 amountOut) {}
+
+    /**
+     * @notice withdraw from strategy
+     * @param _tokenId YBNFT token id
+     * @param _account address of user
+     */
+    function withdraw(uint256 _tokenId, address _account)
+        external
+        payable
+        virtual
+        returns (uint256 amountOut)
+    {}
+
+    /**
+     * @notice claim reward from strategy
+     * @param _tokenId YBNFT token id
+     * @param _account address of user
+     */
+    function claim(uint256 _tokenId, address _account)
+        external
+        payable
+        virtual
+        returns (uint256 amountOut)
+    {}
 
     /**
      * @notice Get pending token reward
+     * @param _tokenId YBNFT token id
+     * @param _account address of user
      */
-    function pendingReward() external view virtual returns (uint256 reward) {
-        reward = 0;
-    }
-
-    /**
-     * @notice Get pending shares
-     */
-    function pendingShares() external view virtual returns (uint256 shares) {
-        return 0;
-    }
-
-    /**
-     * @notice Increase withdrwal amount
-     * @param _user  user address
-     * @param _nftId  nftId
-     * @param _amount  amount of withdrawal
-     */
-    /// #if_succeeds {:msg "withdrawalAmount not increased"} withdrawalAmount[_user][_nftId] == old(withdrawalAmount[_user][_nftId]) + _amount;
-    function increaseWithdrawalAmount(
-        address _user,
-        uint256 _nftId,
-        uint256 _amount
-    ) external onlyInvestor {
-        withdrawalAmount[_user][_nftId] += _amount;
-    }
-
-    /**
-     * @notice Set withdrwal amount
-     * @param _user  user address
-     * @param _nftId  nftId
-     * @param _amount  amount of withdrawal
-     */
-    function setWithdrawalAmount(
-        address _user,
-        uint256 _nftId,
-        uint256 _amount
-    ) external onlyInvestor {
-        withdrawalAmount[_user][_nftId] = _amount;
-    }
-
-    /**
-     * @notice Get withdrwal amount
-     * @param _user  user address
-     * @param _nftId  nftId
-     */
-    function getWithdrawalAmount(address _user, uint256 _nftId)
+    function pendingReward(uint256 _tokenId, address _account)
         external
         view
-        returns (uint256 amount)
-    {
-        amount = withdrawalAmount[_user][_nftId];
-    }
+        virtual
+        returns (uint256 reward)
+    {}
 }

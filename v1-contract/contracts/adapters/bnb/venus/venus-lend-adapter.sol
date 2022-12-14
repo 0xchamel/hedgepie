@@ -2,20 +2,33 @@
 pragma solidity ^0.8.4;
 
 import "./interface/VBep20Interface.sol";
-import "../../BaseAdapter.sol";
 
-contract VenusLendAdapter is BaseAdapter {
+import "../../../libraries/HedgepieLibraryBsc.sol";
+import "../../../interfaces/IHedgepieInvestorBsc.sol";
+import "../../../interfaces/IHedgepieAdapterInfoBsc.sol";
+
+interface IStrategy {
+    function mint(uint256 amount) external;
+
+    function redeem(uint256 amount) external;
+}
+
+contract VenusLendAdapterBsc is BaseAdapterBsc {
     /**
      * @notice Construct
      * @param _strategy  address of strategy
      * @param _stakingToken  address of staking token
      * @param _repayToken  address of repay token
+     * @param _swapRouter  address of swap router
+     * @param _wbnb  address of wbnb
      * @param _name  adatper name
      */
     constructor(
         address _strategy,
         address _stakingToken,
         address _repayToken,
+        address _swapRouter,
+        address _wbnb,
         string memory _name
     ) {
         require(
@@ -26,87 +39,171 @@ contract VenusLendAdapter is BaseAdapter {
             VBep20Interface(_strategy).underlying() != address(0),
             "Error: Invalid underlying address"
         );
+
         strategy = _strategy;
         stakingToken = _stakingToken;
         repayToken = _repayToken;
+        swapRouter = _swapRouter;
+        wbnb = _wbnb;
         name = _name;
     }
 
     /**
-     * @notice Get withdrwal amount
-     * @param _user  user address
-     * @param _nftId  nftId
+     * @notice Deposit with BNB
+     * @param _tokenId YBNFT token id
+     * @param _account user wallet address
+     * @param _amountIn BNB amount
      */
-    function getWithdrawalAmount(address _user, uint256 _nftId)
+    function deposit(
+        uint256 _tokenId,
+        uint256 _amountIn,
+        address _account
+    ) external payable override onlyInvestor returns (uint256 amountOut) {
+        require(msg.value == _amountIn, "Error: msg.value is not correct");
+        AdapterInfo storage adapterInfo = adapterInfos[_tokenId];
+        UserAdapterInfo storage userInfo = userAdapterInfos[_account][_tokenId];
+
+        amountOut = HedgepieLibraryBsc.swapOnRouter(
+            _amountIn,
+            address(this),
+            stakingToken,
+            swapRouter,
+            wbnb
+        );
+
+        uint256 repayAmt = IBEP20(repayToken).balanceOf(address(this));
+        IBEP20(stakingToken).approve(strategy, amountOut);
+        IStrategy(strategy).mint(amountOut);
+        repayAmt = IBEP20(repayToken).balanceOf(address(this)) - repayAmt;
+
+        adapterInfo.totalStaked += amountOut;
+        userInfo.amount += repayAmt;
+        userInfo.invested += _amountIn;
+
+        // Update adapterInfo contract
+        address adapterInfoBnbAddr = IHedgepieInvestorBsc(investor)
+            .adapterInfo();
+        IHedgepieAdapterInfoBsc(adapterInfoBnbAddr).updateTVLInfo(
+            _tokenId,
+            _amountIn,
+            true
+        );
+        IHedgepieAdapterInfoBsc(adapterInfoBnbAddr).updateTradedInfo(
+            _tokenId,
+            _amountIn,
+            true
+        );
+        IHedgepieAdapterInfoBsc(adapterInfoBnbAddr).updateParticipantInfo(
+            _tokenId,
+            _account,
+            true
+        );
+    }
+
+    /**
+     * @notice Withdraw the deposited Bnb
+     * @param _tokenId YBNFT token id
+     * @param _account user wallet address
+     */
+    function withdraw(uint256 _tokenId, address _account)
         external
-        view
-        returns (uint256 amount)
+        payable
+        override
+        onlyInvestor
+        returns (uint256 amountOut)
     {
-        amount = withdrawalAmount[_user][_nftId];
+        AdapterInfo storage adapterInfo = adapterInfos[_tokenId];
+        UserAdapterInfo storage userInfo = userAdapterInfos[_account][_tokenId];
+
+        uint256 repayAmt;
+
+        amountOut = IBEP20(stakingToken).balanceOf(address(this));
+        repayAmt = IBEP20(repayToken).balanceOf(address(this));
+
+        IBEP20(repayToken).approve(strategy, userInfo.amount);
+        IStrategy(strategy).redeem(userInfo.amount);
+
+        repayAmt = repayAmt - IBEP20(repayToken).balanceOf(address(this));
+        amountOut = IBEP20(stakingToken).balanceOf(address(this)) - amountOut;
+
+        require(repayAmt == userInfo.amount, "Error: Redeem failed");
+
+        amountOut = HedgepieLibraryBsc.swapforBnb(
+            amountOut,
+            address(this),
+            stakingToken,
+            swapRouter,
+            wbnb
+        );
+
+        (uint256 reward, ) = HedgepieLibraryBsc.getRewards(
+            _tokenId,
+            address(this),
+            _account
+        );
+
+        uint256 rewardBnb;
+        if (reward != 0) {
+            rewardBnb = HedgepieLibraryBsc.swapforBnb(
+                reward,
+                address(this),
+                rewardToken,
+                swapRouter,
+                wbnb
+            );
+        }
+
+        address adapterInfoBnbAddr = IHedgepieInvestorBsc(investor)
+            .adapterInfo();
+
+        if (rewardBnb != 0) {
+            amountOut += rewardBnb;
+            IHedgepieAdapterInfoBsc(adapterInfoBnbAddr).updateProfitInfo(
+                _tokenId,
+                rewardBnb,
+                true
+            );
+        }
+
+        // Update adapterInfo contract
+        IHedgepieAdapterInfoBsc(adapterInfoBnbAddr).updateTVLInfo(
+            _tokenId,
+            userInfo.invested,
+            false
+        );
+        IHedgepieAdapterInfoBsc(adapterInfoBnbAddr).updateTradedInfo(
+            _tokenId,
+            userInfo.invested,
+            true
+        );
+        IHedgepieAdapterInfoBsc(adapterInfoBnbAddr).updateParticipantInfo(
+            _tokenId,
+            _account,
+            false
+        );
+
+        adapterInfo.totalStaked -= userInfo.amount;
+        delete userAdapterInfos[_account][_tokenId];
+
+        if (amountOut != 0) {
+            bool success;
+            if (rewardBnb != 0) {
+                rewardBnb =
+                    (rewardBnb *
+                        IYBNFT(IHedgepieInvestorBsc(investor).ybnft())
+                            .performanceFee(_tokenId)) /
+                    1e4;
+                (success, ) = payable(IHedgepieInvestorBsc(investor).treasury())
+                    .call{value: rewardBnb}("");
+                require(success, "Failed to send bnb to Treasury");
+            }
+
+            (success, ) = payable(_account).call{value: amountOut - rewardBnb}(
+                ""
+            );
+            require(success, "Failed to send bnb");
+        }
     }
 
-    /**
-     * @notice Set withdrwal amount
-     * @param _user  user address
-     * @param _nftId  nftId
-     * @param _amount  amount of withdrawal
-     */
-    function setWithdrawalAmount(
-        address _user,
-        uint256 _nftId,
-        uint256 _amount
-    ) external onlyInvestor {
-        withdrawalAmount[_user][_nftId] = _amount;
-    }
-
-    /**
-     * @notice Get invest calldata
-     * @param _amount  amount of invest
-     */
-    function getInvestCallData(uint256 _amount)
-        external
-        view
-        returns (
-            address to,
-            uint256 value,
-            bytes memory data
-        )
-    {
-        to = strategy;
-        value = 0;
-        data = abi.encodeWithSignature("mint(uint256)", _amount);
-    }
-
-    /**
-     * @notice Get devest calldata
-     * @param _amount  amount of devest
-     */
-    function getDevestCallData(uint256 _amount)
-        external
-        view
-        returns (
-            address to,
-            uint256 value,
-            bytes memory data
-        )
-    {
-        to = strategy;
-        value = 0;
-        data = abi.encodeWithSignature("redeem(uint256)", _amount);
-    }
-
-    /**
-     * @notice Increase withdrwal amount
-     * @param _user  user address
-     * @param _nftId  nftId
-     * @param _amount  amount of withdrawal
-     */
-    /// #if_succeeds {:msg "withdrawalAmount not increased"} withdrawalAmount[_user][_nftId] == old(withdrawalAmount[_user][_nftId]) + _amount;
-    function increaseWithdrawalAmount(
-        address _user,
-        uint256 _nftId,
-        uint256 _amount
-    ) external onlyInvestor {
-        withdrawalAmount[_user][_nftId] += _amount;
-    }
+    receive() external payable {}
 }
