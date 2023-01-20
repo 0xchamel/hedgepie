@@ -60,7 +60,7 @@ contract BeefyVaultAdapterMatic is BaseAdapterMatic {
         UserAdapterInfo storage userInfo = userAdapterInfos[_account][_tokenId];
 
         // get stakingToken
-        if(router == address(0)) {
+        if (router == address(0)) {
             amountOut = HedgepieLibraryMatic.swapOnRouter(
                 _amountIn,
                 address(this),
@@ -77,16 +77,13 @@ contract BeefyVaultAdapterMatic is BaseAdapterMatic {
         }
 
         // deposit
-        uint256 repayAmt = IBEP20(repayToken).balanceOf(
-            address(this)
-        );
+        uint256 repayAmt = IBEP20(repayToken).balanceOf(address(this));
 
         IBEP20(stakingToken).approve(strategy, amountOut);
         IStrategy(strategy).deposit(amountOut);
 
         unchecked {
-            repayAmt = IBEP20(repayToken).balanceOf(address(this))
-                - repayAmt;
+            repayAmt = IBEP20(repayToken).balanceOf(address(this)) - repayAmt;
 
             adapterInfo.totalStaked += amountOut;
 
@@ -136,11 +133,12 @@ contract BeefyVaultAdapterMatic is BaseAdapterMatic {
         IStrategy(strategy).withdraw(userInfo.userShares);
 
         unchecked {
-            amountOut = IBEP20(stakingToken).balanceOf(address(this))
-                - amountOut;
+            amountOut =
+                IBEP20(stakingToken).balanceOf(address(this)) -
+                amountOut;
         }
 
-        if(router == address(0)) {
+        if (router == address(0)) {
             amountOut = HedgepieLibraryMatic.swapforMatic(
                 amountOut,
                 address(this),
@@ -168,7 +166,7 @@ contract BeefyVaultAdapterMatic is BaseAdapterMatic {
                 reward,
                 true
             );
-        }        
+        }
 
         // Update adapterInfo contract
         IHedgepieAdapterInfoMatic(adapterInfoMaticAddr).updateTVLInfo(
@@ -201,8 +199,9 @@ contract BeefyVaultAdapterMatic is BaseAdapterMatic {
                         IYBNFT(IHedgepieInvestorMatic(investor).ybnft())
                             .performanceFee(_tokenId)) /
                     1e4;
-                (success, ) = payable(IHedgepieInvestorMatic(investor).treasury())
-                    .call{value: reward}("");
+                (success, ) = payable(
+                    IHedgepieInvestorMatic(investor).treasury()
+                ).call{value: reward}("");
                 require(success, "Failed to send matic to Treasury");
             }
 
@@ -224,13 +223,13 @@ contract BeefyVaultAdapterMatic is BaseAdapterMatic {
     {
         UserAdapterInfo memory userInfo = userAdapterInfos[_account][_tokenId];
 
-        uint256 _reward = userInfo.userShares *
-            (IStrategy(strategy).balance()) / 
+        uint256 _reward = (userInfo.userShares *
+            (IStrategy(strategy).balance())) /
             (IStrategy(strategy).totalSupply());
 
-        if(_reward < userInfo.amount) return 0;
+        if (_reward < userInfo.amount) return 0;
 
-        if(router == address(0)) {
+        if (router == address(0)) {
             if (stakingToken != wmatic)
                 reward += IPancakeRouter(swapRouter).getAmountsOut(
                     _reward,
@@ -249,17 +248,21 @@ contract BeefyVaultAdapterMatic is BaseAdapterMatic {
 
             if (token0 == wmatic) reward += amount0;
             else
-                reward += IPancakeRouter(swapRouter).getAmountsOut(
-                    amount0,
-                    getPaths(token0, wmatic)
-                )[1];
+                reward += amount0 == 0
+                    ? 0
+                    : IPancakeRouter(swapRouter).getAmountsOut(
+                        amount0,
+                        getPaths(token0, wmatic)
+                    )[1];
 
             if (token1 == wmatic) reward += amount1;
             else
-                reward += IPancakeRouter(swapRouter).getAmountsOut(
-                    amount1,
-                    getPaths(token1, wmatic)
-                )[1];
+                reward += amount1 == 0
+                    ? 0
+                    : IPancakeRouter(swapRouter).getAmountsOut(
+                        amount1,
+                        getPaths(token1, wmatic)
+                    )[1];
         }
     }
 

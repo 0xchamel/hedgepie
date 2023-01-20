@@ -41,19 +41,18 @@ contract QuickStakeAdapter is BaseAdapterMatic {
         name = _name;
     }
 
-    function _getReward(
-        uint256 _tokenId
-    ) internal {
+    function _getReward(uint256 _tokenId) internal {
         AdapterInfo storage adapterInfo = adapterInfos[_tokenId];
 
         // get reward
         uint256 amountOut = IBEP20(rewardToken).balanceOf(address(this));
 
         IStrategy(strategy).getReward();
-        
+
         unchecked {
-            amountOut = IBEP20(rewardToken).balanceOf(address(this))
-                - amountOut;
+            amountOut =
+                IBEP20(rewardToken).balanceOf(address(this)) -
+                amountOut;
         }
 
         if (amountOut != 0 && adapterInfo.totalStaked != 0) {
@@ -143,8 +142,9 @@ contract QuickStakeAdapter is BaseAdapterMatic {
         IStrategy(strategy).withdraw(userInfo.amount);
 
         unchecked {
-            amountOut = IBEP20(stakingToken).balanceOf(address(this))
-                - amountOut;
+            amountOut =
+                IBEP20(stakingToken).balanceOf(address(this)) -
+                amountOut;
         }
 
         amountOut = HedgepieLibraryMatic.swapforMatic(
@@ -164,7 +164,7 @@ contract QuickStakeAdapter is BaseAdapterMatic {
         address adapterInfoMaticAddr = IHedgepieInvestorMatic(investor)
             .adapterInfo();
 
-        if(rewardAmt != 0) {
+        if (rewardAmt != 0) {
             rewardAmt = HedgepieLibraryMatic.swapforMatic(
                 rewardAmt,
                 address(this),
@@ -213,12 +213,15 @@ contract QuickStakeAdapter is BaseAdapterMatic {
                         IYBNFT(IHedgepieInvestorMatic(investor).ybnft())
                             .performanceFee(_tokenId)) /
                     1e4;
-                (success, ) = payable(IHedgepieInvestorMatic(investor).treasury())
-                    .call{value: rewardAmt}("");
+                (success, ) = payable(
+                    IHedgepieInvestorMatic(investor).treasury()
+                ).call{value: rewardAmt}("");
                 require(success, "Failed to send matic to Treasury");
             }
 
-            (success, ) = payable(_account).call{value: amountOut - rewardAmt}("");
+            (success, ) = payable(_account).call{value: amountOut - rewardAmt}(
+                ""
+            );
             require(success, "Failed to send matic");
         }
     }
@@ -297,9 +300,9 @@ contract QuickStakeAdapter is BaseAdapterMatic {
         uint256 tokenRewards = ((updatedAccTokenPerShare -
             userInfo.userShares) * userInfo.amount) / 1e12;
 
-        if(tokenRewards < userInfo.amount) return 0;
+        if (tokenRewards < userInfo.amount) return 0;
 
-        if (stakingToken != wmatic)
+        if (stakingToken != wmatic && tokenRewards != 0)
             reward += IPancakeRouter(swapRouter).getAmountsOut(
                 tokenRewards,
                 getPaths(stakingToken, wmatic)

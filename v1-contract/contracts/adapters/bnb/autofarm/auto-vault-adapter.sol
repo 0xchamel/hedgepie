@@ -234,17 +234,21 @@ contract AutoVaultAdapterBsc is BaseAdapterBsc {
 
         if (token0 == wbnb) reward += amount0;
         else
-            reward += IPancakeRouter(swapRouter).getAmountsOut(
-                amount0,
-                getPaths(token0, wbnb)
-            )[1];
+            reward += amount0 == 0
+                ? 0
+                : IPancakeRouter(swapRouter).getAmountsOut(
+                    amount0,
+                    getPaths(token0, wbnb)
+                )[1];
 
         if (token1 == wbnb) reward += amount1;
         else
-            reward += IPancakeRouter(swapRouter).getAmountsOut(
-                amount1,
-                getPaths(token1, wbnb)
-            )[1];
+            reward += amount1 == 0
+                ? 0
+                : IPancakeRouter(swapRouter).getAmountsOut(
+                    amount1,
+                    getPaths(token1, wbnb)
+                )[1];
     }
 
     receive() external payable {}

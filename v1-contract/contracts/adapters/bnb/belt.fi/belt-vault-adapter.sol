@@ -14,9 +14,9 @@ interface IStrategy {
 
     function withdrawBNB(uint256, uint256) external;
 
-    function balance() external view returns(uint256);
+    function balance() external view returns (uint256);
 
-    function totalSupply() external view returns(uint256);
+    function totalSupply() external view returns (uint256);
 }
 
 contract BeltVaultAdapter is BaseAdapterBsc {
@@ -70,22 +70,17 @@ contract BeltVaultAdapter is BaseAdapterBsc {
         );
 
         // deposit
-        uint256 repayAmt = IBEP20(repayToken).balanceOf(
-            address(this)
-        );
+        uint256 repayAmt = IBEP20(repayToken).balanceOf(address(this));
 
-        if(stakingToken == wbnb) {
-            IStrategy(strategy).deposit {
-                value: amountOut
-            } (0);
+        if (stakingToken == wbnb) {
+            IStrategy(strategy).deposit{value: amountOut}(0);
         } else {
             IBEP20(stakingToken).approve(strategy, amountOut);
             IStrategy(strategy).deposit(amountOut, 0);
         }
 
         unchecked {
-            repayAmt = IBEP20(repayToken).balanceOf(address(this))
-                - repayAmt;
+            repayAmt = IBEP20(repayToken).balanceOf(address(this)) - repayAmt;
 
             adapterInfo.totalStaked += amountOut;
 
@@ -130,20 +125,25 @@ contract BeltVaultAdapter is BaseAdapterBsc {
         UserAdapterInfo memory userInfo = userAdapterInfos[_account][_tokenId];
 
         bool isBNB = stakingToken == wbnb;
-        amountOut = isBNB ? address(this).balance
+        amountOut = isBNB
+            ? address(this).balance
             : IBEP20(stakingToken).balanceOf(address(this));
 
         // withdraw
-        if(isBNB) {
+        if (isBNB) {
             IStrategy(strategy).withdrawBNB(userInfo.userShares, 0);
         } else {
             IStrategy(strategy).withdraw(userInfo.userShares, 0);
         }
 
         unchecked {
-            amountOut = (isBNB ? address(this).balance
-                : IBEP20(stakingToken).balanceOf(address(this)))
-                - amountOut;
+            amountOut =
+                (
+                    isBNB
+                        ? address(this).balance
+                        : IBEP20(stakingToken).balanceOf(address(this))
+                ) -
+                amountOut;
         }
 
         amountOut = HedgepieLibraryBsc.swapforBnb(
@@ -166,7 +166,7 @@ contract BeltVaultAdapter is BaseAdapterBsc {
                 reward,
                 true
             );
-        }        
+        }
 
         // Update adapterInfo contract
         IHedgepieAdapterInfoBsc(adapterInfoBnbAddr).updateTVLInfo(
@@ -222,11 +222,11 @@ contract BeltVaultAdapter is BaseAdapterBsc {
     {
         UserAdapterInfo memory userInfo = userAdapterInfos[_account][_tokenId];
 
-        uint256 _reward = userInfo.userShares *
-            (IStrategy(strategy).balance()) / 
+        uint256 _reward = (userInfo.userShares *
+            (IStrategy(strategy).balance())) /
             (IStrategy(strategy).totalSupply());
 
-        if(_reward < userInfo.amount) return 0;
+        if (_reward < userInfo.amount) return 0;
 
         address token0 = IPancakePair(stakingToken).token0();
         address token1 = IPancakePair(stakingToken).token1();
@@ -240,17 +240,21 @@ contract BeltVaultAdapter is BaseAdapterBsc {
 
         if (token0 == wbnb) reward += amount0;
         else
-            reward += IPancakeRouter(swapRouter).getAmountsOut(
-                amount0,
-                getPaths(token0, wbnb)
-            )[1];
+            reward += amount0 == 0
+                ? 0
+                : IPancakeRouter(swapRouter).getAmountsOut(
+                    amount0,
+                    getPaths(token0, wbnb)
+                )[1];
 
         if (token1 == wbnb) reward += amount1;
         else
-            reward += IPancakeRouter(swapRouter).getAmountsOut(
-                amount1,
-                getPaths(token1, wbnb)
-            )[1];
+            reward += amount1 == 0
+                ? 0
+                : IPancakeRouter(swapRouter).getAmountsOut(
+                    amount1,
+                    getPaths(token1, wbnb)
+                )[1];
     }
 
     receive() external payable {}
