@@ -10,9 +10,9 @@ interface IStrategy {
 
     function withdraw(uint256) external;
 
-    function balance() external view returns(uint256);
+    function balance() external view returns (uint256);
 
-    function totalSupply() external view returns(uint256);
+    function totalSupply() external view returns (uint256);
 }
 
 contract BeefyVaultAdapter is BaseAdapterBsc {
@@ -58,7 +58,7 @@ contract BeefyVaultAdapter is BaseAdapterBsc {
         UserAdapterInfo storage userInfo = userAdapterInfos[_account][_tokenId];
 
         // get stakingToken
-        if(router == address(0)) {
+        if (router == address(0)) {
             amountOut = HedgepieLibraryBsc.swapOnRouter(
                 _amountIn,
                 address(this),
@@ -75,16 +75,13 @@ contract BeefyVaultAdapter is BaseAdapterBsc {
         }
 
         // deposit
-        uint256 repayAmt = IBEP20(repayToken).balanceOf(
-            address(this)
-        );
+        uint256 repayAmt = IBEP20(repayToken).balanceOf(address(this));
 
         IBEP20(stakingToken).approve(strategy, amountOut);
         IStrategy(strategy).deposit(amountOut);
 
         unchecked {
-            repayAmt = IBEP20(repayToken).balanceOf(address(this))
-                - repayAmt;
+            repayAmt = IBEP20(repayToken).balanceOf(address(this)) - repayAmt;
 
             adapterInfo.totalStaked += amountOut;
 
@@ -134,11 +131,12 @@ contract BeefyVaultAdapter is BaseAdapterBsc {
         IStrategy(strategy).withdraw(userInfo.userShares);
 
         unchecked {
-            amountOut = IBEP20(stakingToken).balanceOf(address(this))
-                - amountOut;
+            amountOut =
+                IBEP20(stakingToken).balanceOf(address(this)) -
+                amountOut;
         }
 
-        if(router == address(0)) {
+        if (router == address(0)) {
             amountOut = HedgepieLibraryBsc.swapforBnb(
                 amountOut,
                 address(this),
@@ -166,7 +164,7 @@ contract BeefyVaultAdapter is BaseAdapterBsc {
                 reward,
                 true
             );
-        }        
+        }
 
         // Update adapterInfo contract
         IHedgepieAdapterInfoBsc(adapterInfoBnbAddr).updateTVLInfo(
@@ -222,13 +220,13 @@ contract BeefyVaultAdapter is BaseAdapterBsc {
     {
         UserAdapterInfo memory userInfo = userAdapterInfos[_account][_tokenId];
 
-        uint256 _reward = userInfo.userShares *
-            (IStrategy(strategy).balance()) / 
+        uint256 _reward = (userInfo.userShares *
+            (IStrategy(strategy).balance())) /
             (IStrategy(strategy).totalSupply());
 
-        if(_reward < userInfo.amount) return 0;
+        if (_reward < userInfo.amount) return 0;
 
-        if(router == address(0)) {
+        if (router == address(0)) {
             if (stakingToken != wbnb)
                 reward += IPancakeRouter(swapRouter).getAmountsOut(
                     _reward,
@@ -247,17 +245,21 @@ contract BeefyVaultAdapter is BaseAdapterBsc {
 
             if (token0 == wbnb) reward += amount0;
             else
-                reward += IPancakeRouter(swapRouter).getAmountsOut(
-                    amount0,
-                    getPaths(token0, wbnb)
-                )[1];
+                reward += amount0 == 0
+                    ? 0
+                    : IPancakeRouter(swapRouter).getAmountsOut(
+                        amount0,
+                        getPaths(token0, wbnb)
+                    )[1];
 
             if (token1 == wbnb) reward += amount1;
             else
-                reward += IPancakeRouter(swapRouter).getAmountsOut(
-                    amount1,
-                    getPaths(token1, wbnb)
-                )[1];
+                reward += amount1 == 0
+                    ? 0
+                    : IPancakeRouter(swapRouter).getAmountsOut(
+                        amount1,
+                        getPaths(token1, wbnb)
+                    )[1];
         }
     }
 

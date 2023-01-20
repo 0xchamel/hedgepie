@@ -219,10 +219,12 @@ contract CompoundLendAdapterEth is BaseAdapterEth {
 
         if (underlyingAmt < userInfo.amount) return 0;
 
-        reward = IPancakeRouter(swapRouter).getAmountsOut(
-            underlyingAmt - userInfo.amount,
-            getPaths(stakingToken, weth)
-        )[1];
+        reward = underlyingAmt == userInfo.amount
+            ? 0
+            : IPancakeRouter(swapRouter).getAmountsOut(
+                underlyingAmt - userInfo.amount,
+                getPaths(stakingToken, weth)
+            )[1];
     }
 
     receive() external payable {}

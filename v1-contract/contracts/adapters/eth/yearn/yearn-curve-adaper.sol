@@ -377,10 +377,12 @@ contract YearnCurveAdapter is BaseAdapterEth {
 
         if (_vAmount <= userInfo.amount) return 0;
 
-        reward = IPancakeRouter(swapRouter).getAmountsOut(
-            _vAmount - userInfo.amount,
-            getPaths(stakingToken, weth)
-        )[1];
+        reward = _vAmount == userInfo.amount
+            ? 0
+            : IPancakeRouter(swapRouter).getAmountsOut(
+                _vAmount - userInfo.amount,
+                getPaths(stakingToken, weth)
+            )[1];
     }
 
     receive() external payable {}
