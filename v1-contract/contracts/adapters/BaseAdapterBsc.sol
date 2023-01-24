@@ -39,6 +39,8 @@ abstract contract BaseAdapterBsc is Ownable {
 
     string public name;
 
+    AdapterInfo public mAdapter;
+
     // inToken => outToken => paths
     mapping(address => mapping(address => address[])) public paths;
 

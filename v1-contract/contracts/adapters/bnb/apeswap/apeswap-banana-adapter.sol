@@ -52,7 +52,7 @@ contract ApeswapBananaAdapter is BaseAdapterBsc {
         address _account
     ) external payable override onlyInvestor returns (uint256 amountOut) {
         require(msg.value == _amountIn, "Error: msg.value is not correct");
-        AdapterInfo storage adapterInfo = adapterInfos[_tokenId];
+
         UserAdapterInfo storage userInfo = userAdapterInfos[_account][_tokenId];
 
         // get token
@@ -71,18 +71,17 @@ contract ApeswapBananaAdapter is BaseAdapterBsc {
         IStrategy(strategy).enterStaking(amountOut);
 
         unchecked {
-            shareAmt = IBEP20(repayToken).balanceOf(address(this))
-                - shareAmt;
+            shareAmt = IBEP20(repayToken).balanceOf(address(this)) - shareAmt;
 
-            adapterInfo.totalStaked += amountOut;
+            mAdapter.totalStaked += amountOut;
             if (shareAmt != 0) {
-                adapterInfo.accTokenPerShare +=
+                mAdapter.accTokenPerShare +=
                     (shareAmt * 1e12) /
-                    adapterInfo.totalStaked;
+                    mAdapter.totalStaked;
             }
 
             if (userInfo.amount == 0) {
-                userInfo.userShares = adapterInfo.accTokenPerShare;
+                userInfo.userShares = mAdapter.accTokenPerShare;
             }
             userInfo.amount += amountOut;
             userInfo.invested += _amountIn;
@@ -120,7 +119,6 @@ contract ApeswapBananaAdapter is BaseAdapterBsc {
         onlyInvestor
         returns (uint256 amountOut)
     {
-        AdapterInfo storage adapterInfo = adapterInfos[_tokenId];
         UserAdapterInfo memory userInfo = userAdapterInfos[_account][_tokenId];
 
         amountOut = IBEP20(stakingToken).balanceOf(address(this));
@@ -129,8 +127,9 @@ contract ApeswapBananaAdapter is BaseAdapterBsc {
         IStrategy(strategy).leaveStaking(userInfo.amount);
 
         unchecked {
-            amountOut = IBEP20(stakingToken).balanceOf(address(this))
-                - amountOut;
+            amountOut =
+                IBEP20(stakingToken).balanceOf(address(this)) -
+                amountOut;
         }
 
         amountOut = HedgepieLibraryBsc.swapforBnb(
@@ -153,7 +152,7 @@ contract ApeswapBananaAdapter is BaseAdapterBsc {
                 reward,
                 true
             );
-        }        
+        }
 
         // Update adapterInfo contract
         IHedgepieAdapterInfoBsc(adapterInfoBnbAddr).updateTVLInfo(
@@ -173,7 +172,7 @@ contract ApeswapBananaAdapter is BaseAdapterBsc {
         );
 
         unchecked {
-            adapterInfo.totalStaked -= userInfo.amount;
+            mAdapter.totalStaked -= userInfo.amount;
         }
 
         delete userAdapterInfos[_account][_tokenId];
@@ -207,16 +206,15 @@ contract ApeswapBananaAdapter is BaseAdapterBsc {
         override
         returns (uint256 reward)
     {
-        AdapterInfo memory adapterInfo = adapterInfos[_tokenId];
         UserAdapterInfo memory userInfo = userAdapterInfos[_account][_tokenId];
 
-        uint256 updatedAccTokenPerShare = adapterInfo.accTokenPerShare +
+        uint256 updatedAccTokenPerShare = mAdapter.accTokenPerShare +
             ((IStrategy(strategy).pendingCake(0, address(this)) * 1e12) /
-                adapterInfo.totalStaked);
+                mAdapter.totalStaked);
 
         uint256 tokenRewards = ((updatedAccTokenPerShare -
             userInfo.userShares) * userInfo.amount) / 1e12;
-        
+
         if (tokenRewards != 0)
             reward = stakingToken == wbnb
                 ? tokenRewards

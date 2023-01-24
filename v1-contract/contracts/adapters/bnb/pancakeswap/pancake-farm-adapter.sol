@@ -55,7 +55,7 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapterBsc {
         address _account
     ) external payable override onlyInvestor returns (uint256 amountOut) {
         require(msg.value == _amountIn, "Error: msg.value is not correct");
-        AdapterInfo storage adapterInfo = adapterInfos[_tokenId];
+
         UserAdapterInfo storage userInfo = userAdapterInfos[_account][_tokenId];
 
         if (router == address(0)) {
@@ -82,16 +82,16 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapterBsc {
 
         rewardAmt0 = IBEP20(rewardToken).balanceOf(address(this)) - rewardAmt0;
 
-        adapterInfo.totalStaked += amountOut;
+        mAdapter.totalStaked += amountOut;
         if (rewardAmt0 != 0 && rewardToken != address(0)) {
-            adapterInfo.accTokenPerShare +=
+            mAdapter.accTokenPerShare +=
                 (rewardAmt0 * 1e12) /
-                adapterInfo.totalStaked;
+                mAdapter.totalStaked;
         }
 
         if (userInfo.amount == 0) {
-            userInfo.userShares = adapterInfo.accTokenPerShare;
-            userInfo.userShares1 = adapterInfo.accTokenPerShare1;
+            userInfo.userShares = mAdapter.accTokenPerShare;
+            userInfo.userShares1 = mAdapter.accTokenPerShare1;
         }
         userInfo.amount += amountOut;
         userInfo.invested += _amountIn;
@@ -130,7 +130,6 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapterBsc {
         onlyInvestor
         returns (uint256 amountOut)
     {
-        AdapterInfo storage adapterInfo = adapterInfos[_tokenId];
         UserAdapterInfo storage userInfo = userAdapterInfos[_account][_tokenId];
 
         uint256 rewardAmt0;
@@ -145,9 +144,9 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapterBsc {
         amountOut = IBEP20(stakingToken).balanceOf(address(this)) - amountOut;
 
         if (rewardAmt0 != 0 && rewardToken != address(0)) {
-            adapterInfo.accTokenPerShare +=
+            mAdapter.accTokenPerShare +=
                 (rewardAmt0 * 1e12) /
-                adapterInfo.totalStaked;
+                mAdapter.totalStaked;
         }
 
         if (router == address(0)) {
@@ -166,7 +165,7 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapterBsc {
             );
         }
 
-        (uint256 reward, ) = HedgepieLibraryBsc.getRewards(
+        (uint256 reward, ) = HedgepieLibraryBsc.getMRewards(
             _tokenId,
             address(this),
             _account
@@ -211,7 +210,7 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapterBsc {
             false
         );
 
-        adapterInfo.totalStaked -= userInfo.amount;
+        mAdapter.totalStaked -= userInfo.amount;
         delete userAdapterInfos[_account][_tokenId];
 
         if (amountOut != 0) {
@@ -248,14 +247,14 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapterBsc {
     {
         UserAdapterInfo storage userInfo = userAdapterInfos[_account][_tokenId];
 
-        (uint256 reward, ) = HedgepieLibraryBsc.getRewards(
+        (uint256 reward, ) = HedgepieLibraryBsc.getMRewards(
             _tokenId,
             address(this),
             _account
         );
 
-        userInfo.userShares = adapterInfos[_tokenId].accTokenPerShare;
-        userInfo.userShares1 = adapterInfos[_tokenId].accTokenPerShare1;
+        userInfo.userShares = mAdapter.accTokenPerShare;
+        userInfo.userShares1 = mAdapter.accTokenPerShare1;
 
         if (reward != 0 && rewardToken != address(0)) {
             amountOut = HedgepieLibraryBsc.swapforBnb(
@@ -265,7 +264,7 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapterBsc {
                 swapRouter,
                 wbnb
             );
-        
+
             uint256 taxAmount = (amountOut *
                 IYBNFT(IHedgepieInvestorBsc(investor).ybnft()).performanceFee(
                     _tokenId
@@ -280,8 +279,9 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapterBsc {
             );
             require(success, "Failed to send bnb");
 
-            IHedgepieAdapterInfoBsc(IHedgepieInvestorBsc(investor).adapterInfo())
-                .updateProfitInfo(_tokenId, amountOut, true);
+            IHedgepieAdapterInfoBsc(
+                IHedgepieInvestorBsc(investor).adapterInfo()
+            ).updateProfitInfo(_tokenId, amountOut, true);
         }
     }
 
@@ -297,11 +297,10 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapterBsc {
         returns (uint256 reward)
     {
         UserAdapterInfo memory userInfo = userAdapterInfos[_account][_tokenId];
-        AdapterInfo memory adapterInfo = adapterInfos[_tokenId];
 
-        uint256 updatedAccTokenPerShare = adapterInfo.accTokenPerShare +
+        uint256 updatedAccTokenPerShare = mAdapter.accTokenPerShare +
             ((IStrategy(strategy).pendingCake(pid, address(this)) * 1e12) /
-                adapterInfo.totalStaked);
+                mAdapter.totalStaked);
 
         uint256 tokenRewards = ((updatedAccTokenPerShare -
             userInfo.userShares) * userInfo.amount) / 1e12;
