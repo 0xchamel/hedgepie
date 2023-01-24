@@ -32,9 +32,7 @@ describe("ApeswapFarmLPAdapter Integration Test", function () {
         this.accTokenPerShare1 = BigNumber.from(0);
 
         // Deploy Apeswap LP Adapter contract
-        const ApeLPAdapter = await adapterFixtureBsc(
-            "ApeswapFarmLPAdapter"
-        );
+        const ApeLPAdapter = await adapterFixtureBsc("ApeswapFarmLPAdapter");
         this.aAdapter = await ApeLPAdapter.deploy(
             3, // pid
             strategy,
@@ -108,14 +106,14 @@ describe("ApeswapFarmLPAdapter Integration Test", function () {
                 this.aliceAddr,
                 1
             );
-            const adapterInfos = await this.aAdapter.adapterInfos(1);
+            const adapterInfos = await this.aAdapter.mAdapter();
             expect(BigNumber.from(adapterInfos.totalStaked)).to.eq(
                 BigNumber.from(aliceAdapterInfos.amount)
             );
 
             // Check accTokenPerShare Info
             this.accTokenPerShare = (
-                await this.aAdapter.adapterInfos(1)
+                await this.aAdapter.mAdapter()
             ).accTokenPerShare;
             expect(BigNumber.from(this.accTokenPerShare)).to.eq(
                 BigNumber.from(0)
@@ -130,7 +128,7 @@ describe("ApeswapFarmLPAdapter Integration Test", function () {
             await ethers.provider.send("evm_increaseTime", [3600 * 24]);
             await ethers.provider.send("evm_mine", []);
 
-            const beforeAdapterInfos = await this.aAdapter.adapterInfos(1);
+            const beforeAdapterInfos = await this.aAdapter.mAdapter();
             const depositAmount = ethers.utils.parseEther("10");
 
             await expect(
@@ -162,7 +160,7 @@ describe("ApeswapFarmLPAdapter Integration Test", function () {
             );
             expect(BigNumber.from(bobAdapterInfos.amount).gt(0)).to.eq(true);
 
-            const afterAdapterInfos = await this.aAdapter.adapterInfos(1);
+            const afterAdapterInfos = await this.aAdapter.mAdapter();
 
             expect(
                 BigNumber.from(afterAdapterInfos.totalStaked).gt(
@@ -173,12 +171,12 @@ describe("ApeswapFarmLPAdapter Integration Test", function () {
             // Check accTokenPerShare Info
             expect(
                 BigNumber.from(
-                    (await this.aAdapter.adapterInfos(1)).accTokenPerShare
+                    (await this.aAdapter.mAdapter()).accTokenPerShare
                 ).gt(BigNumber.from(this.accTokenPerShare))
             ).to.eq(true);
 
             this.accTokenPerShare = (
-                await this.aAdapter.adapterInfos(1)
+                await this.aAdapter.mAdapter()
             ).accTokenPerShare;
         });
 
@@ -302,12 +300,12 @@ describe("ApeswapFarmLPAdapter Integration Test", function () {
 
             expect(
                 BigNumber.from(
-                    (await this.aAdapter.adapterInfos(1)).accTokenPerShare
+                    (await this.aAdapter.mAdapter()).accTokenPerShare
                 ).gt(BigNumber.from(this.accTokenPerShare))
             ).to.eq(true);
 
             this.accTokenPerShare = (
-                await this.aAdapter.adapterInfos(1)
+                await this.aAdapter.mAdapter()
             ).accTokenPerShare;
         });
 
@@ -381,12 +379,12 @@ describe("ApeswapFarmLPAdapter Integration Test", function () {
             // Check accTokenPerShare Info
             expect(
                 BigNumber.from(
-                    (await this.aAdapter.adapterInfos(1)).accTokenPerShare
+                    (await this.aAdapter.mAdapter()).accTokenPerShare
                 ).gt(BigNumber.from(this.accTokenPerShare))
             ).to.eq(true);
 
             this.accTokenPerShare = (
-                await this.aAdapter.adapterInfos(1)
+                await this.aAdapter.mAdapter()
             ).accTokenPerShare;
         });
 

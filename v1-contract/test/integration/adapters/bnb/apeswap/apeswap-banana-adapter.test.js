@@ -83,7 +83,7 @@ describe("ApeswapBananaAdapter Integration Test", function () {
             ).to.be.revertedWith("Error: Insufficient BNB");
         });
 
-        it("(3)deposit should success for Alice", async function () {
+        it("(3) deposit should success for Alice", async function () {
             const beforeRepay = await this.repayToken.balanceOf(
                 this.aAdapter.address
             );
@@ -102,13 +102,13 @@ describe("ApeswapBananaAdapter Integration Test", function () {
             );
             expect(BigNumber.from(aliceAdapterInfos.amount).gt(0)).to.eq(true);
 
-            const adapterInfos = await this.aAdapter.adapterInfos(1);
+            const adapterInfos = await this.aAdapter.mAdapter();
             expect(BigNumber.from(adapterInfos.totalStaked)).to.eq(
                 BigNumber.from(aliceAdapterInfos.amount)
             );
         });
 
-        it("(4)deposit should success for Bob", async function () {
+        it("(4) deposit should success for Bob", async function () {
             const beforeRepay = await this.repayToken.balanceOf(
                 this.aAdapter.address
             );
@@ -116,32 +116,24 @@ describe("ApeswapBananaAdapter Integration Test", function () {
                 this.aliceAddr,
                 1
             );
-            const beforeAdapterInfos = await this.aAdapter.adapterInfos(1);
+            const beforeAdapterInfos = await this.aAdapter.mAdapter();
 
-            const depositAmount = ethers.utils.parseEther("10");
+            const depositAmount = ethers.utils.parseEther("100");
             await expect(
-                this.investor.connect(this.bob).depositBNB(1, depositAmount, {
+                this.investor.connect(this.bob).depositBNB(2, depositAmount, {
                     value: depositAmount,
                 })
             )
                 .to.emit(this.investor, "DepositBNB")
-                .withArgs(this.bobAddr, this.ybNft.address, 1, depositAmount);
-
-            await expect(
-                this.investor.connect(this.bob).depositBNB(1, depositAmount, {
-                    value: depositAmount,
-                })
-            )
-                .to.emit(this.investor, "DepositBNB")
-                .withArgs(this.bobAddr, this.ybNft.address, 1, depositAmount);
+                .withArgs(this.bobAddr, this.ybNft.address, 2, depositAmount);
 
             const bobAdapterInfos = await this.aAdapter.userAdapterInfos(
                 this.bobAddr,
-                1
+                2
             );
             expect(BigNumber.from(bobAdapterInfos.amount).gt(0)).to.eq(true);
 
-            const afterAdapterInfos = await this.aAdapter.adapterInfos(1);
+            const afterAdapterInfos = await this.aAdapter.mAdapter();
             expect(
                 BigNumber.from(afterAdapterInfos.totalStaked).gt(
                     beforeAdapterInfos.totalStaked
@@ -156,6 +148,7 @@ describe("ApeswapBananaAdapter Integration Test", function () {
 
         it("(5) test TVL & participants", async function () {
             const nftInfo = await this.adapterInfo.adapterInfo(1);
+            const nftInfo1 = await this.adapterInfo.adapterInfo(2);
 
             expect(
                 Number(
@@ -163,16 +156,20 @@ describe("ApeswapBananaAdapter Integration Test", function () {
                         BigNumber.from(nftInfo.tvl).toString()
                     )
                 )
-            ).to.be.eq(30) &&
+            ).to.be.eq(10) &&
                 expect(BigNumber.from(nftInfo.participant).toString()).to.be.eq(
-                    "2"
-                );
-
-            const pendingInfo = await this.aAdapter.pendingReward(
-                1,
-                this.alice.address
-            );
-            expect(pendingInfo).to.gte(0);
+                    "1"
+                ) &&
+                expect(
+                    Number(
+                        ethers.utils.formatEther(
+                            BigNumber.from(nftInfo1.tvl).toString()
+                        )
+                    )
+                ).to.be.eq(100) &&
+                expect(
+                    BigNumber.from(nftInfo1.participant).toString()
+                ).to.be.eq("1");
         });
     });
 
@@ -246,10 +243,10 @@ describe("ApeswapBananaAdapter Integration Test", function () {
             expect(aliceInfo).to.eq(BigNumber.from(0));
 
             const bobInfo = (
-                await this.aAdapter.userAdapterInfos(this.bobAddr, 1)
+                await this.aAdapter.userAdapterInfos(this.bobAddr, 2)
             ).invested;
             const bobDeposit = Number(bobInfo) / Math.pow(10, 18);
-            expect(bobDeposit).to.eq(20);
+            expect(bobDeposit).to.eq(100);
         });
 
         it("(3) test TVL & participants after Alice withdraw", async function () {
@@ -261,9 +258,9 @@ describe("ApeswapBananaAdapter Integration Test", function () {
                         BigNumber.from(nftInfo.tvl).toString()
                     )
                 )
-            ).to.be.eq(20) &&
+            ).to.be.eq(0) &&
                 expect(BigNumber.from(nftInfo.participant).toString()).to.be.eq(
-                    "1"
+                    "0"
                 );
         });
 
@@ -276,15 +273,15 @@ describe("ApeswapBananaAdapter Integration Test", function () {
                 this.treasuryAddr
             );
             let bobInfo = (
-                await this.aAdapter.userAdapterInfos(this.bobAddr, 1)
+                await this.aAdapter.userAdapterInfos(this.bobAddr, 2)
             ).invested;
 
             const gasPrice = 21e9;
             const gas = await this.investor
                 .connect(this.bob)
-                .estimateGas.withdrawBNB(1, { gasPrice });
+                .estimateGas.withdrawBNB(2, { gasPrice });
             await expect(
-                this.investor.connect(this.bob).withdrawBNB(1, { gasPrice })
+                this.investor.connect(this.bob).withdrawBNB(2, { gasPrice })
             ).to.emit(this.investor, "WithdrawBNB");
 
             const afterBNB = await ethers.provider.getBalance(this.bobAddr);
@@ -300,6 +297,7 @@ describe("ApeswapBananaAdapter Integration Test", function () {
                 const afterOwnerBNB = await ethers.provider.getBalance(
                     this.treasuryAddr
                 );
+                console.log(afterOwnerBNB, beforeOwnerBNB);
                 const protocolFee = afterOwnerBNB.sub(beforeOwnerBNB);
                 expect(protocolFee).to.gt(0);
                 expect(actualPending).to.be.within(
@@ -314,13 +312,13 @@ describe("ApeswapBananaAdapter Integration Test", function () {
                 );
             }
 
-            bobInfo = (await this.aAdapter.userAdapterInfos(this.bobAddr, 1))
+            bobInfo = (await this.aAdapter.userAdapterInfos(this.bobAddr, 2))
                 .invested;
             expect(bobInfo).to.eq(BigNumber.from(0));
         });
 
         it("(5) test TVL & participants after Alice & Bob withdraw", async function () {
-            const nftInfo = await this.adapterInfo.adapterInfo(1);
+            const nftInfo = await this.adapterInfo.adapterInfo(2);
 
             expect(
                 Number(

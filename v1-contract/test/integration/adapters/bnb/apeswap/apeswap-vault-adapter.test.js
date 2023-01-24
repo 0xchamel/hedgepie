@@ -30,9 +30,7 @@ describe("ApeswapVaultAdapter Integration Test", function () {
         this.treasuryAddr = treasury.address;
 
         // Deploy Apeswap Vault Adapter contract
-        const ApeVaultAdapter = await adapterFixtureBsc(
-            "ApeswapVaultAdapter"
-        );
+        const ApeVaultAdapter = await adapterFixtureBsc("ApeswapVaultAdapter");
         this.aAdapter = await ApeVaultAdapter.deploy(
             5, // PID
             strategy,
@@ -185,13 +183,14 @@ describe("ApeswapVaultAdapter Integration Test", function () {
                 .sub(beforeBNB)
                 .add(gas.mul(gasPrice));
 
-            if(pending > 0)
+            if (pending > 0) {
                 expect(pending).to.be.within(
                     actualPending,
                     actualPending.add(BigNumber.from(2e14))
-                )
-            
-            if(protocolFee > 0)
+                );
+            }
+
+            if (protocolFee > 0) {
                 expect(protocolFee).to.be.within(
                     actualPending.mul(this.performanceFee).div(1e4),
                     actualPending
@@ -199,6 +198,7 @@ describe("ApeswapVaultAdapter Integration Test", function () {
                         .mul(this.performanceFee)
                         .div(1e4)
                 );
+            }
         });
 
         it("(6) test TVL & participants", async function () {

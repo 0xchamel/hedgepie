@@ -101,38 +101,33 @@ describe("AlpacaStakeAdapter Integration Test", function () {
                 this.aliceAddr,
                 1
             );
-            const adapterInfos = await this.aAdapter.adapterInfos(1);
+            const adapterInfos = await this.aAdapter.mAdapter();
             expect(BigNumber.from(adapterInfos.totalStaked)).to.eq(
                 BigNumber.from(aliceAdapterInfos.amount)
             );
         });
 
         it("(4) deposit should success for Bob", async function () {
-            const beforeAdapterInfos = await this.aAdapter.adapterInfos(1);
-            const depositAmount = ethers.utils.parseEther("10");
+            const beforeAdapterInfos = await this.aAdapter.mAdapter();
+            const depositAmount = ethers.utils.parseEther("100");
 
-            await this.investor.connect(this.bob).depositBNB(1, depositAmount, {
-                gasPrice: 21e9,
-                value: depositAmount,
-            });
-
-            await this.investor.connect(this.bob).depositBNB(1, depositAmount, {
+            await this.investor.connect(this.bob).depositBNB(2, depositAmount, {
                 gasPrice: 21e9,
                 value: depositAmount,
             });
 
             const bobInfo = (
-                await this.aAdapter.userAdapterInfos(this.bobAddr, 1)
+                await this.aAdapter.userAdapterInfos(this.bobAddr, 2)
             ).invested;
-            expect(Number(bobInfo) / Math.pow(10, 18)).to.eq(20);
+            expect(Number(bobInfo) / Math.pow(10, 18)).to.eq(100);
 
             const bobAdapterInfos = await this.aAdapter.userAdapterInfos(
                 this.bobAddr,
-                1
+                2
             );
             expect(BigNumber.from(bobAdapterInfos.amount).gt(0)).to.eq(true);
 
-            const afterAdapterInfos = await this.aAdapter.adapterInfos(1);
+            const afterAdapterInfos = await this.aAdapter.mAdapter();
 
             expect(
                 BigNumber.from(afterAdapterInfos.totalStaked).gt(
@@ -141,7 +136,30 @@ describe("AlpacaStakeAdapter Integration Test", function () {
             ).to.eq(true);
         });
 
-        it("(5) test pendingReward function and protocol-fee", async function () {
+        it("(5) check pendingReward from two YBNFT", async function () {
+            // wait 40 mins
+            for (let i = 0; i < 7200; i++) {
+                await ethers.provider.send("evm_mine", []);
+            }
+            await ethers.provider.send("evm_increaseTime", [3600 * 24]);
+            await ethers.provider.send("evm_mine", []);
+            const pending1 = await this.investor.pendingReward(
+                1,
+                this.aliceAddr
+            );
+            const pending2 = await this.investor.pendingReward(2, this.bobAddr);
+
+            expect(
+                BigNumber.from(pending2).gt(BigNumber.from(pending1).mul(9))
+            ).to.eq(true) &&
+                expect(
+                    BigNumber.from(pending2).lt(
+                        BigNumber.from(pending1).mul(11)
+                    )
+                ).to.eq(true);
+        });
+
+        it("(6) test pendingReward function and protocol-fee", async function () {
             const pending = await this.investor.pendingReward(
                 1,
                 this.aliceAddr
@@ -149,8 +167,9 @@ describe("AlpacaStakeAdapter Integration Test", function () {
             expect(BigNumber.from(pending).gt(0)).to.be.eq(true);
         });
 
-        it("(6) test TVL & participants", async function () {
+        it("(7) test TVL & participants", async function () {
             const nftInfo = await this.adapterInfo.adapterInfo(1);
+            const nftInfo1 = await this.adapterInfo.adapterInfo(2);
 
             expect(
                 Number(
@@ -158,10 +177,20 @@ describe("AlpacaStakeAdapter Integration Test", function () {
                         BigNumber.from(nftInfo.tvl).toString()
                     )
                 )
-            ).to.be.eq(30) &&
+            ).to.be.eq(10) &&
                 expect(BigNumber.from(nftInfo.participant).toString()).to.be.eq(
-                    "2"
-                );
+                    "1"
+                ) &&
+                expect(
+                    Number(
+                        ethers.utils.formatEther(
+                            BigNumber.from(nftInfo1.tvl).toString()
+                        )
+                    )
+                ).to.be.eq(100) &&
+                expect(
+                    BigNumber.from(nftInfo1.participant).toString()
+                ).to.be.eq("1");
         });
     });
 
@@ -194,15 +223,16 @@ describe("AlpacaStakeAdapter Integration Test", function () {
                 BigNumber.from(afterBNB).gt(BigNumber.from(beforeBNB))
             ).to.eq(true);
 
-            aliceInfo = (await this.aAdapter.userAdapterInfos(this.aliceAddr, 1))
-                .invested;
+            aliceInfo = (
+                await this.aAdapter.userAdapterInfos(this.aliceAddr, 1)
+            ).invested;
             expect(aliceInfo).to.eq(BigNumber.from(0));
 
             const bobInfo = (
-                await this.aAdapter.userAdapterInfos(this.bobAddr, 1)
+                await this.aAdapter.userAdapterInfos(this.bobAddr, 2)
             ).invested;
             const bobDeposit = Number(bobInfo) / Math.pow(10, 18);
-            expect(bobDeposit).to.eq(20);
+            expect(bobDeposit).to.eq(100);
         });
 
         it("(3) test TVL & participants after Alice withdraw", async function () {
@@ -214,9 +244,9 @@ describe("AlpacaStakeAdapter Integration Test", function () {
                         BigNumber.from(nftInfo.tvl).toString()
                     )
                 )
-            ).to.be.eq(20) &&
+            ).to.be.eq(0) &&
                 expect(BigNumber.from(nftInfo.participant).toString()).to.be.eq(
-                    "1"
+                    "0"
                 );
         });
 
@@ -226,11 +256,12 @@ describe("AlpacaStakeAdapter Integration Test", function () {
             const beforeOwnerBNB = await ethers.provider.getBalance(
                 this.treasuryAddr
             );
-            let bobInfo = (await this.aAdapter.userAdapterInfos(this.bobAddr, 1))
-                .invested;
+            let bobInfo = (
+                await this.aAdapter.userAdapterInfos(this.bobAddr, 2)
+            ).invested;
 
             await expect(
-                this.investor.connect(this.bob).withdrawBNB(1)
+                this.investor.connect(this.bob).withdrawBNB(2)
             ).to.emit(this.investor, "WithdrawBNB");
 
             const afterBNB = await ethers.provider.getBalance(this.bobAddr);
@@ -238,13 +269,13 @@ describe("AlpacaStakeAdapter Integration Test", function () {
                 BigNumber.from(afterBNB).gt(BigNumber.from(beforeBNB))
             ).to.eq(true);
 
-            bobInfo = (await this.aAdapter.userAdapterInfos(this.bobAddr, 1))
+            bobInfo = (await this.aAdapter.userAdapterInfos(this.bobAddr, 2))
                 .invested;
             expect(bobInfo).to.eq(BigNumber.from(0));
         });
 
         it("(5) test TVL & participants after Alice & Bob withdraw", async function () {
-            const nftInfo = await this.adapterInfo.adapterInfo(1);
+            const nftInfo = await this.adapterInfo.adapterInfo(2);
 
             expect(
                 Number(
