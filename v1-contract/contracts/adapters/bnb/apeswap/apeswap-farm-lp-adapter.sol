@@ -57,7 +57,7 @@ contract ApeswapFarmLPAdapter is BaseAdapterBsc {
         address _account
     ) external payable override onlyInvestor returns (uint256 amountOut) {
         require(msg.value == _amountIn, "Error: msg.value is not correct");
-        AdapterInfo storage adapterInfo = adapterInfos[_tokenId];
+
         UserAdapterInfo storage userInfo = userAdapterInfos[_account][_tokenId];
 
         // get LP
@@ -74,19 +74,25 @@ contract ApeswapFarmLPAdapter is BaseAdapterBsc {
         IStrategy(strategy).deposit(pid, amountOut);
 
         unchecked {
-            rewardAmt = IBEP20(rewardToken).balanceOf(address(this))
-                - rewardAmt;
+            rewardAmt =
+                IBEP20(rewardToken).balanceOf(address(this)) -
+                rewardAmt;
 
-            adapterInfo.totalStaked += amountOut;
-            if (rewardAmt != 0) {
-                adapterInfo.accTokenPerShare +=
+            if (rewardAmt != 0 && mAdapter.totalStaked != 0) {
+                mAdapter.accTokenPerShare +=
                     (rewardAmt * 1e12) /
-                    adapterInfo.totalStaked;
+                    mAdapter.totalStaked;
+            }
+            mAdapter.totalStaked += amountOut;
+
+            if (userInfo.amount != 0) {
+                userInfo.rewardDebt +=
+                    (userInfo.amount *
+                        (mAdapter.accTokenPerShare - userInfo.userShares)) /
+                    1e12;
             }
 
-            if (userInfo.amount == 0) {
-                userInfo.userShares = adapterInfo.accTokenPerShare;
-            }
+            userInfo.userShares = mAdapter.accTokenPerShare;
             userInfo.amount += amountOut;
             userInfo.invested += _amountIn;
         }
@@ -123,7 +129,6 @@ contract ApeswapFarmLPAdapter is BaseAdapterBsc {
         onlyInvestor
         returns (uint256 amountOut)
     {
-        AdapterInfo storage adapterInfo = adapterInfos[_tokenId];
         UserAdapterInfo memory userInfo = userAdapterInfos[_account][_tokenId];
 
         amountOut = IBEP20(stakingToken).balanceOf(address(this));
@@ -133,26 +138,28 @@ contract ApeswapFarmLPAdapter is BaseAdapterBsc {
         IStrategy(strategy).withdraw(pid, userInfo.amount);
 
         unchecked {
-            amountOut = IBEP20(stakingToken).balanceOf(address(this))
-                - amountOut;
+            amountOut =
+                IBEP20(stakingToken).balanceOf(address(this)) -
+                amountOut;
 
-            rewardAmt = IBEP20(rewardToken).balanceOf(address(this))
-                - rewardAmt;
+            rewardAmt =
+                IBEP20(rewardToken).balanceOf(address(this)) -
+                rewardAmt;
         }
 
         if (rewardAmt != 0) {
-            adapterInfo.accTokenPerShare +=
+            mAdapter.accTokenPerShare +=
                 (rewardAmt * 1e12) /
-                adapterInfo.totalStaked;
+                mAdapter.totalStaked;
         }
-        
+
         amountOut = HedgepieLibraryBsc.withdrawLP(
             IYBNFT.Adapter(0, stakingToken, address(this), 0, 0),
             wbnb,
             amountOut
         );
 
-        (uint256 reward, ) = HedgepieLibraryBsc.getRewards(
+        (uint256 reward, ) = HedgepieLibraryBsc.getMRewards(
             _tokenId,
             address(this),
             _account
@@ -196,7 +203,7 @@ contract ApeswapFarmLPAdapter is BaseAdapterBsc {
         );
 
         unchecked {
-            adapterInfo.totalStaked -= userInfo.amount;
+            mAdapter.totalStaked -= userInfo.amount;
         }
 
         delete userAdapterInfos[_account][_tokenId];
@@ -214,9 +221,7 @@ contract ApeswapFarmLPAdapter is BaseAdapterBsc {
                 require(success, "Failed to send bnb to Treasury");
             }
 
-            (success, ) = payable(_account).call{value: amountOut - reward}(
-                ""
-            );
+            (success, ) = payable(_account).call{value: amountOut - reward}("");
             require(success, "Failed to send bnb");
         }
     }
@@ -235,13 +240,13 @@ contract ApeswapFarmLPAdapter is BaseAdapterBsc {
     {
         UserAdapterInfo storage userInfo = userAdapterInfos[_account][_tokenId];
 
-        (uint256 reward, ) = HedgepieLibraryBsc.getRewards(
+        (uint256 reward, ) = HedgepieLibraryBsc.getMRewards(
             _tokenId,
             address(this),
             _account
         );
 
-        userInfo.userShares = adapterInfos[_tokenId].accTokenPerShare;
+        userInfo.userShares = mAdapter.accTokenPerShare;
 
         if (reward != 0) {
             amountOut = HedgepieLibraryBsc.swapforBnb(
@@ -251,7 +256,7 @@ contract ApeswapFarmLPAdapter is BaseAdapterBsc {
                 router,
                 wbnb
             );
-        
+
             uint256 taxAmount = (amountOut *
                 IYBNFT(IHedgepieInvestorBsc(investor).ybnft()).performanceFee(
                     _tokenId
@@ -266,8 +271,9 @@ contract ApeswapFarmLPAdapter is BaseAdapterBsc {
             );
             require(success, "Failed to send bnb");
 
-            IHedgepieAdapterInfoBsc(IHedgepieInvestorBsc(investor).adapterInfo())
-                .updateProfitInfo(_tokenId, amountOut, true);
+            IHedgepieAdapterInfoBsc(
+                IHedgepieInvestorBsc(investor).adapterInfo()
+            ).updateProfitInfo(_tokenId, amountOut, true);
         }
     }
 
@@ -283,11 +289,10 @@ contract ApeswapFarmLPAdapter is BaseAdapterBsc {
         returns (uint256 reward)
     {
         UserAdapterInfo memory userInfo = userAdapterInfos[_account][_tokenId];
-        AdapterInfo memory adapterInfo = adapterInfos[_tokenId];
 
-        uint256 updatedAccTokenPerShare = adapterInfo.accTokenPerShare +
+        uint256 updatedAccTokenPerShare = mAdapter.accTokenPerShare +
             ((IStrategy(strategy).pendingCake(pid, address(this)) * 1e12) /
-                adapterInfo.totalStaked);
+                mAdapter.totalStaked);
 
         uint256 tokenRewards = ((updatedAccTokenPerShare -
             userInfo.userShares) * userInfo.amount) / 1e12;

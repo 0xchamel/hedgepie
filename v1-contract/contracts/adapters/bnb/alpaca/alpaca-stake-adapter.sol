@@ -6,9 +6,17 @@ import "../../../interfaces/IHedgepieInvestorBsc.sol";
 import "../../../interfaces/IHedgepieAdapterInfoBsc.sol";
 
 interface IFairLaunch {
-    function deposit(address, uint256, uint256) external;
+    function deposit(
+        address,
+        uint256,
+        uint256
+    ) external;
 
-    function withdraw(address,uint256,uint256) external;
+    function withdraw(
+        address,
+        uint256,
+        uint256
+    ) external;
 
     function pendingAlpaca(uint256 pid, address user)
         external
@@ -54,15 +62,15 @@ contract AlpacaStakeAdapter is BaseAdapterBsc {
      * @notice Get ib Wrapped token
      * @param _amountIn  Amount of underlying token
      */
-    function _getWrapToken(uint256 _amountIn) 
-        internal 
-        returns(uint256 amountOut) 
+    function _getWrapToken(uint256 _amountIn)
+        internal
+        returns (uint256 amountOut)
     {
         amountOut = IBEP20(stakingToken).balanceOf(address(this));
-        
+
         IBEP20(wrapToken).approve(stakingToken, _amountIn);
         IWrap(stakingToken).deposit(_amountIn);
-        
+
         unchecked {
             amountOut =
                 IBEP20(stakingToken).balanceOf(address(this)) -
@@ -74,18 +82,16 @@ contract AlpacaStakeAdapter is BaseAdapterBsc {
      * @notice Unwrap ib token
      * @param _amountIn  Amount of ib token
      */
-    function _unwrapToken(uint256 _amountIn) 
-        internal 
-        returns(uint256 amountOut) 
+    function _unwrapToken(uint256 _amountIn)
+        internal
+        returns (uint256 amountOut)
     {
         amountOut = IBEP20(wrapToken).balanceOf(address(this));
-        
+
         IWrap(stakingToken).withdraw(_amountIn);
-        
+
         unchecked {
-            amountOut =
-                IBEP20(wrapToken).balanceOf(address(this)) -
-                amountOut;
+            amountOut = IBEP20(wrapToken).balanceOf(address(this)) - amountOut;
         }
     }
 
@@ -101,7 +107,6 @@ contract AlpacaStakeAdapter is BaseAdapterBsc {
         address _account
     ) external payable override onlyInvestor returns (uint256 amountOut) {
         require(msg.value == _amountIn, "Error: msg.value is not correct");
-        AdapterInfo storage adapterInfo = adapterInfos[_tokenId];
         UserAdapterInfo storage userInfo = userAdapterInfos[_account][_tokenId];
 
         // get wrap token
@@ -124,16 +129,24 @@ contract AlpacaStakeAdapter is BaseAdapterBsc {
 
         rewardAmt = IBEP20(rewardToken).balanceOf(address(this)) - rewardAmt;
 
-        adapterInfo.totalStaked += amountOut;
-        if (rewardAmt != 0 && rewardToken != address(0)) {
-            adapterInfo.accTokenPerShare +=
+        if (
+            rewardAmt != 0 &&
+            rewardToken != address(0) &&
+            mAdapter.totalStaked != 0
+        ) {
+            mAdapter.accTokenPerShare +=
                 (rewardAmt * 1e12) /
-                adapterInfo.totalStaked;
+                mAdapter.totalStaked;
         }
+        mAdapter.totalStaked += amountOut;
 
-        if (userInfo.amount == 0) {
-            userInfo.userShares = adapterInfo.accTokenPerShare;
+        if (userInfo.amount != 0) {
+            userInfo.rewardDebt +=
+                (userInfo.amount *
+                    (mAdapter.accTokenPerShare - userInfo.userShares)) /
+                1e12;
         }
+        userInfo.userShares = mAdapter.accTokenPerShare;
         userInfo.amount += amountOut;
         userInfo.invested += _amountIn;
 
@@ -169,22 +182,21 @@ contract AlpacaStakeAdapter is BaseAdapterBsc {
         onlyInvestor
         returns (uint256 amountOut)
     {
-        AdapterInfo storage adapterInfo = adapterInfos[_tokenId];
         UserAdapterInfo memory userInfo = userAdapterInfos[_account][_tokenId];
 
         amountOut = IBEP20(stakingToken).balanceOf(address(this));
         uint256 rewardAmt = IBEP20(rewardToken).balanceOf(address(this));
 
         // withdraw from MasterChef
-        IFairLaunch(strategy).withdraw(
-            address(this),
-            pid,
-            userInfo.amount
-        );
+        IFairLaunch(strategy).withdraw(address(this), pid, userInfo.amount);
 
         unchecked {
-            amountOut = IBEP20(stakingToken).balanceOf(address(this)) - amountOut;
-            rewardAmt = IBEP20(rewardToken).balanceOf(address(this)) - rewardAmt;
+            amountOut =
+                IBEP20(stakingToken).balanceOf(address(this)) -
+                amountOut;
+            rewardAmt =
+                IBEP20(rewardToken).balanceOf(address(this)) -
+                rewardAmt;
         }
 
         // unwrap token
@@ -203,7 +215,7 @@ contract AlpacaStakeAdapter is BaseAdapterBsc {
             .adapterInfo();
 
         // swap reward to BNB
-        if(rewardAmt != 0) {
+        if (rewardAmt != 0) {
             rewardAmt = HedgepieLibraryBsc.swapforBnb(
                 rewardAmt,
                 address(this),
@@ -239,7 +251,7 @@ contract AlpacaStakeAdapter is BaseAdapterBsc {
         );
 
         unchecked {
-            adapterInfo.totalStaked -= userInfo.amount;
+            mAdapter.totalStaked -= userInfo.amount;
         }
 
         delete userAdapterInfos[_account][_tokenId];
@@ -257,7 +269,9 @@ contract AlpacaStakeAdapter is BaseAdapterBsc {
                 require(success, "Failed to send bnb to Treasury");
             }
 
-            (success, ) = payable(_account).call{value: amountOut - rewardAmt}("");
+            (success, ) = payable(_account).call{value: amountOut - rewardAmt}(
+                ""
+            );
             require(success, "Failed to send bnb");
         }
     }
@@ -276,13 +290,13 @@ contract AlpacaStakeAdapter is BaseAdapterBsc {
     {
         UserAdapterInfo storage userInfo = userAdapterInfos[_account][_tokenId];
 
-        (uint256 reward, ) = HedgepieLibraryBsc.getRewards(
+        (uint256 reward, ) = HedgepieLibraryBsc.getMRewards(
             _tokenId,
             address(this),
             _account
         );
 
-        userInfo.userShares = adapterInfos[_tokenId].accTokenPerShare;
+        userInfo.userShares = mAdapter.accTokenPerShare;
 
         if (reward != 0 && rewardToken != address(0)) {
             amountOut += HedgepieLibraryBsc.swapforBnb(
@@ -326,11 +340,10 @@ contract AlpacaStakeAdapter is BaseAdapterBsc {
         returns (uint256 reward)
     {
         UserAdapterInfo memory userInfo = userAdapterInfos[_account][_tokenId];
-        AdapterInfo memory adapterInfo = adapterInfos[_tokenId];
 
-        uint256 updatedAccTokenPerShare = adapterInfo.accTokenPerShare +
+        uint256 updatedAccTokenPerShare = mAdapter.accTokenPerShare +
             ((IFairLaunch(strategy).pendingAlpaca(pid, address(this)) * 1e12) /
-                adapterInfo.totalStaked);
+                mAdapter.totalStaked);
 
         uint256 tokenRewards = ((updatedAccTokenPerShare -
             userInfo.userShares) * userInfo.amount) / 1e12;

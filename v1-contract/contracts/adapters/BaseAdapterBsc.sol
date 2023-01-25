@@ -9,6 +9,8 @@ abstract contract BaseAdapterBsc is Ownable {
         uint256 invested; // Current staked ether amount
         uint256 userShares; // First reward token share
         uint256 userShares1; // Second reward token share
+        uint256 rewardDebt; // Reward Debt for reward token1
+        uint256 rewardDebt1; // Reward Debt for reward token2
     }
 
     struct AdapterInfo {
@@ -38,6 +40,8 @@ abstract contract BaseAdapterBsc is Ownable {
     address public wbnb;
 
     string public name;
+
+    AdapterInfo public mAdapter;
 
     // inToken => outToken => paths
     mapping(address => mapping(address => address[])) public paths;

@@ -97,6 +97,43 @@ library HedgepieLibraryBsc {
         }
     }
 
+    function getMRewards(
+        uint256 _tokenId,
+        address _adapterAddr,
+        address _account
+    ) public view returns (uint256 reward, uint256 reward1) {
+        BaseAdapterBsc.AdapterInfo memory adapterInfo = IAdapterBsc(
+            _adapterAddr
+        ).mAdapter();
+        BaseAdapterBsc.UserAdapterInfo memory userInfo = IAdapterBsc(
+            _adapterAddr
+        ).userAdapterInfos(_account, _tokenId);
+
+        if (
+            IAdapterBsc(_adapterAddr).rewardToken() != address(0) &&
+            adapterInfo.totalStaked != 0 &&
+            adapterInfo.accTokenPerShare != 0
+        ) {
+            reward =
+                (userInfo.amount *
+                    (adapterInfo.accTokenPerShare - userInfo.userShares)) /
+                1e12 +
+                userInfo.rewardDebt;
+        }
+
+        if (
+            IAdapterBsc(_adapterAddr).rewardToken1() != address(0) &&
+            adapterInfo.totalStaked != 0 &&
+            adapterInfo.accTokenPerShare1 != 0
+        ) {
+            reward1 =
+                (userInfo.amount *
+                    (adapterInfo.accTokenPerShare1 - userInfo.userShares1)) /
+                1e12 +
+                userInfo.rewardDebt1;
+        }
+    }
+
     function getLP(
         IYBNFT.Adapter memory _adapter,
         address wbnb,

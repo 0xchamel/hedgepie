@@ -54,4 +54,9 @@ interface IAdapterBsc {
         external
         view
         returns (BaseAdapterBsc.UserAdapterInfo memory);
+
+    function mAdapter()
+        external
+        view
+        returns (BaseAdapterBsc.AdapterInfo memory);
 }

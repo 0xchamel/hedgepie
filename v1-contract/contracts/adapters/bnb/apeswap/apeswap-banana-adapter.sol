@@ -33,6 +33,7 @@ contract ApeswapBananaAdapter is BaseAdapterBsc {
         string memory _name
     ) {
         stakingToken = _stakingToken;
+        rewardToken = _stakingToken;
         repayToken = _repayToken;
         strategy = _strategy;
         router = _router;
@@ -52,7 +53,7 @@ contract ApeswapBananaAdapter is BaseAdapterBsc {
         address _account
     ) external payable override onlyInvestor returns (uint256 amountOut) {
         require(msg.value == _amountIn, "Error: msg.value is not correct");
-        AdapterInfo storage adapterInfo = adapterInfos[_tokenId];
+
         UserAdapterInfo storage userInfo = userAdapterInfos[_account][_tokenId];
 
         // get token
@@ -65,25 +66,32 @@ contract ApeswapBananaAdapter is BaseAdapterBsc {
         );
 
         // deposit
-        uint256 shareAmt = IBEP20(repayToken).balanceOf(address(this));
+        uint256 shareAmt = IBEP20(rewardToken).balanceOf(address(this));
 
         IBEP20(stakingToken).approve(strategy, amountOut);
         IStrategy(strategy).enterStaking(amountOut);
 
         unchecked {
-            shareAmt = IBEP20(repayToken).balanceOf(address(this))
-                - shareAmt;
+            shareAmt =
+                IBEP20(rewardToken).balanceOf(address(this)) +
+                amountOut -
+                shareAmt;
 
-            adapterInfo.totalStaked += amountOut;
-            if (shareAmt != 0) {
-                adapterInfo.accTokenPerShare +=
+            if (shareAmt != 0 && mAdapter.totalStaked != 0) {
+                mAdapter.accTokenPerShare +=
                     (shareAmt * 1e12) /
-                    adapterInfo.totalStaked;
+                    mAdapter.totalStaked;
+            }
+            mAdapter.totalStaked += amountOut;
+
+            if (userInfo.amount != 0) {
+                userInfo.rewardDebt +=
+                    (userInfo.amount *
+                        (mAdapter.accTokenPerShare - userInfo.userShares)) /
+                    1e12;
             }
 
-            if (userInfo.amount == 0) {
-                userInfo.userShares = adapterInfo.accTokenPerShare;
-            }
+            userInfo.userShares = mAdapter.accTokenPerShare;
             userInfo.amount += amountOut;
             userInfo.invested += _amountIn;
         }
@@ -120,40 +128,66 @@ contract ApeswapBananaAdapter is BaseAdapterBsc {
         onlyInvestor
         returns (uint256 amountOut)
     {
-        AdapterInfo storage adapterInfo = adapterInfos[_tokenId];
         UserAdapterInfo memory userInfo = userAdapterInfos[_account][_tokenId];
 
-        amountOut = IBEP20(stakingToken).balanceOf(address(this));
+        uint256 rewardAmt = IBEP20(rewardToken).balanceOf(address(this));
 
         // withdraw
         IStrategy(strategy).leaveStaking(userInfo.amount);
 
         unchecked {
-            amountOut = IBEP20(stakingToken).balanceOf(address(this))
-                - amountOut;
+            rewardAmt =
+                IBEP20(rewardToken).balanceOf(address(this)) -
+                userInfo.amount -
+                rewardAmt;
+        }
+
+        if (
+            rewardAmt != 0 &&
+            rewardToken != address(0) &&
+            mAdapter.totalStaked != 0
+        ) {
+            mAdapter.accTokenPerShare +=
+                (rewardAmt * 1e12) /
+                mAdapter.totalStaked;
         }
 
         amountOut = HedgepieLibraryBsc.swapforBnb(
-            amountOut,
+            userInfo.amount,
             address(this),
             stakingToken,
             router,
             wbnb
         );
 
+        (uint256 reward, ) = HedgepieLibraryBsc.getMRewards(
+            _tokenId,
+            address(this),
+            _account
+        );
+
+        uint256 rewardBnb;
+        if (reward != 0) {
+            rewardBnb = HedgepieLibraryBsc.swapforBnb(
+                reward,
+                address(this),
+                rewardToken,
+                router,
+                wbnb
+            );
+        }
+
         address adapterInfoBnbAddr = IHedgepieInvestorBsc(investor)
             .adapterInfo();
 
-        uint256 reward;
-        if (amountOut > userInfo.invested) {
-            reward = amountOut - userInfo.invested;
-
+        if (rewardBnb != 0) {
+            amountOut += rewardBnb;
             IHedgepieAdapterInfoBsc(adapterInfoBnbAddr).updateProfitInfo(
                 _tokenId,
-                reward,
+                rewardBnb,
                 true
             );
-        }        
+        }
 
         // Update adapterInfo contract
         IHedgepieAdapterInfoBsc(adapterInfoBnbAddr).updateTVLInfo(
@@ -173,26 +207,80 @@ contract ApeswapBananaAdapter is BaseAdapterBsc {
         );
 
         unchecked {
-            adapterInfo.totalStaked -= userInfo.amount;
+            mAdapter.totalStaked -= userInfo.amount;
         }
 
         delete userAdapterInfos[_account][_tokenId];
 
         if (amountOut != 0) {
             bool success;
-            if (reward != 0) {
-                reward =
-                    (reward *
+            if (rewardBnb != 0) {
+                rewardBnb =
+                    (rewardBnb *
                         IYBNFT(IHedgepieInvestorBsc(investor).ybnft())
                             .performanceFee(_tokenId)) /
                     1e4;
                 (success, ) = payable(IHedgepieInvestorBsc(investor).treasury())
-                    .call{value: reward}("");
+                    .call{value: rewardBnb}("");
                 require(success, "Failed to send bnb to Treasury");
             }
 
-            (success, ) = payable(_account).call{value: amountOut - reward}("");
+            (success, ) = payable(_account).call{value: amountOut - rewardBnb}(
+                ""
+            );
             require(success, "Failed to send bnb");
+        }
+    }
+
+    /**
+     * @notice Claim the pending reward
+     * @param _tokenId YBNFT token id
+     * @param _account user wallet address
+     */
+    function claim(uint256 _tokenId, address _account)
+        external
+        payable
+        override
+        onlyInvestor
+        returns (uint256 amountOut)
+    {
+        UserAdapterInfo storage userInfo = userAdapterInfos[_account][_tokenId];
+
+        (uint256 reward, ) = HedgepieLibraryBsc.getMRewards(
+            _tokenId,
+            address(this),
+            _account
+        );
+
+        userInfo.userShares = mAdapter.accTokenPerShare;
+        userInfo.userShares1 = mAdapter.accTokenPerShare1;
+
+        if (reward != 0 && rewardToken != address(0)) {
+            amountOut = HedgepieLibraryBsc.swapforBnb(
+                reward,
+                address(this),
+                rewardToken,
+                router,
+                wbnb
+            );
+
+            uint256 taxAmount = (amountOut *
+                IYBNFT(IHedgepieInvestorBsc(investor).ybnft()).performanceFee(
+                    _tokenId
+                )) / 1e4;
+            (bool success, ) = payable(
+                IHedgepieInvestorBsc(investor).treasury()
+            ).call{value: taxAmount}("");
+            require(success, "Failed to send bnb to Treasury");
+
+            (success, ) = payable(_account).call{value: amountOut - taxAmount}(
+                ""
+            );
+            require(success, "Failed to send bnb");
+
+            IHedgepieAdapterInfoBsc(
+                IHedgepieInvestorBsc(investor).adapterInfo()
+            ).updateProfitInfo(_tokenId, amountOut, true);
         }
     }
 
@@ -207,16 +295,15 @@ contract ApeswapBananaAdapter is BaseAdapterBsc {
         override
         returns (uint256 reward)
     {
-        AdapterInfo memory adapterInfo = adapterInfos[_tokenId];
         UserAdapterInfo memory userInfo = userAdapterInfos[_account][_tokenId];
 
-        uint256 updatedAccTokenPerShare = adapterInfo.accTokenPerShare +
+        uint256 updatedAccTokenPerShare = mAdapter.accTokenPerShare +
             ((IStrategy(strategy).pendingCake(0, address(this)) * 1e12) /
-                adapterInfo.totalStaked);
+                mAdapter.totalStaked);
 
         uint256 tokenRewards = ((updatedAccTokenPerShare -
             userInfo.userShares) * userInfo.amount) / 1e12;
-        
+
         if (tokenRewards != 0)
             reward = stakingToken == wbnb
                 ? tokenRewards

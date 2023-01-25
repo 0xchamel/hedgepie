@@ -109,10 +109,6 @@ describe("VenusShortLevAdapter Integration Test", function () {
             expect(Number(aliceInfo.invested) / Math.pow(10, 18)).to.eq(10);
 
             const adapterInfo = await this.adapter.adapterInfos(1);
-            console.log(
-                await this.vBusd.balanceOf(this.adapter.address),
-                await this.busdToken.balanceOf(this.adapter.address)
-            );
             expect(BigNumber.from(adapterInfo.totalStaked)).to.eq(
                 BigNumber.from(aliceInfo.amount)
             );
