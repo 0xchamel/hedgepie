@@ -10,7 +10,8 @@ const BigNumber = ethers.BigNumber;
 
 describe("AlpacaStakeAdapter Integration Test", function () {
     before("Deploy contract", async function () {
-        const [owner, alice, bob, treasury] = await ethers.getSigners();
+        const [owner, alice, bob, treasury, kyle, jerry] =
+            await ethers.getSigners();
 
         const wbnb = "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c";
         const strategy = "0xA625AB01B08ce023B2a342Dbb12a16f2C8489A8F"; // FairLaunch
@@ -19,10 +20,12 @@ describe("AlpacaStakeAdapter Integration Test", function () {
         const wrapToken = "0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82"; // Cake
         const swapRouter = "0x10ED43C718714eb63d5aA57B78B54704E256024E"; // pks rounter address
 
-        this.performanceFee = 50;
+        this.performanceFee = 100;
         this.owner = owner;
         this.alice = alice;
         this.bob = bob;
+        this.kyle = kyle;
+        this.jerry = jerry;
 
         this.bobAddr = bob.address;
         this.aliceAddr = alice.address;
@@ -136,38 +139,7 @@ describe("AlpacaStakeAdapter Integration Test", function () {
             ).to.eq(true);
         });
 
-        it("(5) check pendingReward from two YBNFT", async function () {
-            // wait 40 mins
-            for (let i = 0; i < 7200; i++) {
-                await ethers.provider.send("evm_mine", []);
-            }
-            await ethers.provider.send("evm_increaseTime", [3600 * 24]);
-            await ethers.provider.send("evm_mine", []);
-            const pending1 = await this.investor.pendingReward(
-                1,
-                this.aliceAddr
-            );
-            const pending2 = await this.investor.pendingReward(2, this.bobAddr);
-
-            expect(
-                BigNumber.from(pending2).gt(BigNumber.from(pending1).mul(9))
-            ).to.eq(true) &&
-                expect(
-                    BigNumber.from(pending2).lt(
-                        BigNumber.from(pending1).mul(11)
-                    )
-                ).to.eq(true);
-        });
-
-        it("(6) test pendingReward function and protocol-fee", async function () {
-            const pending = await this.investor.pendingReward(
-                1,
-                this.aliceAddr
-            );
-            expect(BigNumber.from(pending).gt(0)).to.be.eq(true);
-        });
-
-        it("(7) test TVL & participants", async function () {
+        it("(5) test TVL & participants", async function () {
             const nftInfo = await this.adapterInfo.adapterInfo(1);
             const nftInfo1 = await this.adapterInfo.adapterInfo(2);
 
@@ -287,6 +259,104 @@ describe("AlpacaStakeAdapter Integration Test", function () {
                 expect(BigNumber.from(nftInfo.participant).toString()).to.be.eq(
                     "0"
                 );
+        });
+    });
+
+    describe("pendingReward(), claim() function tests and protocol-fee test", function () {
+        it("test with token1 and token2", async function () {
+            await this.investor
+                .connect(this.kyle)
+                .depositBNB(1, ethers.utils.parseEther("10"), {
+                    gasPrice: 21e9,
+                    value: ethers.utils.parseEther("10"),
+                });
+
+            await this.investor
+                .connect(this.jerry)
+                .depositBNB(2, ethers.utils.parseEther("100"), {
+                    gasPrice: 21e9,
+                    value: ethers.utils.parseEther("100"),
+                });
+
+            // wait 40 mins
+            for (let i = 0; i < 7200; i++) {
+                await ethers.provider.send("evm_mine", []);
+            }
+            await ethers.provider.send("evm_increaseTime", [3600 * 24]);
+            await ethers.provider.send("evm_mine", []);
+
+            // deposit from other user to update accTokenPerShare values
+            await this.investor
+                .connect(this.alice)
+                .depositBNB(2, ethers.utils.parseEther("1"), {
+                    gasPrice: 21e9,
+                    value: ethers.utils.parseEther("1"),
+                });
+
+            // check pending rewards
+            const pending1 = await this.investor.pendingReward(
+                1,
+                this.kyle.address
+            );
+            const pending2 = await this.investor.pendingReward(
+                2,
+                this.jerry.address
+            );
+            expect(
+                BigNumber.from(pending2).gt(BigNumber.from(pending1).mul(9))
+            ).to.eq(true);
+
+            // claim rewards
+            let treasuryAmt1 = await ethers.provider.getBalance(
+                this.treasuryAddr
+            );
+            const beforeAmt1 = await ethers.provider.getBalance(
+                this.kyle.address
+            );
+            const tx1 = await (
+                await this.investor.connect(this.kyle).claim(1)
+            ).wait();
+            const afterAmt1 = await ethers.provider.getBalance(
+                this.kyle.address
+            );
+            const actualReward1 = afterAmt1
+                .add(tx1.gasUsed.mul("1000000007"))
+                .sub(beforeAmt1);
+            treasuryAmt1 = (
+                await ethers.provider.getBalance(this.treasuryAddr)
+            ).sub(treasuryAmt1);
+
+            // check protocol fee
+            expect(actualReward1.div(99)).to.eq(treasuryAmt1);
+
+            let treasuryAmt2 = await ethers.provider.getBalance(
+                this.treasuryAddr
+            );
+            const beforeAmt2 = await ethers.provider.getBalance(
+                this.jerry.address
+            );
+            const tx2 = await (
+                await this.investor.connect(this.jerry).claim(2)
+            ).wait();
+            const afterAmt2 = await ethers.provider.getBalance(
+                this.jerry.address
+            );
+            const actualReward2 = afterAmt2
+                .add(tx2.gasUsed.mul("1000000007"))
+                .sub(beforeAmt2);
+            treasuryAmt2 = (
+                await ethers.provider.getBalance(this.treasuryAddr)
+            ).sub(treasuryAmt2);
+
+            // check protocol fee
+            expect(actualReward2.div(99)).to.eq(treasuryAmt2);
+
+            // Check mixed adapter reward results
+            expect(
+                BigNumber.from(actualReward2).gt(
+                    BigNumber.from(actualReward1).mul(9)
+                )
+            ).to.eq(true);
         });
     });
 });
