@@ -57,7 +57,7 @@ contract ApeswapFarmLPAdapter is BaseAdapterBsc {
         address _account
     ) external payable override onlyInvestor returns (uint256 amountOut) {
         require(msg.value == _amountIn, "Error: msg.value is not correct");
-        AdapterInfo storage adapterInfo = adapterInfos[_tokenId];
+
         UserAdapterInfo storage userInfo = userAdapterInfos[_account][_tokenId];
 
         // get LP
@@ -78,16 +78,21 @@ contract ApeswapFarmLPAdapter is BaseAdapterBsc {
                 IBEP20(rewardToken).balanceOf(address(this)) -
                 rewardAmt;
 
-            mAdapter.totalStaked += amountOut;
-            if (rewardAmt != 0) {
+            if (rewardAmt != 0 && mAdapter.totalStaked != 0) {
                 mAdapter.accTokenPerShare +=
                     (rewardAmt * 1e12) /
                     mAdapter.totalStaked;
             }
+            mAdapter.totalStaked += amountOut;
 
-            if (userInfo.amount == 0) {
-                userInfo.userShares = mAdapter.accTokenPerShare;
+            if (userInfo.amount != 0) {
+                userInfo.rewardDebt +=
+                    (userInfo.amount *
+                        (mAdapter.accTokenPerShare - userInfo.userShares)) /
+                    1e12;
             }
+
+            userInfo.userShares = mAdapter.accTokenPerShare;
             userInfo.amount += amountOut;
             userInfo.invested += _amountIn;
         }
@@ -124,7 +129,6 @@ contract ApeswapFarmLPAdapter is BaseAdapterBsc {
         onlyInvestor
         returns (uint256 amountOut)
     {
-        AdapterInfo storage adapterInfo = adapterInfos[_tokenId];
         UserAdapterInfo memory userInfo = userAdapterInfos[_account][_tokenId];
 
         amountOut = IBEP20(stakingToken).balanceOf(address(this));

@@ -129,16 +129,24 @@ contract AlpacaStakeAdapter is BaseAdapterBsc {
 
         rewardAmt = IBEP20(rewardToken).balanceOf(address(this)) - rewardAmt;
 
-        mAdapter.totalStaked += amountOut;
-        if (rewardAmt != 0 && rewardToken != address(0)) {
+        if (
+            rewardAmt != 0 &&
+            rewardToken != address(0) &&
+            mAdapter.totalStaked != 0
+        ) {
             mAdapter.accTokenPerShare +=
                 (rewardAmt * 1e12) /
                 mAdapter.totalStaked;
         }
+        mAdapter.totalStaked += amountOut;
 
-        if (userInfo.amount == 0) {
-            userInfo.userShares = mAdapter.accTokenPerShare;
+        if (userInfo.amount != 0) {
+            userInfo.rewardDebt +=
+                (userInfo.amount *
+                    (mAdapter.accTokenPerShare - userInfo.userShares)) /
+                1e12;
         }
+        userInfo.userShares = mAdapter.accTokenPerShare;
         userInfo.amount += amountOut;
         userInfo.invested += _amountIn;
 

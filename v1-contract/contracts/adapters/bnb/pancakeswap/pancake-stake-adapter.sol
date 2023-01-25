@@ -78,17 +78,29 @@ contract PancakeStakeAdapterBsc is BaseAdapterBsc {
 
         rewardAmt0 = IBEP20(rewardToken).balanceOf(address(this)) - rewardAmt0;
 
-        mAdapter.totalStaked += amountOut;
-        if (rewardAmt0 != 0 && rewardToken != address(0)) {
+        if (
+            rewardAmt0 != 0 &&
+            rewardToken != address(0) &&
+            mAdapter.totalStaked != 0
+        ) {
             mAdapter.accTokenPerShare +=
                 (rewardAmt0 * 1e12) /
                 mAdapter.totalStaked;
         }
+        mAdapter.totalStaked += amountOut;
 
-        if (userInfo.amount == 0) {
-            userInfo.userShares = mAdapter.accTokenPerShare;
-            userInfo.userShares1 = mAdapter.accTokenPerShare1;
+        if (userInfo.amount != 0) {
+            userInfo.rewardDebt +=
+                (userInfo.amount *
+                    (mAdapter.accTokenPerShare - userInfo.userShares)) /
+                1e12;
+            userInfo.rewardDebt1 +=
+                (userInfo.amount *
+                    (mAdapter.accTokenPerShare - userInfo.userShares)) /
+                1e12;
         }
+        userInfo.userShares = mAdapter.accTokenPerShare;
+        userInfo.userShares1 = mAdapter.accTokenPerShare1;
         userInfo.amount += amountOut;
         userInfo.invested += _amountIn;
 
@@ -139,7 +151,11 @@ contract PancakeStakeAdapterBsc is BaseAdapterBsc {
         rewardAmt0 = IBEP20(rewardToken).balanceOf(address(this)) - rewardAmt0;
         amountOut = IBEP20(stakingToken).balanceOf(address(this)) - amountOut;
 
-        if (rewardAmt0 != 0 && rewardToken != address(0)) {
+        if (
+            rewardAmt0 != 0 &&
+            rewardToken != address(0) &&
+            mAdapter.totalStaked != 0
+        ) {
             mAdapter.accTokenPerShare +=
                 (rewardAmt0 * 1e12) /
                 mAdapter.totalStaked;

@@ -115,9 +115,10 @@ library HedgepieLibraryBsc {
             adapterInfo.accTokenPerShare != 0
         ) {
             reward =
-                ((adapterInfo.accTokenPerShare - userInfo.userShares) *
-                    userInfo.amount) /
-                1e12;
+                (userInfo.amount *
+                    (adapterInfo.accTokenPerShare - userInfo.userShares)) /
+                1e12 +
+                userInfo.rewardDebt;
         }
 
         if (
@@ -126,9 +127,10 @@ library HedgepieLibraryBsc {
             adapterInfo.accTokenPerShare1 != 0
         ) {
             reward1 =
-                ((adapterInfo.accTokenPerShare1 - userInfo.userShares1) *
-                    userInfo.amount) /
-                1e12;
+                (userInfo.amount *
+                    (adapterInfo.accTokenPerShare1 - userInfo.userShares1)) /
+                1e12 +
+                userInfo.rewardDebt1;
         }
     }
 
