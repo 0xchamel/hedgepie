@@ -290,6 +290,21 @@ contract AlpacaStakeAdapter is BaseAdapterBsc {
     {
         UserAdapterInfo storage userInfo = userAdapterInfos[_account][_tokenId];
 
+        // claim reward
+        uint256 rewardAmt = IBEP20(rewardToken).balanceOf(address(this));
+        IFairLaunch(strategy).withdraw(address(this), pid, 0);
+        rewardAmt = IBEP20(rewardToken).balanceOf(address(this)) - rewardAmt;
+
+        if (
+            rewardAmt != 0 &&
+            rewardToken != address(0) &&
+            mAdapter.totalStaked != 0
+        ) {
+            mAdapter.accTokenPerShare +=
+                (rewardAmt * 1e12) /
+                mAdapter.totalStaked;
+        }
+
         (uint256 reward, ) = HedgepieLibraryBsc.getMRewards(
             _tokenId,
             address(this),
