@@ -53,6 +53,31 @@ contract HedgepieAdapterManagerBsc is Ownable {
     }
 
     /**
+     * @notice Get a list of adapters
+     */
+    function getAdapterInfo(address _adapterAddr)
+        external
+        view
+        returns (
+            address adapterAddr,
+            string memory name,
+            address stakingToken,
+            bool status
+        )
+    {
+        for (uint256 i; i < adapterInfo.length; i++) {
+            if (adapterInfo[i].addr == _adapterAddr && adapterInfo[i].status) {
+                adapterAddr = adapterInfo[i].addr;
+                name = adapterInfo[i].name;
+                stakingToken = adapterInfo[i].stakingToken;
+                status = adapterInfo[i].status;
+
+                break;
+            }
+        }
+    }
+
+    /**
      * @notice Get strategy address of adapter contract
      * @param _adapter  adapter address
      */
