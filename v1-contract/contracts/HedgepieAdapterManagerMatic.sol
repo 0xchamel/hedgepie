@@ -18,6 +18,7 @@ contract HedgepieAdapterManagerMatic is Ownable {
 
     event AdapterAdded(address strategy);
     event AdapterRemoveed(address strategy);
+    event InvestorUpdated(address investor);
 
     /**
      * @notice Throws if adapter is not active
@@ -106,5 +107,6 @@ contract HedgepieAdapterManagerMatic is Ownable {
     function setInvestor(address _investor) external onlyOwner {
         require(_investor != address(0), "Invalid investor address");
         investor = _investor;
+        emit InvestorUpdated(investor);
     }
 }
