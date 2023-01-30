@@ -9,15 +9,15 @@ import "../../../interfaces/IHedgepieInvestorBsc.sol";
 import "../../../interfaces/IHedgepieAdapterInfoBsc.sol";
 
 interface IStrategy {
-    function mint(uint256 amount) external;
+    function mint(uint256 amount) external returns (uint256);
 
-    function redeem(uint256 amount) external;
+    function redeem(uint256 amount) external returns (uint256);
 
-    function redeemUnderlying(uint256 amount) external;
+    function redeemUnderlying(uint256 amount) external returns (uint256);
 
-    function borrow(uint256 amount) external;
+    function borrow(uint256 amount) external returns (uint256);
 
-    function repayBorrow(uint256 amount) external;
+    function repayBorrow(uint256 amount) external returns (uint256);
 }
 
 contract VenusLevAdapterBsc is BaseAdapterBsc {
@@ -77,14 +77,15 @@ contract VenusLevAdapterBsc is BaseAdapterBsc {
      * @notice Deposit with BNB
      * @param _tokenId YBNFT token id
      * @param _account user wallet address
-     * @param _amountIn BNB amount
      */
-    function deposit(
-        uint256 _tokenId,
-        uint256 _amountIn,
-        address _account
-    ) external payable override onlyInvestor returns (uint256 amountOut) {
-        require(msg.value == _amountIn, "Error: msg.value is not correct");
+    function deposit(uint256 _tokenId, address _account)
+        external
+        payable
+        override
+        onlyInvestor
+        returns (uint256 amountOut)
+    {
+        uint256 _amountIn = msg.value;
         UserAdapterInfo storage userInfo = userAdapterInfos[_account][_tokenId];
 
         amountOut = HedgepieLibraryBsc.swapOnRouter(
@@ -97,7 +98,10 @@ contract VenusLevAdapterBsc is BaseAdapterBsc {
 
         uint256 repayAmt = IBEP20(repayToken).balanceOf(address(this));
         IBEP20(stakingToken).approve(strategy, amountOut);
-        IStrategy(strategy).mint(amountOut);
+        require(
+            IStrategy(strategy).mint(amountOut) == 0,
+            "Error: Venus internal error"
+        );
         repayAmt = IBEP20(repayToken).balanceOf(address(this)) - repayAmt;
         require(repayAmt != 0, "Error: mint failed");
 
@@ -182,7 +186,7 @@ contract VenusLevAdapterBsc is BaseAdapterBsc {
 
         address adapterInfoBnbAddr = IHedgepieInvestorBsc(investor)
             .adapterInfo();
-        
+
         if (rewardBnb != 0) {
             amountOut += rewardBnb;
             IHedgepieAdapterInfoBsc(adapterInfoBnbAddr).updateProfitInfo(
@@ -214,7 +218,7 @@ contract VenusLevAdapterBsc is BaseAdapterBsc {
             delete stackWithdrawalAmounts[_account][_tokenId][i];
 
         delete userAdapterInfos[_account][_tokenId];
-        
+
         if (amountOut != 0) {
             bool success;
             if (rewardBnb != 0) {
@@ -261,7 +265,10 @@ contract VenusLevAdapterBsc is BaseAdapterBsc {
         for (uint256 i; i < depth; i++) {
             amounts[0] = IBEP20(stakingToken).balanceOf(address(this));
 
-            IStrategy(strategy).borrow((_amount * borrowRate) / 1e4);
+            require(
+                IStrategy(strategy).borrow((_amount * borrowRate) / 1e4) == 0,
+                "Error: Venus internal error"
+            );
 
             amounts[1] = IBEP20(stakingToken).balanceOf(address(this));
             require(amounts[0] < amounts[1], "Error: Borrow failed");
@@ -269,7 +276,10 @@ contract VenusLevAdapterBsc is BaseAdapterBsc {
             _amount = amounts[1] - amounts[0];
 
             IBEP20(stakingToken).approve(strategy, _amount);
-            IStrategy(strategy).mint(_amount);
+            require(
+                IStrategy(strategy).mint(_amount) == 0,
+                "Error: Venus internal error"
+            );
 
             stackWithdrawalAmounts[_account][_tokenId][i + 1] += _amount;
             userInfo.amount += _amount;
@@ -289,18 +299,27 @@ contract VenusLevAdapterBsc is BaseAdapterBsc {
 
             bAmt = IBEP20(stakingToken).balanceOf(address(this));
 
-            IStrategy(strategy).redeemUnderlying(_amount);
+            require(
+                IStrategy(strategy).redeemUnderlying(_amount) == 0,
+                "Error: Venus internal error"
+            );
             aAmt = IBEP20(stakingToken).balanceOf(address(this));
             require(aAmt - bAmt == _amount, "Error: Devest failed");
 
             IBEP20(stakingToken).approve(strategy, _amount);
-            IStrategy(strategy).repayBorrow(_amount);
+            require(
+                IStrategy(strategy).repayBorrow(_amount) == 0,
+                "Error: Venus internal error"
+            );
         }
 
         _amount = stackWithdrawalAmounts[_account][_tokenId][0];
 
         bAmt = IBEP20(stakingToken).balanceOf(address(this));
-        IStrategy(strategy).redeemUnderlying((_amount * 9999) / 10000);
+        require(
+            IStrategy(strategy).redeemUnderlying((_amount * 9999) / 10000) == 0,
+            "Error: Venus internal error"
+        );
         aAmt = IBEP20(stakingToken).balanceOf(address(this));
 
         require(bAmt < aAmt, "Error: Devest failed");
