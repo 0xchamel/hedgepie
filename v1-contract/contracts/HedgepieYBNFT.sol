@@ -14,8 +14,11 @@ contract YBNFT is BEP721, Ownable {
         uint256 allocation;
         address token;
         address addr;
-        uint96 created;
-        uint96 modified;
+    }
+
+    struct AdapterDate {
+        uint128 created;
+        uint128 modified;
     }
 
     // current max tokenId
@@ -24,6 +27,8 @@ contract YBNFT is BEP721, Ownable {
     mapping(uint256 => string) private _tokenURIs;
     // tokenId => Adapter[]
     mapping(uint256 => Adapter[]) public adapterInfo;
+    // tokenId => AdapterDate
+    mapping(uint256 => AdapterDate) public adapterDate;
     // tokenId => performanceFee
     mapping(uint256 => uint256) public performanceFee;
 
@@ -157,10 +162,7 @@ contract YBNFT is BEP721, Ownable {
         require(msg.sender == ownerOf(_tokenId), "Invalid NFT Owner");
 
         performanceFee[_tokenId] = _performanceFee;
-
-        for (uint256 i; i < adapterInfo[_tokenId].length; i++) {
-            adapterInfo[_tokenId][i].modified = uint96(block.timestamp);
-        }
+        adapterDate[_tokenId].modified = uint128(block.timestamp);
     }
 
     /**
@@ -184,8 +186,9 @@ contract YBNFT is BEP721, Ownable {
 
         for (uint256 i; i < adapterInfo[_tokenId].length; i++) {
             adapterInfo[_tokenId][i].allocation = _adapterAllocations[i];
-            adapterInfo[_tokenId][i].modified = uint96(block.timestamp);
         }
+
+        adapterDate[_tokenId].modified = uint128(block.timestamp);
     }
 
     /**
@@ -199,9 +202,7 @@ contract YBNFT is BEP721, Ownable {
         require(msg.sender == ownerOf(_tokenId), "Invalid NFT Owner");
 
         _setTokenURI(_tokenId, _tokenURI);
-        for (uint256 i; i < adapterInfo[_tokenId].length; i++) {
-            adapterInfo[_tokenId][i].modified = uint96(block.timestamp);
-        }
+        adapterDate[_tokenId].modified = uint128(block.timestamp);
     }
 
     /**
@@ -237,12 +238,14 @@ contract YBNFT is BEP721, Ownable {
                 Adapter({
                     allocation: _adapterAllocations[i],
                     token: _adapterTokens[i],
-                    addr: _adapterAddrs[i],
-                    created: uint96(block.timestamp),
-                    modified: uint96(block.timestamp)
+                    addr: _adapterAddrs[i]
                 })
             );
         }
+        adapterDate[_tokenId] = AdapterDate({
+            created: uint128(block.timestamp),
+            modified: uint128(block.timestamp)
+        });
     }
 
     /**
