@@ -10,9 +10,9 @@ interface IStrategy {
 
     function withdraw(uint256) external;
 
-    function totalSupply() external view returns(uint256);
+    function totalSupply() external view returns (uint256);
 
-    function totalToken() external view returns(uint256);
+    function totalToken() external view returns (uint256);
 }
 
 contract AlpacaLendAdapter is BaseAdapterBsc {
@@ -43,20 +43,21 @@ contract AlpacaLendAdapter is BaseAdapterBsc {
      * @notice Deposit with BNB
      * @param _tokenId YBNFT token id
      * @param _account user wallet address
-     * @param _amountIn BNB amount
      */
-    function deposit(
-        uint256 _tokenId,
-        uint256 _amountIn,
-        address _account
-    ) external payable override onlyInvestor returns (uint256 amountOut) {
-        require(msg.value == _amountIn, "Error: msg.value is not correct");
+    function deposit(uint256 _tokenId, address _account)
+        external
+        payable
+        override
+        onlyInvestor
+        returns (uint256 amountOut)
+    {
+        uint256 _amountIn = msg.value;
         AdapterInfo storage adapterInfo = adapterInfos[_tokenId];
         UserAdapterInfo storage userInfo = userAdapterInfos[_account][_tokenId];
 
         // get token
         bool isBNB = stakingToken == wbnb;
-        if(isBNB) {
+        if (isBNB) {
             amountOut = _amountIn;
         } else {
             amountOut = HedgepieLibraryBsc.swapOnRouter(
@@ -69,14 +70,10 @@ contract AlpacaLendAdapter is BaseAdapterBsc {
         }
 
         // stake
-        uint256 repayAmt = IBEP20(repayToken).balanceOf(
-            address(this)
-        );
+        uint256 repayAmt = IBEP20(repayToken).balanceOf(address(this));
 
-        if(isBNB) {
-            IStrategy(strategy).deposit {
-                value: amountOut
-            } (amountOut);
+        if (isBNB) {
+            IStrategy(strategy).deposit{value: amountOut}(amountOut);
         } else {
             IBEP20(stakingToken).approve(strategy, amountOut);
             IStrategy(strategy).deposit(amountOut);
@@ -128,20 +125,25 @@ contract AlpacaLendAdapter is BaseAdapterBsc {
         UserAdapterInfo memory userInfo = userAdapterInfos[_account][_tokenId];
 
         bool isBNB = stakingToken == wbnb;
-        amountOut = isBNB ? address(this).balance
+        amountOut = isBNB
+            ? address(this).balance
             : IBEP20(stakingToken).balanceOf(address(this));
 
         // withdraw
         IStrategy(strategy).withdraw(userInfo.userShares);
 
         unchecked {
-            amountOut = (isBNB ? address(this).balance
-                : IBEP20(stakingToken).balanceOf(address(this)))
-                - amountOut;
+            amountOut =
+                (
+                    isBNB
+                        ? address(this).balance
+                        : IBEP20(stakingToken).balanceOf(address(this))
+                ) -
+                amountOut;
         }
 
         // swap wraptoken to BNB
-        if(stakingToken != wbnb) {
+        if (stakingToken != wbnb) {
             amountOut = HedgepieLibraryBsc.swapforBnb(
                 amountOut,
                 address(this),
@@ -155,7 +157,7 @@ contract AlpacaLendAdapter is BaseAdapterBsc {
             .adapterInfo();
 
         uint256 rewardAmt;
-        if(amountOut > userInfo.invested) {
+        if (amountOut > userInfo.invested) {
             unchecked {
                 rewardAmt = amountOut - userInfo.invested;
             }
@@ -180,7 +182,9 @@ contract AlpacaLendAdapter is BaseAdapterBsc {
                 require(success, "Failed to send bnb to Treasury");
             }
 
-            (success, ) = payable(_account).call{value: amountOut - rewardAmt}("");
+            (success, ) = payable(_account).call{value: amountOut - rewardAmt}(
+                ""
+            );
             require(success, "Failed to send bnb");
         }
 
@@ -221,11 +225,11 @@ contract AlpacaLendAdapter is BaseAdapterBsc {
     {
         UserAdapterInfo memory userInfo = userAdapterInfos[_account][_tokenId];
 
-        reward = userInfo.userShares *
-            (IStrategy(strategy).totalToken()) / 
+        reward =
+            (userInfo.userShares * (IStrategy(strategy).totalToken())) /
             (IStrategy(strategy).totalSupply());
 
-        if(reward < userInfo.amount) return 0;
+        if (reward < userInfo.amount) return 0;
 
         if (reward != 0)
             reward = stakingToken == wbnb

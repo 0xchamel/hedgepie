@@ -70,7 +70,7 @@ contract BeefyVaultAdapterMatic is BaseAdapterMatic {
             );
         } else {
             amountOut = HedgepieLibraryMatic.getLP(
-                IYBNFT.Adapter(0, stakingToken, address(this), 0, 0),
+                IYBNFT.Adapter(0, stakingToken, address(this)),
                 wmatic,
                 _amountIn
             );
@@ -148,7 +148,7 @@ contract BeefyVaultAdapterMatic is BaseAdapterMatic {
             );
         } else {
             amountOut = HedgepieLibraryMatic.withdrawLP(
-                IYBNFT.Adapter(0, stakingToken, address(this), 0, 0),
+                IYBNFT.Adapter(0, stakingToken, address(this)),
                 wmatic,
                 amountOut
             );

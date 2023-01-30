@@ -47,9 +47,7 @@ contract QuickLPDualAdapter is BaseAdapterMatic {
         name = _name;
     }
 
-    function _getReward(
-        uint256 _tokenId
-    ) internal {
+    function _getReward(uint256 _tokenId) internal {
         AdapterInfo storage adapterInfo = adapterInfos[_tokenId];
 
         // get reward
@@ -57,13 +55,15 @@ contract QuickLPDualAdapter is BaseAdapterMatic {
         uint256 amountOut1 = IBEP20(rewardToken1).balanceOf(address(this));
 
         IStrategy(strategy).getReward();
-        
-        unchecked {
-            amountOut = IBEP20(rewardToken).balanceOf(address(this))
-                - amountOut;
 
-            amountOut1 = IBEP20(rewardToken1).balanceOf(address(this))
-                - amountOut1;
+        unchecked {
+            amountOut =
+                IBEP20(rewardToken).balanceOf(address(this)) -
+                amountOut;
+
+            amountOut1 =
+                IBEP20(rewardToken1).balanceOf(address(this)) -
+                amountOut1;
         }
 
         if (amountOut != 0 && adapterInfo.totalStaked != 0) {
@@ -96,7 +96,7 @@ contract QuickLPDualAdapter is BaseAdapterMatic {
 
         // get stakingToken
         amountOut = HedgepieLibraryMatic.getLP(
-            IYBNFT.Adapter(0, stakingToken, address(this), 0, 0),
+            IYBNFT.Adapter(0, stakingToken, address(this)),
             wmatic,
             _amountIn
         );
@@ -158,12 +158,13 @@ contract QuickLPDualAdapter is BaseAdapterMatic {
         IStrategy(strategy).withdraw(userInfo.amount);
 
         unchecked {
-            amountOut = IBEP20(stakingToken).balanceOf(address(this))
-                - amountOut;
+            amountOut =
+                IBEP20(stakingToken).balanceOf(address(this)) -
+                amountOut;
         }
 
         amountOut = HedgepieLibraryMatic.withdrawLP(
-            IYBNFT.Adapter(0, stakingToken, address(this), 0, 0),
+            IYBNFT.Adapter(0, stakingToken, address(this)),
             wmatic,
             amountOut
         );

@@ -84,7 +84,7 @@ contract SushiSwapLPAdapterMatic is BaseAdapterMatic {
             );
         } else {
             amountOut = HedgepieLibraryMatic.getLP(
-                IYBNFT.Adapter(0, stakingToken, address(this), 0, 0),
+                IYBNFT.Adapter(0, stakingToken, address(this)),
                 wmatic,
                 _amountIn
             );
@@ -204,7 +204,7 @@ contract SushiSwapLPAdapterMatic is BaseAdapterMatic {
             );
         } else {
             amountOut = HedgepieLibraryMatic.withdrawLP(
-                IYBNFT.Adapter(0, stakingToken, address(this), 0, 0),
+                IYBNFT.Adapter(0, stakingToken, address(this)),
                 wmatic,
                 amountOut
             );
@@ -283,9 +283,9 @@ contract SushiSwapLPAdapterMatic is BaseAdapterMatic {
                 require(success, "Failed to send matic to Treasury");
             }
 
-            (success, ) = payable(_account).call{value: amountOut - rewardMatic}(
-                ""
-            );
+            (success, ) = payable(_account).call{
+                value: amountOut - rewardMatic
+            }("");
             require(success, "Failed to send matic");
         }
 

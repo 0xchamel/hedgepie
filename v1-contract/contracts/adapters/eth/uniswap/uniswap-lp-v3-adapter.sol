@@ -222,7 +222,7 @@ contract UniswapV3LPAdapter is BaseAdapterEth, IERC721Receiver {
         uint256 ethBalBefore = address(this).balance - _amountIn;
 
         tokenAmount[0] = _swapAndApprove(tokens[0], _amountIn / 2);
-        tokenAmount[1] = _swapAndApprove(tokens[1], _amountIn / 2);
+        tokenAmount[1] = _swapAndApprove(tokens[1], _amountIn - _amountIn / 2);
 
         // deposit staking token to uniswapV3 strategy (mint or increaseLiquidity)
         uint256 v3TokenId = liquidityNFT[_account][_tokenId];

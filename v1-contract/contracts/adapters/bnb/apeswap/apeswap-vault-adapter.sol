@@ -10,19 +10,28 @@ interface IStrategy {
 
     function withdraw(uint256, uint256) external;
 
-    function userInfo(uint256, address) external view returns(uint256,uint256,uint256,uint256);
+    function userInfo(uint256, address)
+        external
+        view
+        returns (
+            uint256,
+            uint256,
+            uint256,
+            uint256
+        );
 }
 
 interface IVStrategy {
-    function BANANA_VAULT() external view returns(address);
+    function BANANA_VAULT() external view returns (address);
 }
 
 interface IVault {
-    function getPricePerFullShare() external view returns(uint256);
+    function getPricePerFullShare() external view returns (uint256);
 }
 
 contract ApeswapVaultAdapter is BaseAdapterBsc {
     address public immutable vStrategy;
+
     /**
      * @notice Construct
      * @param _strategy  address of strategy
@@ -58,33 +67,36 @@ contract ApeswapVaultAdapter is BaseAdapterBsc {
      * @notice Deposit with BNB
      * @param _tokenId YBNFT token id
      * @param _account user wallet address
-     * @param _amountIn BNB amount
      */
-    function deposit(
-        uint256 _tokenId,
-        uint256 _amountIn,
-        address _account
-    ) external payable override onlyInvestor returns (uint256 amountOut) {
-        require(msg.value == _amountIn, "Error: msg.value is not correct");
+    function deposit(uint256 _tokenId, address _account)
+        external
+        payable
+        override
+        onlyInvestor
+        returns (uint256 amountOut)
+    {
+        uint256 _amountIn = msg.value;
         AdapterInfo storage adapterInfo = adapterInfos[_tokenId];
         UserAdapterInfo storage userInfo = userAdapterInfos[_account][_tokenId];
 
         // get LP
         amountOut = HedgepieLibraryBsc.getLP(
-            IYBNFT.Adapter(0, stakingToken, address(this), 0, 0),
+            IYBNFT.Adapter(0, stakingToken, address(this)),
             wbnb,
             _amountIn
         );
 
         // deposit
-        (uint256 shareAmt,,,) = IStrategy(strategy).userInfo(pid, address(this));
+        (uint256 shareAmt, , , ) = IStrategy(strategy).userInfo(
+            pid,
+            address(this)
+        );
 
         IBEP20(stakingToken).approve(strategy, amountOut);
         IStrategy(strategy).deposit(pid, amountOut);
 
         unchecked {
-            shareAmt = IBEP20(rewardToken).balanceOf(address(this))
-                - shareAmt;
+            shareAmt = IBEP20(rewardToken).balanceOf(address(this)) - shareAmt;
 
             adapterInfo.totalStaked += amountOut;
 
@@ -135,15 +147,17 @@ contract ApeswapVaultAdapter is BaseAdapterBsc {
         IStrategy(strategy).withdraw(pid, userInfo.amount);
 
         unchecked {
-            amountOut = IBEP20(stakingToken).balanceOf(address(this))
-                - amountOut;
+            amountOut =
+                IBEP20(stakingToken).balanceOf(address(this)) -
+                amountOut;
 
-            rewardAmt = IBEP20(rewardToken).balanceOf(address(this))
-                - rewardAmt;
+            rewardAmt =
+                IBEP20(rewardToken).balanceOf(address(this)) -
+                rewardAmt;
         }
 
         amountOut = HedgepieLibraryBsc.withdrawLP(
-            IYBNFT.Adapter(0, stakingToken, address(this), 0, 0),
+            IYBNFT.Adapter(0, stakingToken, address(this)),
             wbnb,
             amountOut
         );
@@ -224,11 +238,12 @@ contract ApeswapVaultAdapter is BaseAdapterBsc {
     {
         UserAdapterInfo memory userInfo = userAdapterInfos[_account][_tokenId];
 
-        uint256 tokenRewards = userInfo.userShares *
-            (IVault(
-                IVStrategy(vStrategy).BANANA_VAULT()
-            ).getPricePerFullShare()) / 1e18;
-        
+        uint256 tokenRewards = (userInfo.userShares *
+            (
+                IVault(IVStrategy(vStrategy).BANANA_VAULT())
+                    .getPricePerFullShare()
+            )) / 1e18;
+
         if (tokenRewards != 0)
             reward = rewardToken == wbnb
                 ? tokenRewards

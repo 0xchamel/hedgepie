@@ -11,7 +11,7 @@ interface IStrategy {
     function withdraw(uint256) external;
 
     function getReward() external;
-    
+
     function earned(address account) external view returns (uint256);
 }
 
@@ -42,19 +42,18 @@ contract QuickLPFarmAdapter is BaseAdapterMatic {
         name = _name;
     }
 
-    function _getReward(
-        uint256 _tokenId
-    ) internal {
+    function _getReward(uint256 _tokenId) internal {
         AdapterInfo storage adapterInfo = adapterInfos[_tokenId];
 
         // get reward
         uint256 amountOut = IBEP20(rewardToken).balanceOf(address(this));
 
         IStrategy(strategy).getReward();
-        
+
         unchecked {
-            amountOut = IBEP20(rewardToken).balanceOf(address(this))
-                - amountOut;
+            amountOut =
+                IBEP20(rewardToken).balanceOf(address(this)) -
+                amountOut;
         }
 
         if (amountOut != 0 && adapterInfo.totalStaked != 0) {
@@ -81,7 +80,7 @@ contract QuickLPFarmAdapter is BaseAdapterMatic {
 
         // get stakingToken
         amountOut = HedgepieLibraryMatic.getLP(
-            IYBNFT.Adapter(0, stakingToken, address(this), 0, 0),
+            IYBNFT.Adapter(0, stakingToken, address(this)),
             wmatic,
             _amountIn
         );
@@ -142,12 +141,13 @@ contract QuickLPFarmAdapter is BaseAdapterMatic {
         IStrategy(strategy).withdraw(userInfo.amount);
 
         unchecked {
-            amountOut = IBEP20(stakingToken).balanceOf(address(this))
-                - amountOut;
+            amountOut =
+                IBEP20(stakingToken).balanceOf(address(this)) -
+                amountOut;
         }
 
         amountOut = HedgepieLibraryMatic.withdrawLP(
-            IYBNFT.Adapter(0, stakingToken, address(this), 0, 0),
+            IYBNFT.Adapter(0, stakingToken, address(this)),
             wmatic,
             amountOut
         );
