@@ -93,14 +93,15 @@ contract UniswapLPAdapter is BaseAdapterMatic, IERC721Receiver {
      * @notice Deposit to uniswapV3 adapter
      * @param _tokenId  YBNft token id
      * @param _account  address of depositor
-     * @param _amountIn  amount of Matic
      */
-    function deposit(
-        uint256 _tokenId,
-        uint256 _amountIn,
-        address _account
-    ) external payable override onlyInvestor returns (uint256 amountIn) {
-        require(msg.value == _amountIn, "Error: msg.value is not correct");
+    function deposit(uint256 _tokenId, address _account)
+        external
+        payable
+        override
+        onlyInvestor
+        returns (uint256 amountIn)
+    {
+        uint256 _amountIn = msg.value;
         (amountIn, _amountIn) = _deposit(_tokenId, _amountIn, _account);
 
         // update user info

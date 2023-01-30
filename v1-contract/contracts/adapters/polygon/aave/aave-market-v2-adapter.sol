@@ -52,14 +52,15 @@ contract AaveMarketV2AdapterMatic is BaseAdapterMatic {
      * @notice Deposit with MATIC
      * @param _tokenId YBNFT token id
      * @param _account user wallet address
-     * @param _amountIn MATIC amount
      */
-    function deposit(
-        uint256 _tokenId,
-        uint256 _amountIn,
-        address _account
-    ) external payable override onlyInvestor returns (uint256 amountOut) {
-        require(msg.value == _amountIn, "Error: msg.value is not correct");
+    function deposit(uint256 _tokenId, address _account)
+        external
+        payable
+        override
+        onlyInvestor
+        returns (uint256 amountOut)
+    {
+        uint256 _amountIn = msg.value;
         AdapterInfo storage adapterInfo = adapterInfos[_tokenId];
         UserAdapterInfo storage userInfo = userAdapterInfos[_account][_tokenId];
 
@@ -218,7 +219,7 @@ contract AaveMarketV2AdapterMatic is BaseAdapterMatic {
 
         unchecked {
             adapterInfo.totalStaked -= userInfo.amount;
-            lastStakedAmt -= userInfo.amount;   
+            lastStakedAmt -= userInfo.amount;
         }
 
         delete userAdapterInfos[_account][_tokenId];

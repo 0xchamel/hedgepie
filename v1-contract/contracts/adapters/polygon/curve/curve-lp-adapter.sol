@@ -12,18 +12,27 @@ interface IStrategy {
 
     function claim_rewards(address) external;
 
-    function claimable_reward(address, address)
-        external
-        view
-        returns (uint256);
+    function claimable_reward(address, address) external view returns (uint256);
 }
 
 interface IPool {
-    function add_liquidity(uint256[2] memory, uint256, bool) external payable;
+    function add_liquidity(
+        uint256[2] memory,
+        uint256,
+        bool
+    ) external payable;
 
-    function add_liquidity(uint256[3] memory, uint256, bool) external payable;
+    function add_liquidity(
+        uint256[3] memory,
+        uint256,
+        bool
+    ) external payable;
 
-    function add_liquidity(uint256[4] memory, uint256, bool) external payable;
+    function add_liquidity(
+        uint256[4] memory,
+        uint256,
+        bool
+    ) external payable;
 
     function add_liquidity(uint256[2] memory, uint256) external payable;
 
@@ -100,7 +109,7 @@ contract CurveLPAdapter is BaseAdapterMatic {
     {
         amountOut = IBEP20(stakingToken).balanceOf(address(this));
 
-        if(curveInfo.isDeposit) {
+        if (curveInfo.isDeposit) {
             if (curveInfo.lpCnt == 2) {
                 uint256[2] memory amounts;
                 amounts[curveInfo.lpOrder] = _amountIn;
@@ -179,7 +188,7 @@ contract CurveLPAdapter is BaseAdapterMatic {
 
         IBEP20(stakingToken).approve(router, _amountIn);
 
-        if(curveInfo.isDeposit) {
+        if (curveInfo.isDeposit) {
             IPool(router).remove_liquidity_one_coin(
                 _amountIn,
                 curveInfo.lpOrder,
@@ -205,25 +214,25 @@ contract CurveLPAdapter is BaseAdapterMatic {
     /**
      * @notice Remove CRV reward
      */
-    function _getReward(
-        uint256 _tokenId
-    ) internal {
+    function _getReward(uint256 _tokenId) internal {
         AdapterInfo storage adapterInfo = adapterInfos[_tokenId];
 
         // get CRV reward
         uint256 amountOut = IBEP20(rewardToken).balanceOf(address(this));
-        uint256 amountOut1 = rewardToken1 == address(0) ? 0
+        uint256 amountOut1 = rewardToken1 == address(0)
+            ? 0
             : IBEP20(rewardToken1).balanceOf(address(this));
 
         IStrategy(strategy).claim_rewards(address(this));
-        
-        unchecked {
-            amountOut = IBEP20(rewardToken).balanceOf(address(this))
-                - amountOut;
 
-            amountOut1 = rewardToken1 == address(0) ? 0
-                : (IBEP20(rewardToken1).balanceOf(address(this))
-                - amountOut1);
+        unchecked {
+            amountOut =
+                IBEP20(rewardToken).balanceOf(address(this)) -
+                amountOut;
+
+            amountOut1 = rewardToken1 == address(0)
+                ? 0
+                : (IBEP20(rewardToken1).balanceOf(address(this)) - amountOut1);
         }
 
         if (amountOut != 0 && adapterInfo.totalStaked != 0) {
@@ -243,14 +252,15 @@ contract CurveLPAdapter is BaseAdapterMatic {
      * @notice Deposit to yearn adapter
      * @param _tokenId  YBNft token id
      * @param _account  address of depositor
-     * @param _amountIn  amount of Matic
      */
-    function deposit(
-        uint256 _tokenId,
-        uint256 _amountIn,
-        address _account
-    ) external payable override onlyInvestor returns (uint256 amountOut) {
-        require(msg.value == _amountIn, "Error: msg.value is not correct");
+    function deposit(uint256 _tokenId, address _account)
+        external
+        payable
+        override
+        onlyInvestor
+        returns (uint256 amountOut)
+    {
+        uint256 _amountIn = msg.value;
 
         bool isMatic = curveInfo.liquidityToken == wmatic;
         if (isMatic) {
@@ -361,7 +371,7 @@ contract CurveLPAdapter is BaseAdapterMatic {
             );
         }
 
-        if(reward1 != 0) {
+        if (reward1 != 0) {
             reward += HedgepieLibraryMatic.swapforMatic(
                 reward1,
                 address(this),
@@ -371,7 +381,7 @@ contract CurveLPAdapter is BaseAdapterMatic {
             );
         }
 
-        if(reward != 0) {
+        if (reward != 0) {
             IHedgepieAdapterInfoMatic(adapterInfoMaticAddr).updateProfitInfo(
                 _tokenId,
                 reward,
@@ -391,8 +401,9 @@ contract CurveLPAdapter is BaseAdapterMatic {
         if (amountOut != 0) {
             bool success;
             if (reward != 0) {
-                (success, ) = payable(IHedgepieInvestorMatic(investor).treasury())
-                    .call{value: reward}("");
+                (success, ) = payable(
+                    IHedgepieInvestorMatic(investor).treasury()
+                ).call{value: reward}("");
                 require(success, "Failed to send matic to Treasury");
             }
 
@@ -455,16 +466,17 @@ contract CurveLPAdapter is BaseAdapterMatic {
             );
 
             uint256 taxAmount = (amountOut *
-                IYBNFT(IHedgepieInvestorMatic(investor).ybnft())
-                    .performanceFee(_tokenId)) / 1e4;
+                IYBNFT(IHedgepieInvestorMatic(investor).ybnft()).performanceFee(
+                    _tokenId
+                )) / 1e4;
             (bool success, ) = payable(
                 IHedgepieInvestorMatic(investor).treasury()
             ).call{value: taxAmount}("");
             require(success, "Failed to send matic to Treasury");
 
-            (success, ) = payable(_account).call{
-                value: amountOut - taxAmount
-            }("");
+            (success, ) = payable(_account).call{value: amountOut - taxAmount}(
+                ""
+            );
             require(success, "Failed to send matic");
 
             IHedgepieAdapterInfoMatic(
