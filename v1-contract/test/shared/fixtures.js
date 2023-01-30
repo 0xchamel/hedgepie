@@ -6,10 +6,18 @@ async function investorFixture(
     stakingToken,
     performanceFee
 ) {
+    // Deploy Adaptor Manager contract
+    const AdapterManager = await ethers.getContractFactory(
+        "HedgepieAdapterManagerEth"
+    );
+    const adapterManager = await AdapterManager.deploy();
+    await adapterManager.deployed();
+
     // Deploy YBNFT contract
     const ybNftFactory = await ethers.getContractFactory("YBNFT");
     const ybNft = await ybNftFactory.deploy();
     await ybNft.deployed();
+    await ybNft.setAdapterManager(adapterManager.address);
 
     // deploy adapterinfo
     const AdapterInfo = await ethers.getContractFactory(
@@ -32,15 +40,11 @@ async function investorFixture(
     );
     await investor.deployed();
 
-    // Deploy Adaptor Manager contract
-    const AdapterManager = await ethers.getContractFactory(
-        "HedgepieAdapterManagerEth"
-    );
-    const adapterManager = await AdapterManager.deploy();
-    await adapterManager.deployed();
-
     // set investor
     await adapter.setInvestor(investor.address);
+
+    // Add Adapter to AdapterManager
+    await adapterManager.addAdapter(adapter.address);
 
     // Mint NFTs
     // tokenID: 1
@@ -60,9 +64,6 @@ async function investorFixture(
         performanceFee,
         "test tokenURI2"
     );
-
-    // Add Adapter to AdapterManager
-    await adapterManager.addAdapter(adapter.address);
 
     // Set investor in adapter manager
     await adapterManager.setInvestor(investor.address);
@@ -93,10 +94,18 @@ async function investorFixtureBsc(
     stakingToken,
     performanceFee
 ) {
+    // Deploy Adaptor Manager contract
+    const AdapterManager = await ethers.getContractFactory(
+        "HedgepieAdapterManagerBsc"
+    );
+    const adapterManager = await AdapterManager.deploy();
+    await adapterManager.deployed();
+
     // Deploy YBNFT contract
     const ybNftFactory = await ethers.getContractFactory("YBNFT");
     const ybNft = await ybNftFactory.deploy();
     await ybNft.deployed();
+    await ybNft.setAdapterManager(adapterManager.address);
 
     // deploy adapterinfo
     const AdapterInfo = await ethers.getContractFactory(
@@ -119,15 +128,11 @@ async function investorFixtureBsc(
     );
     await investor.deployed();
 
-    // Deploy Adaptor Manager contract
-    const AdapterManager = await ethers.getContractFactory(
-        "HedgepieAdapterManagerBsc"
-    );
-    const adapterManager = await AdapterManager.deploy();
-    await adapterManager.deployed();
-
     // set investor
     await adapter.setInvestor(investor.address);
+
+    // Add Adapter to AdapterManager
+    await adapterManager.addAdapter(adapter.address);
 
     // Mint NFTs
     // tokenID: 1
@@ -147,9 +152,6 @@ async function investorFixtureBsc(
         performanceFee,
         "test tokenURI2"
     );
-
-    // Add Adapter to AdapterManager
-    await adapterManager.addAdapter(adapter.address);
 
     // Set investor in adapter manager
     await adapterManager.setInvestor(investor.address);
@@ -180,10 +182,18 @@ async function investorFixtureMatic(
     stakingToken,
     performanceFee
 ) {
+    // Deploy Adaptor Manager contract
+    const AdapterManager = await ethers.getContractFactory(
+        "HedgepieAdapterManagerMatic"
+    );
+    const adapterManager = await AdapterManager.deploy();
+    await adapterManager.deployed();
+
     // Deploy YBNFT contract
     const ybNftFactory = await ethers.getContractFactory("YBNFT");
     const ybNft = await ybNftFactory.deploy();
     await ybNft.deployed();
+    await ybNft.setAdapterManager(adapterManager.address);
 
     // deploy adapterinfo
     const AdapterInfo = await ethers.getContractFactory(
@@ -206,15 +216,11 @@ async function investorFixtureMatic(
     );
     await investor.deployed();
 
-    // Deploy Adaptor Manager contract
-    const AdapterManager = await ethers.getContractFactory(
-        "HedgepieAdapterManagerMatic"
-    );
-    const adapterManager = await AdapterManager.deploy();
-    await adapterManager.deployed();
-
     // set investor
     await adapter.setInvestor(investor.address);
+
+    // Add Adapter to AdapterManager
+    await adapterManager.addAdapter(adapter.address);
 
     // Mint NFTs
     // tokenID: 1
@@ -234,9 +240,6 @@ async function investorFixtureMatic(
         performanceFee,
         "test tokenURI2"
     );
-
-    // Add Adapter to AdapterManager
-    await adapterManager.addAdapter(adapter.address);
 
     // Set investor in adapter manager
     await adapterManager.setInvestor(investor.address);

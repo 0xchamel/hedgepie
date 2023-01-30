@@ -259,6 +259,16 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapterBsc {
     {
         UserAdapterInfo storage userInfo = userAdapterInfos[_account][_tokenId];
 
+        // claim rewards
+        uint256 rewardAmt0 = IBEP20(rewardToken).balanceOf(address(this));
+        IStrategy(strategy).withdraw(pid, 0);
+        rewardAmt0 = IBEP20(rewardToken).balanceOf(address(this)) - rewardAmt0;
+        if (rewardAmt0 != 0 && rewardToken != address(0)) {
+            mAdapter.accTokenPerShare +=
+                (rewardAmt0 * 1e12) /
+                mAdapter.totalStaked;
+        }
+
         (uint256 reward, ) = HedgepieLibraryBsc.getMRewards(
             _tokenId,
             address(this),

@@ -281,6 +281,21 @@ contract BiSwapFarmLPAdapterBsc is BaseAdapterBsc {
     {
         UserAdapterInfo storage userInfo = userAdapterInfos[_account][_tokenId];
 
+        // claim rewards
+        uint256 rewardAmt0 = IBEP20(rewardToken).balanceOf(address(this));
+        if (pid == 0) IStrategy(strategy).leaveStaking(0);
+        else IStrategy(strategy).withdraw(pid, 0);
+        rewardAmt0 = IBEP20(rewardToken).balanceOf(address(this)) - rewardAmt0;
+        if (
+            rewardAmt0 != 0 &&
+            rewardToken != address(0) &&
+            mAdapter.totalStaked != 0
+        ) {
+            mAdapter.accTokenPerShare +=
+                (rewardAmt0 * 1e12) /
+                mAdapter.totalStaked;
+        }
+
         (uint256 reward, ) = HedgepieLibraryBsc.getMRewards(
             _tokenId,
             address(this),

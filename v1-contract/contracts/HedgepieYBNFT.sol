@@ -2,6 +2,7 @@
 pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/utils/Counters.sol";
+import "./interfaces/IAdapterManager.sol";
 import "./interfaces/IYBNFT.sol";
 import "./libraries/Ownable.sol";
 import "./type/BEP721.sol";
@@ -26,7 +27,8 @@ contract YBNFT is BEP721, Ownable {
     // tokenId => performanceFee
     mapping(uint256 => uint256) public performanceFee;
 
-    // tokenId => totalStaked
+    // AdapterManager handler
+    IAdapterManager public adapterManager;
 
     event Mint(address indexed minter, uint256 indexed tokenId);
 
@@ -103,6 +105,27 @@ contract YBNFT is BEP721, Ownable {
             _checkPercent(_adapterAllocations),
             "Incorrect adapter allocation"
         );
+        require(address(adapterManager) != address(0), "AdapterManger not set");
+
+        for (uint256 i = 0; i < _adapterAddrs.length; i++) {
+            (
+                address adapterAddr,
+                ,
+                address stakingToken,
+                bool status
+            ) = IAdapterManager(adapterManager).getAdapterInfo(
+                    _adapterAddrs[i]
+                );
+            require(
+                _adapterAddrs[i] == adapterAddr,
+                "Adapter address mismatch"
+            );
+            require(
+                _adapterTokens[i] == stakingToken,
+                "Staking token address mismatch"
+            );
+            require(status, "Adapter is inactive");
+        }
 
         _tokenIdPointer.increment();
         performanceFee[_tokenIdPointer._value] = _performanceFee;
@@ -237,5 +260,13 @@ contract YBNFT is BEP721, Ownable {
         }
 
         return totalAlloc <= 1e4;
+    }
+
+    /**
+     * @notice Set adapter manager address
+     * @param _adapterManager adapter manager address
+     */
+    function setAdapterManager(address _adapterManager) external onlyOwner {
+        adapterManager = IAdapterManager(_adapterManager);
     }
 }
