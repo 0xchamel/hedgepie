@@ -51,6 +51,8 @@ abstract contract BaseAdapterMatic is Ownable {
     // nft id => AdapterInfo
     mapping(uint256 => AdapterInfo) public adapterInfos;
 
+    event InvestorUpdated(address investor);
+
     modifier onlyInvestor() {
         require(msg.sender == investor, "Not investor");
         _;
@@ -125,6 +127,7 @@ abstract contract BaseAdapterMatic is Ownable {
     function setInvestor(address _investor) external onlyOwner {
         require(_investor != address(0), "Error: Investor zero address");
         investor = _investor;
+        emit InvestorUpdated(investor);
     }
 
     /**
