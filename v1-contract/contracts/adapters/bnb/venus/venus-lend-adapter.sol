@@ -8,9 +8,9 @@ import "../../../interfaces/IHedgepieInvestorBsc.sol";
 import "../../../interfaces/IHedgepieAdapterInfoBsc.sol";
 
 interface IStrategy {
-    function mint(uint256 amount) external;
+    function mint(uint256 amount) external returns (uint256);
 
-    function redeem(uint256 amount) external;
+    function redeem(uint256 amount) external returns (uint256);
 }
 
 contract VenusLendAdapterBsc is BaseAdapterBsc {
@@ -52,14 +52,15 @@ contract VenusLendAdapterBsc is BaseAdapterBsc {
      * @notice Deposit with BNB
      * @param _tokenId YBNFT token id
      * @param _account user wallet address
-     * @param _amountIn BNB amount
      */
-    function deposit(
-        uint256 _tokenId,
-        uint256 _amountIn,
-        address _account
-    ) external payable override onlyInvestor returns (uint256 amountOut) {
-        require(msg.value == _amountIn, "Error: msg.value is not correct");
+    function deposit(uint256 _tokenId, address _account)
+        external
+        payable
+        override
+        onlyInvestor
+        returns (uint256 amountOut)
+    {
+        uint256 _amountIn = msg.value;
         AdapterInfo storage adapterInfo = adapterInfos[_tokenId];
         UserAdapterInfo storage userInfo = userAdapterInfos[_account][_tokenId];
 
@@ -73,7 +74,10 @@ contract VenusLendAdapterBsc is BaseAdapterBsc {
 
         uint256 repayAmt = IBEP20(repayToken).balanceOf(address(this));
         IBEP20(stakingToken).approve(strategy, amountOut);
-        IStrategy(strategy).mint(amountOut);
+        require(
+            IStrategy(strategy).mint(amountOut) == 0,
+            "Error: Venus internal error"
+        );
         repayAmt = IBEP20(repayToken).balanceOf(address(this)) - repayAmt;
 
         adapterInfo.totalStaked += amountOut;
@@ -121,7 +125,10 @@ contract VenusLendAdapterBsc is BaseAdapterBsc {
         repayAmt = IBEP20(repayToken).balanceOf(address(this));
 
         IBEP20(repayToken).approve(strategy, userInfo.amount);
-        IStrategy(strategy).redeem(userInfo.amount);
+        require(
+            IStrategy(strategy).redeem(userInfo.amount) == 0,
+            "Error: Venus internal error"
+        );
 
         repayAmt = repayAmt - IBEP20(repayToken).balanceOf(address(this));
         amountOut = IBEP20(stakingToken).balanceOf(address(this)) - amountOut;

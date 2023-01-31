@@ -56,14 +56,15 @@ contract SushiFarmAdapterEth is BaseAdapterEth {
      * @notice Deposit with ETH
      * @param _tokenId YBNFT token id
      * @param _account user wallet address
-     * @param _amountIn ETH amount
      */
-    function deposit(
-        uint256 _tokenId,
-        uint256 _amountIn,
-        address _account
-    ) external payable override onlyInvestor returns (uint256 amountOut) {
-        require(msg.value == _amountIn, "Error: msg.value is not correct");
+    function deposit(uint256 _tokenId, address _account)
+        external
+        payable
+        override
+        onlyInvestor
+        returns (uint256 amountOut)
+    {
+        uint256 _amountIn = msg.value;
         AdapterInfo storage adapterInfo = adapterInfos[_tokenId];
         UserAdapterInfo storage userInfo = userAdapterInfos[_account][_tokenId];
 
@@ -77,7 +78,7 @@ contract SushiFarmAdapterEth is BaseAdapterEth {
             );
         } else {
             amountOut = HedgepieLibraryEth.getLP(
-                IYBNFT.Adapter(0, stakingToken, address(this), 0, 0),
+                IYBNFT.Adapter(0, stakingToken, address(this)),
                 weth,
                 _amountIn
             );
@@ -193,7 +194,7 @@ contract SushiFarmAdapterEth is BaseAdapterEth {
             );
         } else {
             amountOut = HedgepieLibraryEth.withdrawLP(
-                IYBNFT.Adapter(0, stakingToken, address(this), 0, 0),
+                IYBNFT.Adapter(0, stakingToken, address(this)),
                 weth,
                 amountOut
             );

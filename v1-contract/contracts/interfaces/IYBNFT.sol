@@ -6,8 +6,6 @@ interface IYBNFT {
         uint256 allocation;
         address token;
         address addr;
-        uint96 created;
-        uint96 modified;
     }
 
     function getCurrentTokenId() external view returns (uint256);

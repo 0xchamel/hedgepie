@@ -24,11 +24,10 @@ interface IAdapterEth {
 
     function swapRouter() external view returns (address);
 
-    function deposit(
-        uint256 _tokenId,
-        uint256 _amount,
-        address _account
-    ) external payable returns (uint256 amountOut);
+    function deposit(uint256 _tokenId, address _account)
+        external
+        payable
+        returns (uint256 amountOut);
 
     function withdraw(uint256 _tokenId, address _account)
         external

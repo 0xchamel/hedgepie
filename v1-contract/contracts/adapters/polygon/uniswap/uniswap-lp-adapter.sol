@@ -93,14 +93,15 @@ contract UniswapLPAdapter is BaseAdapterMatic, IERC721Receiver {
      * @notice Deposit to uniswapV3 adapter
      * @param _tokenId  YBNft token id
      * @param _account  address of depositor
-     * @param _amountIn  amount of Matic
      */
-    function deposit(
-        uint256 _tokenId,
-        uint256 _amountIn,
-        address _account
-    ) external payable override onlyInvestor returns (uint256 amountIn) {
-        require(msg.value == _amountIn, "Error: msg.value is not correct");
+    function deposit(uint256 _tokenId, address _account)
+        external
+        payable
+        override
+        onlyInvestor
+        returns (uint256 amountIn)
+    {
+        uint256 _amountIn = msg.value;
         (amountIn, _amountIn) = _deposit(_tokenId, _amountIn, _account);
 
         // update user info
@@ -156,8 +157,9 @@ contract UniswapLPAdapter is BaseAdapterMatic, IERC721Receiver {
                         IYBNFT(IHedgepieInvestorMatic(investor).ybnft())
                             .performanceFee(_tokenId)) /
                     1e4;
-                (success, ) = payable(IHedgepieInvestorMatic(investor).treasury())
-                    .call{value: taxAmount}("");
+                (success, ) = payable(
+                    IHedgepieInvestorMatic(investor).treasury()
+                ).call{value: taxAmount}("");
                 require(success, "Failed to send matic to Treasury");
             }
 
@@ -214,7 +216,7 @@ contract UniswapLPAdapter is BaseAdapterMatic, IERC721Receiver {
         uint256 maticBalBefore = address(this).balance - _amountIn;
 
         tokenAmount[0] = _swapAndApprove(tokens[0], _amountIn / 2);
-        tokenAmount[1] = _swapAndApprove(tokens[1], _amountIn / 2);
+        tokenAmount[1] = _swapAndApprove(tokens[1], _amountIn - _amountIn / 2);
 
         // deposit staking token to uniswapV3 strategy (mint or increaseLiquidity)
         uint256 v3TokenId = liquidityNFT[_account][_tokenId];

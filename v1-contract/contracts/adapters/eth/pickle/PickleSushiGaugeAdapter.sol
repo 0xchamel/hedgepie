@@ -98,18 +98,19 @@ contract PickleSushiGaugeAdapter is BaseAdapterEth {
      * @notice Deposit to PickleSushiGauge adapter
      * @param _tokenId  YBNft token id
      * @param _account  address of depositor
-     * @param _amountIn  amount of eth
      */
-    function deposit(
-        uint256 _tokenId,
-        uint256 _amountIn,
-        address _account
-    ) external payable override onlyInvestor returns (uint256 amountOut) {
-        require(msg.value == _amountIn, "Error: msg.value is not correct");
+    function deposit(uint256 _tokenId, address _account)
+        external
+        payable
+        override
+        onlyInvestor
+        returns (uint256 amountOut)
+    {
+        uint256 _amountIn = msg.value;
 
         // get sushi LP
         uint256 lpOut = HedgepieLibraryEth.getLP(
-            IYBNFT.Adapter(0, stakingToken, address(this), 0, 0),
+            IYBNFT.Adapter(0, stakingToken, address(this)),
             weth,
             _amountIn
         );
@@ -217,7 +218,7 @@ contract PickleSushiGaugeAdapter is BaseAdapterEth {
         }
 
         amountOut = HedgepieLibraryEth.withdrawLP(
-            IYBNFT.Adapter(0, stakingToken, address(this), 0, 0),
+            IYBNFT.Adapter(0, stakingToken, address(this)),
             weth,
             lpAmount
         );

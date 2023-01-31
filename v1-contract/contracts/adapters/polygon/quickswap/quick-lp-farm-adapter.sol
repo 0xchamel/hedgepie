@@ -11,7 +11,7 @@ interface IStrategy {
     function withdraw(uint256) external;
 
     function getReward() external;
-    
+
     function earned(address account) external view returns (uint256);
 }
 
@@ -42,19 +42,18 @@ contract QuickLPFarmAdapter is BaseAdapterMatic {
         name = _name;
     }
 
-    function _getReward(
-        uint256 _tokenId
-    ) internal {
+    function _getReward(uint256 _tokenId) internal {
         AdapterInfo storage adapterInfo = adapterInfos[_tokenId];
 
         // get reward
         uint256 amountOut = IBEP20(rewardToken).balanceOf(address(this));
 
         IStrategy(strategy).getReward();
-        
+
         unchecked {
-            amountOut = IBEP20(rewardToken).balanceOf(address(this))
-                - amountOut;
+            amountOut =
+                IBEP20(rewardToken).balanceOf(address(this)) -
+                amountOut;
         }
 
         if (amountOut != 0 && adapterInfo.totalStaked != 0) {
@@ -68,20 +67,21 @@ contract QuickLPFarmAdapter is BaseAdapterMatic {
      * @notice Deposit with Matic
      * @param _tokenId YBNFT token id
      * @param _account user wallet address
-     * @param _amountIn Matic amount
      */
-    function deposit(
-        uint256 _tokenId,
-        uint256 _amountIn,
-        address _account
-    ) external payable override onlyInvestor returns (uint256 amountOut) {
-        require(msg.value == _amountIn, "Error: msg.value is not correct");
+    function deposit(uint256 _tokenId, address _account)
+        external
+        payable
+        override
+        onlyInvestor
+        returns (uint256 amountOut)
+    {
+        uint256 _amountIn = msg.value;
         AdapterInfo storage adapterInfo = adapterInfos[_tokenId];
         UserAdapterInfo storage userInfo = userAdapterInfos[_account][_tokenId];
 
         // get stakingToken
         amountOut = HedgepieLibraryMatic.getLP(
-            IYBNFT.Adapter(0, stakingToken, address(this), 0, 0),
+            IYBNFT.Adapter(0, stakingToken, address(this)),
             wmatic,
             _amountIn
         );
@@ -142,12 +142,13 @@ contract QuickLPFarmAdapter is BaseAdapterMatic {
         IStrategy(strategy).withdraw(userInfo.amount);
 
         unchecked {
-            amountOut = IBEP20(stakingToken).balanceOf(address(this))
-                - amountOut;
+            amountOut =
+                IBEP20(stakingToken).balanceOf(address(this)) -
+                amountOut;
         }
 
         amountOut = HedgepieLibraryMatic.withdrawLP(
-            IYBNFT.Adapter(0, stakingToken, address(this), 0, 0),
+            IYBNFT.Adapter(0, stakingToken, address(this)),
             wmatic,
             amountOut
         );

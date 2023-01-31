@@ -58,6 +58,8 @@ abstract contract BaseAdapterBsc is Ownable {
         _;
     }
 
+    event InvestorUpdated(address investor);
+
     /**
      * @notice Get path
      * @param _inToken token address of inToken
@@ -127,19 +129,20 @@ abstract contract BaseAdapterBsc is Ownable {
     function setInvestor(address _investor) external onlyOwner {
         require(_investor != address(0), "Error: Investor zero address");
         investor = _investor;
+        emit InvestorUpdated(investor);
     }
 
     /**
      * @notice deposit to strategy
      * @param _tokenId YBNFT token id
      * @param _account address of user
-     * @param _amountIn payable eth from Investor
      */
-    function deposit(
-        uint256 _tokenId,
-        uint256 _amountIn,
-        address _account
-    ) external payable virtual returns (uint256 amountOut) {}
+    function deposit(uint256 _tokenId, address _account)
+        external
+        payable
+        virtual
+        returns (uint256 amountOut)
+    {}
 
     /**
      * @notice withdraw from strategy

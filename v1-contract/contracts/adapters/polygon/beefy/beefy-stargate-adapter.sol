@@ -16,13 +16,21 @@ interface IStrategy {
 }
 
 interface IStargate {
-    function addLiquidity(uint256,uint256,address) external;
+    function addLiquidity(
+        uint256,
+        uint256,
+        address
+    ) external;
 
-    function instantRedeemLocal(uint16,uint256,address) external;
+    function instantRedeemLocal(
+        uint16,
+        uint256,
+        address
+    ) external;
 
-    function totalSupply() external view returns(uint256);
+    function totalSupply() external view returns (uint256);
 
-    function totalLiquidity() external view returns(uint256);
+    function totalLiquidity() external view returns (uint256);
 }
 
 contract BeefyStargateAdapter is BaseAdapterMatic {
@@ -62,17 +70,19 @@ contract BeefyStargateAdapter is BaseAdapterMatic {
      * @notice Get Stargate LP
      * @param _amountIn liquidity token amount
      */
-    function _getStargate(
-        uint256 _amountIn
-    ) internal returns(uint256 amountOut) {
+    function _getStargate(uint256 _amountIn)
+        internal
+        returns (uint256 amountOut)
+    {
         amountOut = IBEP20(stakingToken).balanceOf(address(this));
 
         IBEP20(liquidityToken).approve(router, _amountIn);
         IStargate(router).addLiquidity(pid, _amountIn, address(this));
 
         unchecked {
-            amountOut = IBEP20(stakingToken).balanceOf(address(this))
-                - amountOut;
+            amountOut =
+                IBEP20(stakingToken).balanceOf(address(this)) -
+                amountOut;
         }
     }
 
@@ -80,16 +90,22 @@ contract BeefyStargateAdapter is BaseAdapterMatic {
      * @notice Remove Stargate LP
      * @param _amountIn LP amount
      */
-    function _removeStargate(
-        uint256 _amountIn
-    ) internal returns(uint256 amountOut) {
+    function _removeStargate(uint256 _amountIn)
+        internal
+        returns (uint256 amountOut)
+    {
         amountOut = IBEP20(liquidityToken).balanceOf(address(this));
 
-        IStargate(router).instantRedeemLocal(uint16(pid), _amountIn, address(this));
+        IStargate(router).instantRedeemLocal(
+            uint16(pid),
+            _amountIn,
+            address(this)
+        );
 
         unchecked {
-            amountOut = IBEP20(liquidityToken).balanceOf(address(this))
-                - amountOut;
+            amountOut =
+                IBEP20(liquidityToken).balanceOf(address(this)) -
+                amountOut;
         }
     }
 
@@ -97,14 +113,15 @@ contract BeefyStargateAdapter is BaseAdapterMatic {
      * @notice Deposit with Matic
      * @param _tokenId YBNFT token id
      * @param _account user wallet address
-     * @param _amountIn Matic amount
      */
-    function deposit(
-        uint256 _tokenId,
-        uint256 _amountIn,
-        address _account
-    ) external payable override onlyInvestor returns (uint256 amountOut) {
-        require(msg.value == _amountIn, "Error: msg.value is not correct");
+    function deposit(uint256 _tokenId, address _account)
+        external
+        payable
+        override
+        onlyInvestor
+        returns (uint256 amountOut)
+    {
+        uint256 _amountIn = msg.value;
         AdapterInfo storage adapterInfo = adapterInfos[_tokenId];
         UserAdapterInfo storage userInfo = userAdapterInfos[_account][_tokenId];
 
@@ -121,16 +138,13 @@ contract BeefyStargateAdapter is BaseAdapterMatic {
         amountOut = _getStargate(amountOut);
 
         // deposit
-        uint256 repayAmt = IBEP20(repayToken).balanceOf(
-            address(this)
-        );
+        uint256 repayAmt = IBEP20(repayToken).balanceOf(address(this));
 
         IBEP20(stakingToken).approve(strategy, amountOut);
         IStrategy(strategy).deposit(amountOut);
 
         unchecked {
-            repayAmt = IBEP20(repayToken).balanceOf(address(this))
-                - repayAmt;
+            repayAmt = IBEP20(repayToken).balanceOf(address(this)) - repayAmt;
 
             adapterInfo.totalStaked += amountOut;
 
@@ -180,8 +194,9 @@ contract BeefyStargateAdapter is BaseAdapterMatic {
         IStrategy(strategy).withdraw(userInfo.userShares);
 
         unchecked {
-            amountOut = IBEP20(stakingToken).balanceOf(address(this))
-                - amountOut;
+            amountOut =
+                IBEP20(stakingToken).balanceOf(address(this)) -
+                amountOut;
         }
 
         // remove from stargate
@@ -239,8 +254,9 @@ contract BeefyStargateAdapter is BaseAdapterMatic {
                         IYBNFT(IHedgepieInvestorMatic(investor).ybnft())
                             .performanceFee(_tokenId)) /
                     1e4;
-                (success, ) = payable(IHedgepieInvestorMatic(investor).treasury())
-                    .call{value: reward}("");
+                (success, ) = payable(
+                    IHedgepieInvestorMatic(investor).treasury()
+                ).call{value: reward}("");
                 require(success, "Failed to send matic to Treasury");
             }
 
@@ -262,23 +278,23 @@ contract BeefyStargateAdapter is BaseAdapterMatic {
     {
         UserAdapterInfo memory userInfo = userAdapterInfos[_account][_tokenId];
 
-        uint256 _reward = userInfo.userShares *
-            (IStrategy(strategy).balance()) / 
+        uint256 _reward = (userInfo.userShares *
+            (IStrategy(strategy).balance())) /
             (IStrategy(strategy).totalSupply());
 
-        if(_reward < userInfo.amount) return 0;
+        if (_reward < userInfo.amount) return 0;
 
-        _reward = _reward * IStargate(stakingToken).totalLiquidity()
-            / IStargate(stakingToken).totalSupply();
+        _reward =
+            (_reward * IStargate(stakingToken).totalLiquidity()) /
+            IStargate(stakingToken).totalSupply();
 
-        if(_reward != 0)
+        if (_reward != 0)
             reward = IPancakeRouter(swapRouter).getAmountsOut(
                 _reward,
                 getPaths(liquidityToken, wmatic)
             )[1];
 
-            reward = reward <= userInfo.invested ? 0
-                : (reward - userInfo.invested);
+        reward = reward <= userInfo.invested ? 0 : (reward - userInfo.invested);
     }
 
     receive() external payable {}

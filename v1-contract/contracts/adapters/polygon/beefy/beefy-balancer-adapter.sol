@@ -102,18 +102,19 @@ contract BeefyBalancerAdapter is BaseAdapterMatic {
      * @notice Get Balancer LP
      * @param _amountIn liquidity token amount
      */
-    function _getBalancerLP(
-        uint256 _amountIn
-    ) internal returns(uint256 amountOut) {
+    function _getBalancerLP(uint256 _amountIn)
+        internal
+        returns (uint256 amountOut)
+    {
         amountOut = IBEP20(stakingToken).balanceOf(address(this));
 
-        (IERC20[] memory tokens, ,) = IBalancerVault(router).getPoolTokens(
+        (IERC20[] memory tokens, , ) = IBalancerVault(router).getPoolTokens(
             bPool.poolId
         );
 
         uint256[] memory amountsIn = new uint256[](bPool.lpCnt);
         IAsset[] memory assets = new IAsset[](bPool.lpCnt);
-        for(uint256 i = 0 ; i < bPool.lpCnt; i++) {
+        for (uint256 i = 0; i < bPool.lpCnt; i++) {
             assets[i] = IAsset(address(tokens[i]));
             amountsIn[i] = address(tokens[i]) == liquidityToken ? _amountIn : 0;
         }
@@ -132,8 +133,9 @@ contract BeefyBalancerAdapter is BaseAdapterMatic {
         );
 
         unchecked {
-            amountOut = IBEP20(stakingToken).balanceOf(address(this))
-                - amountOut;
+            amountOut =
+                IBEP20(stakingToken).balanceOf(address(this)) -
+                amountOut;
         }
     }
 
@@ -141,18 +143,19 @@ contract BeefyBalancerAdapter is BaseAdapterMatic {
      * @notice Withdraw Balancer LP
      * @param _amountIn LP token amount
      */
-    function _removeBalancerLP(
-        uint256 _amountIn
-    ) internal returns(uint256 amountOut) {
+    function _removeBalancerLP(uint256 _amountIn)
+        internal
+        returns (uint256 amountOut)
+    {
         amountOut = IBEP20(liquidityToken).balanceOf(address(this));
 
-        (IERC20[] memory tokens, ,) = IBalancerVault(router).getPoolTokens(
+        (IERC20[] memory tokens, , ) = IBalancerVault(router).getPoolTokens(
             bPool.poolId
         );
 
         uint256[] memory amountsOut = new uint256[](bPool.lpCnt);
         IAsset[] memory assets = new IAsset[](bPool.lpCnt);
-        for(uint256 i = 0 ; i < bPool.lpCnt; i++) {
+        for (uint256 i = 0; i < bPool.lpCnt; i++) {
             assets[i] = IAsset(address(tokens[i]));
         }
 
@@ -169,8 +172,9 @@ contract BeefyBalancerAdapter is BaseAdapterMatic {
         );
 
         unchecked {
-            amountOut = IBEP20(liquidityToken).balanceOf(address(this))
-                - amountOut;
+            amountOut =
+                IBEP20(liquidityToken).balanceOf(address(this)) -
+                amountOut;
         }
     }
 
@@ -178,14 +182,15 @@ contract BeefyBalancerAdapter is BaseAdapterMatic {
      * @notice Deposit with Matic
      * @param _tokenId YBNFT token id
      * @param _account user wallet address
-     * @param _amountIn Matic amount
      */
-    function deposit(
-        uint256 _tokenId,
-        uint256 _amountIn,
-        address _account
-    ) external payable override onlyInvestor returns (uint256 amountOut) {
-        require(msg.value == _amountIn, "Error: msg.value is not correct");
+    function deposit(uint256 _tokenId, address _account)
+        external
+        payable
+        override
+        onlyInvestor
+        returns (uint256 amountOut)
+    {
+        uint256 _amountIn = msg.value;
         AdapterInfo storage adapterInfo = adapterInfos[_tokenId];
         UserAdapterInfo storage userInfo = userAdapterInfos[_account][_tokenId];
 
@@ -202,16 +207,13 @@ contract BeefyBalancerAdapter is BaseAdapterMatic {
         amountOut = _getBalancerLP(amountOut);
 
         // deposit
-        uint256 repayAmt = IBEP20(repayToken).balanceOf(
-            address(this)
-        );
+        uint256 repayAmt = IBEP20(repayToken).balanceOf(address(this));
 
         IBEP20(stakingToken).approve(strategy, amountOut);
         IStrategy(strategy).deposit(amountOut);
 
         unchecked {
-            repayAmt = IBEP20(repayToken).balanceOf(address(this))
-                - repayAmt;
+            repayAmt = IBEP20(repayToken).balanceOf(address(this)) - repayAmt;
 
             adapterInfo.totalStaked += amountOut;
 
@@ -261,8 +263,9 @@ contract BeefyBalancerAdapter is BaseAdapterMatic {
         IStrategy(strategy).withdraw(userInfo.userShares);
 
         unchecked {
-            amountOut = IBEP20(stakingToken).balanceOf(address(this))
-                - amountOut;
+            amountOut =
+                IBEP20(stakingToken).balanceOf(address(this)) -
+                amountOut;
         }
 
         // remove from stargate
@@ -320,8 +323,9 @@ contract BeefyBalancerAdapter is BaseAdapterMatic {
                         IYBNFT(IHedgepieInvestorMatic(investor).ybnft())
                             .performanceFee(_tokenId)) /
                     1e4;
-                (success, ) = payable(IHedgepieInvestorMatic(investor).treasury())
-                    .call{value: reward}("");
+                (success, ) = payable(
+                    IHedgepieInvestorMatic(investor).treasury()
+                ).call{value: reward}("");
                 require(success, "Failed to send matic to Treasury");
             }
 
@@ -343,27 +347,27 @@ contract BeefyBalancerAdapter is BaseAdapterMatic {
     {
         UserAdapterInfo memory userInfo = userAdapterInfos[_account][_tokenId];
 
-        uint256 lpReward = userInfo.userShares *
-            (IStrategy(strategy).balance()) / 
+        uint256 lpReward = (userInfo.userShares *
+            (IStrategy(strategy).balance())) /
             (IStrategy(strategy).totalSupply());
 
-        (, uint256[] memory balances,) = IBalancerVault(router).getPoolTokens(
+        (, uint256[] memory balances, ) = IBalancerVault(router).getPoolTokens(
             bPool.poolId
         );
 
-        lpReward = balances[bPool.lpOrder] * lpReward
-            / IBEP20(stakingToken).totalSupply();
+        lpReward =
+            (balances[bPool.lpOrder] * lpReward) /
+            IBEP20(stakingToken).totalSupply();
 
-        if(lpReward < userInfo.amount) return 0;
+        if (lpReward < userInfo.amount) return 0;
 
-        if(lpReward != 0)
+        if (lpReward != 0)
             reward = IPancakeRouter(swapRouter).getAmountsOut(
                 lpReward,
                 getPaths(liquidityToken, wmatic)
             )[1];
 
-            reward = reward <= userInfo.invested ? 0
-                : (reward - userInfo.invested);
+        reward = reward <= userInfo.invested ? 0 : (reward - userInfo.invested);
     }
 
     receive() external payable {}

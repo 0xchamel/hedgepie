@@ -95,7 +95,6 @@ contract HedgepieInvestorMatic is Ownable, ReentrancyGuard {
             uint256 amountIn = (_amount * adapter.allocation) / 1e4;
             IAdapterMatic(adapter.addr).deposit{value: amountIn}(
                 _tokenId,
-                amountIn,
                 msg.sender
             );
         }

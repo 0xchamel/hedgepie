@@ -6,16 +6,21 @@ import "../../../interfaces/IHedgepieInvestorMatic.sol";
 import "../../../interfaces/IHedgepieAdapterInfoMatic.sol";
 
 interface IStrategy {
-    function deposit(uint256, uint256, address) external;
+    function deposit(
+        uint256,
+        uint256,
+        address
+    ) external;
 
-    function withdrawAndHarvest(uint256, uint256, address) external;
+    function withdrawAndHarvest(
+        uint256,
+        uint256,
+        address
+    ) external;
 
     function harvest(uint256, address) external;
 
-    function pendingBanana(uint256, address)
-        external
-        view
-        returns (uint256);
+    function pendingBanana(uint256, address) external view returns (uint256);
 }
 
 contract ApeswapFarmAdapter is BaseAdapterMatic {
@@ -55,20 +60,21 @@ contract ApeswapFarmAdapter is BaseAdapterMatic {
      * @notice Deposit with Matic
      * @param _tokenId YBNFT token id
      * @param _account user wallet address
-     * @param _amountIn Matic amount
      */
-    function deposit(
-        uint256 _tokenId,
-        uint256 _amountIn,
-        address _account
-    ) external payable override onlyInvestor returns (uint256 amountOut) {
-        require(msg.value == _amountIn, "Error: msg.value is not correct");
+    function deposit(uint256 _tokenId, address _account)
+        external
+        payable
+        override
+        onlyInvestor
+        returns (uint256 amountOut)
+    {
+        uint256 _amountIn = msg.value;
         AdapterInfo storage adapterInfo = adapterInfos[_tokenId];
         UserAdapterInfo storage userInfo = userAdapterInfos[_account][_tokenId];
 
         // get LP
         amountOut = HedgepieLibraryMatic.getLP(
-            IYBNFT.Adapter(0, stakingToken, address(this), 0, 0),
+            IYBNFT.Adapter(0, stakingToken, address(this)),
             wmatic,
             _amountIn
         );
@@ -83,8 +89,9 @@ contract ApeswapFarmAdapter is BaseAdapterMatic {
         IStrategy(strategy).deposit(pid, amountOut, address(this));
 
         unchecked {
-            rewardAmt0 = IBEP20(rewardToken).balanceOf(address(this))
-                - rewardAmt0;
+            rewardAmt0 =
+                IBEP20(rewardToken).balanceOf(address(this)) -
+                rewardAmt0;
             rewardAmt1 = rewardToken1 != address(0)
                 ? IBEP20(rewardToken1).balanceOf(address(this)) - rewardAmt1
                 : 0;
@@ -152,12 +159,20 @@ contract ApeswapFarmAdapter is BaseAdapterMatic {
             ? IBEP20(rewardToken1).balanceOf(address(this))
             : 0;
 
-        IStrategy(strategy).withdrawAndHarvest(pid, userInfo.amount, address(this));
+        IStrategy(strategy).withdrawAndHarvest(
+            pid,
+            userInfo.amount,
+            address(this)
+        );
 
         unchecked {
-            amountOut = IBEP20(stakingToken).balanceOf(address(this)) - amountOut;
+            amountOut =
+                IBEP20(stakingToken).balanceOf(address(this)) -
+                amountOut;
 
-            rewardAmt0 = IBEP20(rewardToken).balanceOf(address(this)) - rewardAmt0;
+            rewardAmt0 =
+                IBEP20(rewardToken).balanceOf(address(this)) -
+                rewardAmt0;
             rewardAmt1 = rewardToken1 != address(0)
                 ? IBEP20(rewardToken1).balanceOf(address(this)) - rewardAmt1
                 : 0;
@@ -176,7 +191,7 @@ contract ApeswapFarmAdapter is BaseAdapterMatic {
         }
 
         amountOut = HedgepieLibraryMatic.withdrawLP(
-            IYBNFT.Adapter(0, stakingToken, address(this), 0, 0),
+            IYBNFT.Adapter(0, stakingToken, address(this)),
             wmatic,
             amountOut
         );
@@ -249,8 +264,9 @@ contract ApeswapFarmAdapter is BaseAdapterMatic {
                         IYBNFT(IHedgepieInvestorMatic(investor).ybnft())
                             .performanceFee(_tokenId)) /
                     1e4;
-                (success, ) = payable(IHedgepieInvestorMatic(investor).treasury())
-                    .call{value: taxAmount}("");
+                (success, ) = payable(
+                    IHedgepieInvestorMatic(investor).treasury()
+                ).call{value: taxAmount}("");
                 require(success, "Failed to send matic to Treasury");
             }
 
@@ -281,8 +297,9 @@ contract ApeswapFarmAdapter is BaseAdapterMatic {
         IStrategy(strategy).harvest(pid, address(this));
 
         unchecked {
-            rewardAmt = IBEP20(rewardToken).balanceOf(address(this))
-                - rewardAmt;
+            rewardAmt =
+                IBEP20(rewardToken).balanceOf(address(this)) -
+                rewardAmt;
 
             adapterInfo.accTokenPerShare +=
                 (rewardAmt * 1e12) /
@@ -323,8 +340,9 @@ contract ApeswapFarmAdapter is BaseAdapterMatic {
             require(success, "Failed to send matic");
         }
 
-        IHedgepieAdapterInfoMatic(IHedgepieInvestorMatic(investor).adapterInfo())
-            .updateProfitInfo(_tokenId, amountOut, true);
+        IHedgepieAdapterInfoMatic(
+            IHedgepieInvestorMatic(investor).adapterInfo()
+        ).updateProfitInfo(_tokenId, amountOut, true);
     }
 
     /**
