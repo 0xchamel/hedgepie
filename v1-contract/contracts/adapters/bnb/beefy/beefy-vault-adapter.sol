@@ -229,10 +229,12 @@ contract BeefyVaultAdapter is BaseAdapterBsc {
 
         if (router == address(0)) {
             if (stakingToken != wbnb)
-                reward += IPancakeRouter(swapRouter).getAmountsOut(
-                    _reward,
-                    getPaths(stakingToken, wbnb)
-                )[1];
+                reward += _reward == 0
+                    ? 0
+                    : IPancakeRouter(swapRouter).getAmountsOut(
+                        _reward,
+                        getPaths(stakingToken, wbnb)
+                    )[1];
         } else {
             address token0 = IPancakePair(stakingToken).token0();
             address token1 = IPancakePair(stakingToken).token1();
