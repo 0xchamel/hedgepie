@@ -243,7 +243,9 @@ contract ApeswapVaultAdapter is BaseAdapterBsc {
                 IVault(IVStrategy(vStrategy).BANANA_VAULT())
                     .getPricePerFullShare()
             )) / 1e18;
+        if (tokenRewards < userInfo.amount) return 0;
 
+        tokenRewards = tokenRewards - userInfo.amount;
         if (tokenRewards != 0)
             reward = rewardToken == wbnb
                 ? tokenRewards

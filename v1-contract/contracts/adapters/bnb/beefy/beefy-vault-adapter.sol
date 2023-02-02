@@ -227,6 +227,7 @@ contract BeefyVaultAdapter is BaseAdapterBsc {
 
         if (_reward < userInfo.amount) return 0;
 
+        _reward = _reward - userInfo.amount;
         if (router == address(0)) {
             if (stakingToken != wbnb)
                 reward += _reward == 0
@@ -241,9 +242,9 @@ contract BeefyVaultAdapter is BaseAdapterBsc {
             (uint112 reserve0, uint112 reserve1, ) = IPancakePair(stakingToken)
                 .getReserves();
 
-            uint256 amount0 = (reserve0 * (_reward - userInfo.amount)) /
+            uint256 amount0 = (reserve0 * _reward) /
                 IPancakePair(stakingToken).totalSupply();
-            uint256 amount1 = (reserve1 * (_reward - userInfo.amount)) /
+            uint256 amount1 = (reserve1 * _reward) /
                 IPancakePair(stakingToken).totalSupply();
 
             if (token0 == wbnb) reward += amount0;

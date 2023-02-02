@@ -231,6 +231,7 @@ contract AlpacaAUSDAdapter is BaseAdapterBsc {
 
         if (reward < userInfo.amount) return 0;
 
+        reward = reward - userInfo.amount;
         if (reward != 0)
             reward = stakingToken == wbnb
                 ? reward
