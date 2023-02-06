@@ -159,19 +159,20 @@ contract HedgepieInvestorBsc is Ownable, ReentrancyGuard {
     function pendingReward(uint256 _tokenId, address _account)
         public
         view
-        returns (uint256 amountOut)
+        returns (uint256 amountOut, uint256 withdrawable)
     {
-        if (!IYBNFT(ybnft).exists(_tokenId)) return 0;
+        if (!IYBNFT(ybnft).exists(_tokenId)) return (0, 0);
 
         IYBNFT.Adapter[] memory adapterInfos = IYBNFT(ybnft).getAdapterInfo(
             _tokenId
         );
 
         for (uint8 i; i < adapterInfos.length; i++) {
-            amountOut += IAdapterBsc(adapterInfos[i].addr).pendingReward(
-                _tokenId,
-                _account
-            );
+            (uint256 _amountOut, uint256 _withdrawable) = IAdapterBsc(
+                adapterInfos[i].addr
+            ).pendingReward(_tokenId, _account);
+            amountOut += _amountOut;
+            withdrawable += _withdrawable;
         }
     }
 

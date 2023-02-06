@@ -221,7 +221,7 @@ contract AlpacaAUSDAdapter is BaseAdapterBsc {
         external
         view
         override
-        returns (uint256 reward)
+        returns (uint256 reward, uint256 withdrawable)
     {
         UserAdapterInfo memory userInfo = userAdapterInfos[_account][_tokenId];
 
@@ -229,16 +229,18 @@ contract AlpacaAUSDAdapter is BaseAdapterBsc {
             (userInfo.userShares * (IStrategy(strategy).totalToken())) /
             (IStrategy(strategy).totalSupply());
 
-        if (reward < userInfo.amount) return 0;
+        if (reward < userInfo.amount) return (0, 0);
 
         reward = reward - userInfo.amount;
-        if (reward != 0)
+        if (reward != 0) {
             reward = stakingToken == wbnb
                 ? reward
                 : IPancakeRouter(swapRouter).getAmountsOut(
                     reward,
                     getPaths(stakingToken, wbnb)
                 )[1];
+            withdrawable = reward;
+        }
     }
 
     receive() external payable {}

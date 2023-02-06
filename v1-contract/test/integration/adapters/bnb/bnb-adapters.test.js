@@ -111,7 +111,6 @@ describe("Global BNB Adapters Integration Test", function () {
     describe("depositBNB function test", function () {
         it("(1) deposit should success for Alice", async function () {
             const depositAmount = ethers.utils.parseEther("10");
-            console.log("===============");
             await this.investor
                 .connect(this.alice)
                 .depositBNB(1, depositAmount, {

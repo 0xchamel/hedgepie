@@ -213,7 +213,7 @@ contract AutoVaultAdapterBsc is BaseAdapterBsc {
         external
         view
         override
-        returns (uint256 reward)
+        returns (uint256 reward, uint256)
     {
         UserAdapterInfo memory userInfo = userAdapterInfos[_account][_tokenId];
 
@@ -221,7 +221,7 @@ contract AutoVaultAdapterBsc is BaseAdapterBsc {
             IVaultStrategy(vStrategy).wantLockedTotal()) /
             IVaultStrategy(vStrategy).sharesTotal();
 
-        if (vAmount < userInfo.amount) return 0;
+        if (vAmount < userInfo.amount) return (0, 0);
 
         address token0 = IPancakePair(stakingToken).token0();
         address token1 = IPancakePair(stakingToken).token1();

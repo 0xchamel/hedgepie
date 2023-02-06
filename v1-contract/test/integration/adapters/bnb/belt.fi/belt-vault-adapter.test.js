@@ -183,7 +183,7 @@ describe("BeltVaultStakingAdapter Integration Test", function () {
                 1,
                 this.alice.address
             );
-            expect(pendingInfo).to.gte(0);
+            expect(pendingInfo[0]).to.gte(0);
         });
     });
 

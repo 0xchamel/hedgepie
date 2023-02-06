@@ -177,6 +177,6 @@ abstract contract BaseAdapterBsc is Ownable {
         external
         view
         virtual
-        returns (uint256 reward)
+        returns (uint256 reward, uint256 withdrawable)
     {}
 }

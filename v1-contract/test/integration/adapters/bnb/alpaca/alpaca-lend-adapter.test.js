@@ -137,7 +137,7 @@ describe("AlpacaLendAdapter Integration Test", function () {
                 1,
                 this.aliceAddr
             );
-            expect(BigNumber.from(pending).gt(0)).to.be.eq(true);
+            expect(BigNumber.from(pending[0]).gt(0)).to.be.eq(true);
         });
 
         it("(6) test TVL & participants", async function () {
@@ -185,8 +185,9 @@ describe("AlpacaLendAdapter Integration Test", function () {
                 BigNumber.from(afterBNB).gt(BigNumber.from(beforeBNB))
             ).to.eq(true);
 
-            aliceInfo = (await this.aAdapter.userAdapterInfos(this.aliceAddr, 1))
-                .invested;
+            aliceInfo = (
+                await this.aAdapter.userAdapterInfos(this.aliceAddr, 1)
+            ).invested;
             expect(aliceInfo).to.eq(BigNumber.from(0));
 
             const bobInfo = (
@@ -217,8 +218,9 @@ describe("AlpacaLendAdapter Integration Test", function () {
             const beforeOwnerBNB = await ethers.provider.getBalance(
                 this.treasuryAddr
             );
-            let bobInfo = (await this.aAdapter.userAdapterInfos(this.bobAddr, 1))
-                .invested;
+            let bobInfo = (
+                await this.aAdapter.userAdapterInfos(this.bobAddr, 1)
+            ).invested;
 
             await expect(
                 this.investor.connect(this.bob).withdrawBNB(1)

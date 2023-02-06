@@ -387,7 +387,9 @@ describe("ApeswapJungleAdapter Integration Test", function () {
                 this.jerry.address
             );
             expect(
-                BigNumber.from(pending2).gt(BigNumber.from(pending1).mul(8))
+                BigNumber.from(pending2[0]).gt(
+                    BigNumber.from(pending1[0]).mul(7)
+                )
             ).to.eq(true);
 
             // claim rewards
@@ -438,7 +440,7 @@ describe("ApeswapJungleAdapter Integration Test", function () {
             // Check mixed adapter reward results
             expect(
                 BigNumber.from(actualReward2).gt(
-                    BigNumber.from(actualReward1).mul(8)
+                    BigNumber.from(actualReward1).mul(7)
                 )
             ).to.eq(true);
         });

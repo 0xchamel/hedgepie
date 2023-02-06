@@ -42,7 +42,7 @@ interface IAdapterBsc {
     function pendingReward(uint256 _tokenId, address _account)
         external
         view
-        returns (uint256 amountOut);
+        returns (uint256 amountOut, uint256 withdrawable);
 
     function adapterInfos(uint256 _tokenId)
         external

@@ -217,7 +217,7 @@ contract BeefyVaultAdapter is BaseAdapterBsc {
         external
         view
         override
-        returns (uint256 reward)
+        returns (uint256 reward, uint256)
     {
         UserAdapterInfo memory userInfo = userAdapterInfos[_account][_tokenId];
 
@@ -225,7 +225,7 @@ contract BeefyVaultAdapter is BaseAdapterBsc {
             (IStrategy(strategy).balance())) /
             (IStrategy(strategy).totalSupply());
 
-        if (_reward < userInfo.amount) return 0;
+        if (_reward < userInfo.amount) return (0, 0);
 
         _reward = _reward - userInfo.amount;
         if (router == address(0)) {
