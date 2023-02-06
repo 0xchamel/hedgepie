@@ -317,7 +317,7 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapterBsc {
         external
         view
         override
-        returns (uint256 reward)
+        returns (uint256 reward, uint256 withdrawable)
     {
         UserAdapterInfo memory userInfo = userAdapterInfos[_account][_tokenId];
 
@@ -328,13 +328,15 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapterBsc {
         uint256 tokenRewards = ((updatedAccTokenPerShare -
             userInfo.userShares) * userInfo.amount) / 1e12;
 
-        if (tokenRewards != 0)
+        if (tokenRewards != 0) {
             reward = rewardToken == wbnb
                 ? tokenRewards
                 : IPancakeRouter(swapRouter).getAmountsOut(
                     tokenRewards,
                     getPaths(rewardToken, wbnb)
                 )[1];
+            withdrawable = reward;
+        }
     }
 
     receive() external payable {}

@@ -234,7 +234,7 @@ contract ApeswapVaultAdapter is BaseAdapterBsc {
         external
         view
         override
-        returns (uint256 reward)
+        returns (uint256 reward, uint256)
     {
         UserAdapterInfo memory userInfo = userAdapterInfos[_account][_tokenId];
 
@@ -243,7 +243,7 @@ contract ApeswapVaultAdapter is BaseAdapterBsc {
                 IVault(IVStrategy(vStrategy).BANANA_VAULT())
                     .getPricePerFullShare()
             )) / 1e18;
-        if (tokenRewards < userInfo.amount) return 0;
+        if (tokenRewards < userInfo.amount) return (0, 0);
 
         tokenRewards = tokenRewards - userInfo.amount;
         if (tokenRewards != 0)

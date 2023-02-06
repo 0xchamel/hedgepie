@@ -169,7 +169,7 @@ describe("AutoVaultAdatperBsc Integration Test", function () {
                 1,
                 this.aliceAddr
             );
-            expect(BigNumber.from(pending).gt(0)).to.be.eq(true);
+            expect(BigNumber.from(pending[0]).gt(0)).to.be.eq(true);
         });
 
         it("(6) test TVL & participants", async function () {

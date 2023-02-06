@@ -183,8 +183,8 @@ describe("ApeswapVaultAdapter Integration Test", function () {
                 .sub(beforeBNB)
                 .add(gas.mul(gasPrice));
 
-            if (pending > 0) {
-                expect(pending).to.be.within(
+            if (pending[0] > 0) {
+                expect(pending[0]).to.be.within(
                     actualPending,
                     actualPending.add(BigNumber.from(2e14))
                 );

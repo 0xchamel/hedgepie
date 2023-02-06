@@ -48,7 +48,7 @@ describe("BeefyLPVaultAdapter Integration Test", function () {
                 stakingToken,
                 this.performanceFee
             );
-            
+
         await setPath(this.aAdapter, wbnb, USDT);
         await setPath(this.aAdapter, wbnb, BUSD);
 
@@ -187,7 +187,7 @@ describe("BeefyLPVaultAdapter Integration Test", function () {
                 1,
                 this.alice.address
             );
-            expect(pendingInfo).to.gte(0);
+            expect(pendingInfo[0]).to.gte(0);
         });
     });
 

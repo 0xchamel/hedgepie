@@ -221,7 +221,7 @@ contract AlpacaLendAdapter is BaseAdapterBsc {
         external
         view
         override
-        returns (uint256 reward)
+        returns (uint256 reward, uint256)
     {
         UserAdapterInfo memory userInfo = userAdapterInfos[_account][_tokenId];
 
@@ -229,7 +229,7 @@ contract AlpacaLendAdapter is BaseAdapterBsc {
             (userInfo.userShares * (IStrategy(strategy).totalToken())) /
             (IStrategy(strategy).totalSupply());
 
-        if (reward < userInfo.amount) return 0;
+        if (reward < userInfo.amount) return (0, 0);
 
         reward = reward - userInfo.amount;
         if (reward != 0)
