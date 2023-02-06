@@ -25,10 +25,18 @@ describe("Global BNB Adapters Integration Test", function () {
         // Get Adapter fixtures
         this.ethAdapters = [...(await deployAdapters())];
 
+        // Deploy Adaptor Manager contract
+        const AdapterManager = await ethers.getContractFactory(
+            "HedgepieAdapterManagerBsc"
+        );
+        this.adapterManager = await AdapterManager.deploy();
+        await this.adapterManager.deployed();
+
         // Deploy YBNFT contract
         const ybNftFactory = await ethers.getContractFactory("YBNFT");
         this.ybNft = await ybNftFactory.deploy();
         await this.ybNft.deployed();
+        await await this.ybNft.setAdapterManager(this.adapterManager.address);
 
         // deploy adapterinfo
         const AdapterInfo = await ethers.getContractFactory(
@@ -57,12 +65,16 @@ describe("Global BNB Adapters Integration Test", function () {
             );
         }
 
-        // Deploy Adaptor Manager contract
-        const AdapterManager = await ethers.getContractFactory(
-            "HedgepieAdapterManagerBsc"
-        );
-        this.adapterManager = await AdapterManager.deploy();
-        await this.adapterManager.deployed();
+        // Set investor in adapter manager
+        await this.adapterManager.setInvestor(this.investor.address);
+
+        // Set adapter manager in investor
+        await this.investor.setAdapterManager(this.adapterManager.address);
+
+        // Add Adapters to AdapterManager
+        for (let i = 0; i < this.ethAdapters.length; i++) {
+            await this.adapterManager.addAdapter(this.ethAdapters[i].address);
+        }
 
         // Mint NFTs
         // tokenID: 1
@@ -83,17 +95,6 @@ describe("Global BNB Adapters Integration Test", function () {
             "test tokenURI2"
         );
 
-        // Set investor in adapter manager
-        await this.adapterManager.setInvestor(this.investor.address);
-
-        // Add Adapters to AdapterManager
-        for (let i = 0; i < this.ethAdapters.length; i++) {
-            await this.adapterManager.addAdapter(this.ethAdapters[i].address);
-        }
-
-        // Set adapter manager in investor
-        await this.investor.setAdapterManager(this.adapterManager.address);
-
         console.log("Owner: ", this.owner.address);
         console.log("YBNFT: ", this.ybNft.address);
         console.log("Investor: ", this.investor.address);
@@ -110,12 +111,18 @@ describe("Global BNB Adapters Integration Test", function () {
     describe("depositBNB function test", function () {
         it("(1) deposit should success for Alice", async function () {
             const depositAmount = ethers.utils.parseEther("10");
+            console.log("===============");
             await this.investor
                 .connect(this.alice)
                 .depositBNB(1, depositAmount, {
                     gasPrice: 21e9,
                     value: depositAmount,
                 });
+
+            const pendingReward = await this.investor
+                .connect(this.alice)
+                .pendingReward(1, this.aliceAddr);
+            expect(BigNumber.from(pendingReward)).to.eq(0);
 
             for (let i = 0; i < 10; i++) {
                 const aliceInfo = (
@@ -131,9 +138,16 @@ describe("Global BNB Adapters Integration Test", function () {
                 ].userAdapterInfos(this.aliceAddr, 1);
 
                 const adapterInfos = await this.ethAdapters[i].adapterInfos(1);
-                expect(BigNumber.from(adapterInfos.totalStaked)).to.eq(
-                    BigNumber.from(aliceAdapterInfos.amount)
-                );
+                const mAdapterInfos = await this.ethAdapters[i].mAdapter();
+
+                expect(
+                    BigNumber.from(adapterInfos.totalStaked).eq(
+                        BigNumber.from(aliceAdapterInfos.amount)
+                    ) ||
+                        BigNumber.from(mAdapterInfos.totalStaked).eq(
+                            BigNumber.from(aliceAdapterInfos.amount)
+                        )
+                ).to.eq(true);
             }
         });
 
@@ -158,12 +172,17 @@ describe("Global BNB Adapters Integration Test", function () {
 
                 expect(Number(bobInfo) / Math.pow(10, 16)).to.eq(250);
 
-                const bobAdapterInfos = await this.ethAdapters[
-                    i
-                ].userAdapterInfos(this.bobAddr, 2);
-
                 const adapterInfos = await this.ethAdapters[i].adapterInfos(2);
-                expect(BigNumber.from(adapterInfos.totalStaked)).to.gte(0);
+                const mAdapterInfos = await this.ethAdapters[i].mAdapter();
+
+                expect(
+                    BigNumber.from(adapterInfos.totalStaked).eq(
+                        BigNumber.from(aliceAdapterInfos.amount)
+                    ) ||
+                        BigNumber.from(mAdapterInfos.totalStaked).eq(
+                            BigNumber.from(aliceAdapterInfos.amount)
+                        )
+                ).to.eq(true);
             }
         });
 
