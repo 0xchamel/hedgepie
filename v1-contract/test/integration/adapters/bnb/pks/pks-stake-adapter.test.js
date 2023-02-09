@@ -16,7 +16,7 @@ describe("PancakeStakeAdapterBsc Integration Test", function () {
 
         const wbnb = "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c";
         const cake = "0x0e09fabb73bd3ade0a17ecc321fd13a19e81ce82";
-        const xcad = "0x431e0cD023a32532BF3969CddFc002c00E98429d";
+        const arena = "0xCfFD4D3B517b77BE32C76DA768634dE6C738889B";
         const busd = "0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56";
         const swapRouter = "0x10ED43C718714eb63d5aA57B78B54704E256024E"; // pks rounter address
 
@@ -32,9 +32,9 @@ describe("PancakeStakeAdapterBsc Integration Test", function () {
         this.tomAddr = tom.address;
 
         this.performanceFee = 100;
-        this.strategy = "0x68Cc90351a79A4c10078FE021bE430b7a12aaA09";
+        this.strategy = "0xDe9FC6485b5f4A1905d8011fcd201EB78CF34073";
         this.stakingToken = cake;
-        this.rewardToken = xcad;
+        this.rewardToken = arena;
         this.treasuryAddr = treasury.address;
         this.swapRouter = swapRouter;
         this.accTokenPerShare = BigNumber.from(0);
@@ -50,7 +50,7 @@ describe("PancakeStakeAdapterBsc Integration Test", function () {
             this.rewardToken,
             this.swapRouter,
             wbnb,
-            "PK::STAKE::XCAD-ADAPTER"
+            "PK::STAKE::ARENA-ADAPTER"
         );
         await this.adapter.deployed();
 
@@ -63,7 +63,7 @@ describe("PancakeStakeAdapterBsc Integration Test", function () {
             );
 
         await setPath(this.adapter, wbnb, cake);
-        await setPath(this.adapter, wbnb, this.rewardToken, busd);
+        await setPath(this.adapter, wbnb, this.rewardToken, cake);
 
         console.log("Owner: ", this.owner.address);
         console.log("Investor: ", this.investor.address);
@@ -373,6 +373,7 @@ describe("PancakeStakeAdapterBsc Integration Test", function () {
                 2,
                 this.jerry.address
             );
+            console.log(pending1[0], pending2[0]);
             expect(
                 BigNumber.from(pending2[0]).gt(
                     BigNumber.from(pending1[0]).mul(9)

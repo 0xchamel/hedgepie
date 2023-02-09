@@ -330,7 +330,9 @@ contract PancakeStakeAdapterBsc is BaseAdapterBsc {
                 mAdapter.totalStaked);
 
         uint256 tokenRewards = ((updatedAccTokenPerShare -
-            userInfo.userShares) * userInfo.amount) / 1e12;
+            userInfo.userShares) * userInfo.amount) /
+            1e12 +
+            userInfo.rewardDebt;
 
         if (tokenRewards != 0) {
             reward = rewardToken == wbnb
@@ -338,7 +340,7 @@ contract PancakeStakeAdapterBsc is BaseAdapterBsc {
                 : IPancakeRouter(swapRouter).getAmountsOut(
                     tokenRewards,
                     getPaths(rewardToken, wbnb)
-                )[1];
+                )[getPaths(rewardToken, wbnb).length - 1];
             withdrawable = reward;
         }
     }

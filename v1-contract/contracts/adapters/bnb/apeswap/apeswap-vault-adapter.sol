@@ -252,7 +252,7 @@ contract ApeswapVaultAdapter is BaseAdapterBsc {
                 : IPancakeRouter(router).getAmountsOut(
                     tokenRewards,
                     getPaths(rewardToken, wbnb)
-                )[1];
+                )[getPaths(rewardToken, wbnb).length - 1];
     }
 
     receive() external payable {}

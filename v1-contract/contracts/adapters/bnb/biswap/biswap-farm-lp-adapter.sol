@@ -108,14 +108,8 @@ contract BiSwapFarmLPAdapterBsc is BaseAdapterBsc {
                 (userInfo.amount *
                     (mAdapter.accTokenPerShare - userInfo.userShares)) /
                 1e12;
-            userInfo.rewardDebt1 +=
-                (userInfo.amount *
-                    (mAdapter.accTokenPerShare - userInfo.userShares)) /
-                1e12;
         }
         userInfo.userShares = mAdapter.accTokenPerShare;
-        userInfo.userShares1 = mAdapter.accTokenPerShare1;
-
         userInfo.amount += amountOut;
         userInfo.invested += _amountIn;
 
@@ -355,7 +349,9 @@ contract BiSwapFarmLPAdapterBsc is BaseAdapterBsc {
                 mAdapter.totalStaked);
 
         uint256 tokenRewards = ((updatedAccTokenPerShare -
-            userInfo.userShares) * userInfo.amount) / 1e12;
+            userInfo.userShares) * userInfo.amount) /
+            1e12 +
+            userInfo.rewardDebt;
 
         if (tokenRewards != 0) {
             reward = rewardToken == wbnb
@@ -363,7 +359,7 @@ contract BiSwapFarmLPAdapterBsc is BaseAdapterBsc {
                 : IPancakeRouter(swapRouter).getAmountsOut(
                     tokenRewards,
                     getPaths(rewardToken, wbnb)
-                )[1];
+                )[getPaths(rewardToken, wbnb).length - 1];
             withdrawable = reward;
         }
     }

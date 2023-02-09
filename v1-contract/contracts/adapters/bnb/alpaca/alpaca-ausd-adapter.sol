@@ -238,7 +238,7 @@ contract AlpacaAUSDAdapter is BaseAdapterBsc {
                 : IPancakeRouter(swapRouter).getAmountsOut(
                     reward,
                     getPaths(stakingToken, wbnb)
-                )[1];
+                )[getPaths(stakingToken, wbnb).length - 1];
             withdrawable = reward;
         }
     }

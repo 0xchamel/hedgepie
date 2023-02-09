@@ -318,7 +318,9 @@ contract ApeswapBananaAdapter is BaseAdapterBsc {
                 mAdapter.totalStaked);
 
         uint256 tokenRewards = ((updatedAccTokenPerShare -
-            userInfo.userShares) * userInfo.amount) / 1e12;
+            userInfo.userShares) * userInfo.amount) /
+            1e12 +
+            userInfo.rewardDebt;
 
         if (tokenRewards != 0) {
             reward = stakingToken == wbnb
@@ -326,7 +328,7 @@ contract ApeswapBananaAdapter is BaseAdapterBsc {
                 : IPancakeRouter(router).getAmountsOut(
                     tokenRewards,
                     getPaths(stakingToken, wbnb)
-                )[1];
+                )[getPaths(stakingToken, wbnb).length - 1];
             withdrawable = reward;
         }
     }
