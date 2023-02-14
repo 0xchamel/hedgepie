@@ -313,6 +313,7 @@ contract AlpacaStakeAdapter is BaseAdapterBsc {
         );
 
         userInfo.userShares = mAdapter.accTokenPerShare;
+        userInfo.rewardDebt = 0;
 
         if (reward != 0 && rewardToken != address(0)) {
             amountOut += HedgepieLibraryBsc.swapforBnb(

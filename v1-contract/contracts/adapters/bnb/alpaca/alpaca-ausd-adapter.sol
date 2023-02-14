@@ -221,7 +221,7 @@ contract AlpacaAUSDAdapter is BaseAdapterBsc {
         external
         view
         override
-        returns (uint256 reward, uint256 withdrawable)
+        returns (uint256 reward, uint256)
     {
         UserAdapterInfo memory userInfo = userAdapterInfos[_account][_tokenId];
 
@@ -239,7 +239,6 @@ contract AlpacaAUSDAdapter is BaseAdapterBsc {
                     reward,
                     getPaths(stakingToken, wbnb)
                 )[getPaths(stakingToken, wbnb).length - 1];
-            withdrawable = reward;
         }
     }
 

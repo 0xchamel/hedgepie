@@ -258,6 +258,7 @@ contract ApeswapFarmLPAdapter is BaseAdapterBsc {
         );
 
         userInfo.userShares = mAdapter.accTokenPerShare;
+        userInfo.rewardDebt = 0;
 
         if (reward != 0) {
             amountOut = HedgepieLibraryBsc.swapforBnb(

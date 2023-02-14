@@ -298,7 +298,7 @@ contract BiSwapFarmLPAdapterBsc is BaseAdapterBsc {
         );
 
         userInfo.userShares = mAdapter.accTokenPerShare;
-        userInfo.userShares1 = mAdapter.accTokenPerShare1;
+        userInfo.rewardDebt = 0;
 
         if (reward != 0 && rewardToken != address(0)) {
             amountOut = HedgepieLibraryBsc.swapforBnb(

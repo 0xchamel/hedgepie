@@ -99,13 +99,8 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapterBsc {
                 (userInfo.amount *
                     (mAdapter.accTokenPerShare - userInfo.userShares)) /
                 1e12;
-            userInfo.rewardDebt1 +=
-                (userInfo.amount *
-                    (mAdapter.accTokenPerShare - userInfo.userShares)) /
-                1e12;
         }
         userInfo.userShares = mAdapter.accTokenPerShare;
-        userInfo.userShares1 = mAdapter.accTokenPerShare1;
         userInfo.amount += amountOut;
         userInfo.invested += _amountIn;
 
@@ -277,7 +272,7 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapterBsc {
         );
 
         userInfo.userShares = mAdapter.accTokenPerShare;
-        userInfo.userShares1 = mAdapter.accTokenPerShare1;
+        userInfo.rewardDebt = 0;
 
         if (reward != 0 && rewardToken != address(0)) {
             amountOut = HedgepieLibraryBsc.swapforBnb(
