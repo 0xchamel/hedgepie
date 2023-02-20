@@ -63,8 +63,6 @@ describe.only("PancakeSwapFarmLPAdapter Integration Test", function () {
 
         await setPath(this.adapter, this.wbnb, this.cake);
 
-        this.pksFarm = await ethers.getContractAt("IPKSFarmStrategy", strategy)
-
         console.log("Owner: ", this.owner.address);
         console.log("Investor: ", this.investor.address);
         console.log("Strategy: ", strategy);
