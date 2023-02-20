@@ -9,7 +9,7 @@ const {
 
 const BigNumber = ethers.BigNumber;
 
-describe.only("PancakeSwapFarmLPAdapter Integration Test", function () {
+describe("PancakeSwapFarmLPAdapter Integration Test", function () {
     before("Deploy contract", async function () {
         const [owner, alice, bob, treasury, kyle, jerry] =
             await ethers.getSigners();
