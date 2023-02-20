@@ -232,8 +232,6 @@ describe.only("PancakeSwapFarmLPAdapter Integration Test", function () {
             const afterBNB = await ethers.provider.getBalance(this.aliceAddr);
             const actualPending = BigNumber.from(afterBNB).add(gasAmt).sub(beforeBNB)
 
-            console.log(actualPending, estimatePending, alicePending.withdrawable, "pendingpendingpendingpending")
-
             // actualPending in 2% range of estimatePending
             expect(actualPending).gte(
                 estimatePending.mul(98).div(1e2)
@@ -259,8 +257,6 @@ describe.only("PancakeSwapFarmLPAdapter Integration Test", function () {
 
             const afterBNB = await ethers.provider.getBalance(this.bobAddr);
             const actualPending = BigNumber.from(afterBNB).add(gasAmt).sub(beforeBNB)
-            
-            console.log(actualPending, estimatePending, bobPending.withdrawable, "pendingpendingpendingpending")
 
             // actualPending in 2% range of estimatePending
             expect(actualPending).gte(
