@@ -205,7 +205,7 @@ describe("PancakeSwapFarmLPAdapter Integration Test", function () {
     });
 
     describe("claim() function test", function() {
-        it("check withdrawable and claim for alice", async function() {
+        it("(1) check withdrawable and claim for alice", async function() {
             // wait 1 day
             for (let i = 0; i < 1800; i++) {
                 await ethers.provider.send("evm_mine", []);
@@ -238,7 +238,7 @@ describe("PancakeSwapFarmLPAdapter Integration Test", function () {
             )
         })
 
-        it("check withdrawable and claim for bob", async function() {
+        it("(2) check withdrawable and claim for bob", async function() {
             const bobPending = await this.investor.pendingReward(
                 1,
                 this.bobAddr
@@ -446,7 +446,7 @@ describe("PancakeSwapFarmLPAdapter Integration Test", function () {
                 this.kyle.address
             );
             const actualReward1 = afterAmt1
-                .add(tx1.gasUsed.mul("1000000007"))
+                .add(tx1.gasUsed.mul(tx1.effectiveGasPrice))
                 .sub(beforeAmt1);
             treasuryAmt1 = (
                 await ethers.provider.getBalance(this.treasuryAddr)
@@ -468,7 +468,7 @@ describe("PancakeSwapFarmLPAdapter Integration Test", function () {
                 this.jerry.address
             );
             const actualReward2 = afterAmt2
-                .add(tx2.gasUsed.mul("1000000007"))
+                .add(tx2.gasUsed.mul(tx2.effectiveGasPrice))
                 .sub(beforeAmt2);
             treasuryAmt2 = (
                 await ethers.provider.getBalance(this.treasuryAddr)

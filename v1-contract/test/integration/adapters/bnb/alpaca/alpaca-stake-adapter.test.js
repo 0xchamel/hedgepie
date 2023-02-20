@@ -167,7 +167,7 @@ describe("AlpacaStakeAdapter Integration Test", function () {
     });
 
     describe("claim() function test", function() {
-        it("check withdrawable and claim for alice", async function() {
+        it("(1) check withdrawable and claim for alice", async function() {
             // wait 1 day
             for (let i = 0; i < 1800; i++) {
                 await ethers.provider.send("evm_mine", []);
@@ -200,7 +200,7 @@ describe("AlpacaStakeAdapter Integration Test", function () {
             }
         })
 
-        it("check withdrawable and claim for bob", async function() {
+        it("(2) check withdrawable and claim for bob", async function() {
             const bobPending = await this.investor.pendingReward(
                 1,
                 this.bobAddr
