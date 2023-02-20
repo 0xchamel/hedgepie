@@ -267,6 +267,12 @@ describe("PancakeSwapFarmLPAdapter Integration Test", function () {
 
     describe("withdrawBNB() function test", function () {
         it("(1) revert when nft tokenId is invalid", async function () {
+            for (let i = 0; i < 10; i++) {
+                await ethers.provider.send("evm_mine", []);
+            }
+            await ethers.provider.send("evm_increaseTime", [3600 * 24]);
+            await ethers.provider.send("evm_mine", []);
+
             // withdraw to nftID: 3
             await expect(
                 this.investor
@@ -446,7 +452,7 @@ describe("PancakeSwapFarmLPAdapter Integration Test", function () {
                 this.kyle.address
             );
             const actualReward1 = afterAmt1
-                .add(tx1.gasUsed.mul(tx1.effectiveGasPrice))
+            .add(tx1.gasUsed.mul(tx1.effectiveGasPrice))
                 .sub(beforeAmt1);
             treasuryAmt1 = (
                 await ethers.provider.getBalance(this.treasuryAddr)
@@ -468,7 +474,7 @@ describe("PancakeSwapFarmLPAdapter Integration Test", function () {
                 this.jerry.address
             );
             const actualReward2 = afterAmt2
-                .add(tx2.gasUsed.mul(tx2.effectiveGasPrice))
+            .add(tx2.gasUsed.mul(tx2.effectiveGasPrice))
                 .sub(beforeAmt2);
             treasuryAmt2 = (
                 await ethers.provider.getBalance(this.treasuryAddr)
