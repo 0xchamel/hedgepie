@@ -253,7 +253,7 @@ describe("BeltVaultStakingAdapter Integration Test", function () {
                 BigNumber.from(afterBNB).gt(BigNumber.from(beforeBNB))
             ).to.eq(true);
 
-            // check protocol fee
+            // check protocol fee and amountOut
             const rewardAmt = afterBNB.sub(beforeBNB);
             const afterOwnerBNB = await ethers.provider.getBalance(
                 this.treasuryAddr
@@ -312,6 +312,7 @@ describe("BeltVaultStakingAdapter Integration Test", function () {
         it("(4) should receive the BNB successfully after withdraw function for Bob", async function () {
             await ethers.provider.send("evm_increaseTime", [3600 * 24 * 30]);
             await ethers.provider.send("evm_mine", []);
+
             // withdraw from nftId: 1
             const beforeBNB = await ethers.provider.getBalance(this.bobAddr);
             const beforeOwnerBNB = await ethers.provider.getBalance(
@@ -338,7 +339,7 @@ describe("BeltVaultStakingAdapter Integration Test", function () {
                 BigNumber.from(afterBNB).gt(BigNumber.from(beforeBNB))
             ).to.eq(true);
 
-            // check protocol fee
+            // check protocol fee and amountOut
             const rewardAmt = afterBNB.sub(beforeBNB);
             let actualPending = rewardAmt.add(gas.mul(gasPrice));
             if (actualPending.gt(bobInfo)) {
