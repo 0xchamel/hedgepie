@@ -209,6 +209,67 @@ describe("BiswapFarmLPAdapter Integration Test", function () {
         });
     });
 
+    describe("claim() function test", function() {
+        it("(1) check withdrawable and claim for alice", async function() {
+            // wait 1 day
+            for (let i = 0; i < 1800; i++) {
+                await ethers.provider.send("evm_mine", []);
+            }
+            await ethers.provider.send("evm_increaseTime", [3600 * 24]);
+            await ethers.provider.send("evm_mine", []);
+
+            const alicePending = await this.investor.pendingReward(
+                1,
+                this.aliceAddr
+            )
+            expect(alicePending.withdrawable).gt(0)
+
+            const estimatePending = BigNumber.from(alicePending.withdrawable)
+                .mul(1e4 - this.performanceFee).div(1e4)
+
+            const beforeBNB = await ethers.provider.getBalance(this.aliceAddr);
+
+            const claimTx = await this.investor.connect(this.alice).claim(1)
+            const claimTxResp = await claimTx.wait()
+            const gasAmt = BigNumber.from(claimTxResp.effectiveGasPrice).mul(
+                BigNumber.from(claimTxResp.gasUsed))
+
+            const afterBNB = await ethers.provider.getBalance(this.aliceAddr);
+            const actualPending = BigNumber.from(afterBNB).add(gasAmt).sub(beforeBNB)
+
+            // actualPending in 2% range of estimatePending
+            expect(actualPending).gte(
+                estimatePending.mul(98).div(1e2)
+            )
+        })
+
+        it("(2) check withdrawable and claim for bob", async function() {
+            const bobPending = await this.investor.pendingReward(
+                1,
+                this.bobAddr
+            )
+            expect(bobPending.withdrawable).gt(0)
+
+            const estimatePending = BigNumber.from(bobPending.withdrawable)
+                .mul(1e4 - this.performanceFee).div(1e4)
+
+            const beforeBNB = await ethers.provider.getBalance(this.bobAddr);
+
+            const claimTx = await this.investor.connect(this.bob).claim(1)
+            const claimTxResp = await claimTx.wait()
+            const gasAmt = BigNumber.from(claimTxResp.effectiveGasPrice).mul(
+                BigNumber.from(claimTxResp.gasUsed))
+
+            const afterBNB = await ethers.provider.getBalance(this.bobAddr);
+            const actualPending = BigNumber.from(afterBNB).add(gasAmt).sub(beforeBNB)
+
+            // actualPending in 2% range of estimatePending
+            expect(actualPending).gte(
+                estimatePending.mul(98).div(1e2)
+            )
+        })
+    })
+
     describe("withdrawBNB() function test", function () {
         it("(1) revert when nft tokenId is invalid", async function () {
             for (let i = 0; i < 10; i++) {

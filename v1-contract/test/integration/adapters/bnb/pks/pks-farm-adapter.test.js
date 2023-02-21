@@ -11,10 +11,10 @@ const BigNumber = ethers.BigNumber;
 
 describe("PancakeSwapFarmLPAdapter Integration Test", function () {
     before("Deploy contract", async function () {
-        const [owner, alice, bob, tom, treasury, kyle, jerry] =
+        const [owner, alice, bob, treasury, kyle, jerry] =
             await ethers.getSigners();
 
-        const performanceFee = 100;
+        const performanceFee = 500;
         const wbnb = "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c";
         const cake = "0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82";
         const strategy = "0xa5f8C5Dbd5F286960b9d90548680aE5ebFf07652"; // MasterChef v2 pks
@@ -28,14 +28,12 @@ describe("PancakeSwapFarmLPAdapter Integration Test", function () {
         this.owner = owner;
         this.alice = alice;
         this.bob = bob;
-        this.tom = tom;
         this.kyle = kyle;
         this.jerry = jerry;
         this.pksRouter = "0x10ED43C718714eb63d5aA57B78B54704E256024E";
 
         this.bobAddr = bob.address;
         this.aliceAddr = alice.address;
-        this.tomAddr = tom.address;
         this.treasuryAddr = treasury.address;
         this.accTokenPerShare = BigNumber.from(0);
 
@@ -205,6 +203,67 @@ describe("PancakeSwapFarmLPAdapter Integration Test", function () {
                 );
         });
     });
+
+    describe("claim() function test", function() {
+        it("(1) check withdrawable and claim for alice", async function() {
+            // wait 1 day
+            for (let i = 0; i < 1800; i++) {
+                await ethers.provider.send("evm_mine", []);
+            }
+            await ethers.provider.send("evm_increaseTime", [3600 * 24]);
+            await ethers.provider.send("evm_mine", []);
+
+            const alicePending = await this.investor.pendingReward(
+                1,
+                this.aliceAddr
+            )
+            expect(alicePending.withdrawable).gt(0)
+
+            const estimatePending = BigNumber.from(alicePending.withdrawable)
+                .mul(1e4 - this.performanceFee).div(1e4)
+
+            const beforeBNB = await ethers.provider.getBalance(this.aliceAddr);
+
+            const claimTx = await this.investor.connect(this.alice).claim(1)
+            const claimTxResp = await claimTx.wait()
+            const gasAmt = BigNumber.from(claimTxResp.effectiveGasPrice).mul(
+                BigNumber.from(claimTxResp.gasUsed))
+
+            const afterBNB = await ethers.provider.getBalance(this.aliceAddr);
+            const actualPending = BigNumber.from(afterBNB).add(gasAmt).sub(beforeBNB)
+
+            // actualPending in 2% range of estimatePending
+            expect(actualPending).gte(
+                estimatePending.mul(98).div(1e2)
+            )
+        })
+
+        it("(2) check withdrawable and claim for bob", async function() {
+            const bobPending = await this.investor.pendingReward(
+                1,
+                this.bobAddr
+            )
+            expect(bobPending.withdrawable).gt(0)
+
+            const estimatePending = BigNumber.from(bobPending.withdrawable)
+                .mul(1e4 - this.performanceFee).div(1e4)
+
+            const beforeBNB = await ethers.provider.getBalance(this.bobAddr);
+
+            const claimTx = await this.investor.connect(this.bob).claim(1)
+            const claimTxResp = await claimTx.wait()
+            const gasAmt = BigNumber.from(claimTxResp.effectiveGasPrice).mul(
+                BigNumber.from(claimTxResp.gasUsed))
+
+            const afterBNB = await ethers.provider.getBalance(this.bobAddr);
+            const actualPending = BigNumber.from(afterBNB).add(gasAmt).sub(beforeBNB)
+
+            // actualPending in 2% range of estimatePending
+            expect(actualPending).gte(
+                estimatePending.mul(98).div(1e2)
+            )
+        })
+    })
 
     describe("withdrawBNB() function test", function () {
         it("(1) revert when nft tokenId is invalid", async function () {
@@ -393,7 +452,7 @@ describe("PancakeSwapFarmLPAdapter Integration Test", function () {
                 this.kyle.address
             );
             const actualReward1 = afterAmt1
-                .add(tx1.gasUsed.mul("1000000007"))
+            .add(tx1.gasUsed.mul(tx1.effectiveGasPrice))
                 .sub(beforeAmt1);
             treasuryAmt1 = (
                 await ethers.provider.getBalance(this.treasuryAddr)
@@ -415,7 +474,7 @@ describe("PancakeSwapFarmLPAdapter Integration Test", function () {
                 this.jerry.address
             );
             const actualReward2 = afterAmt2
-                .add(tx2.gasUsed.mul("1000000007"))
+            .add(tx2.gasUsed.mul(tx2.effectiveGasPrice))
                 .sub(beforeAmt2);
             treasuryAmt2 = (
                 await ethers.provider.getBalance(this.treasuryAddr)
