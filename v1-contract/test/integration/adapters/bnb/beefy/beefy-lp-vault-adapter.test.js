@@ -60,7 +60,7 @@ describe("BeefyLPVaultAdapter Integration Test", function () {
         console.log("BeefyLPVaultAdapter: ", this.aAdapter.address);
     });
 
-    describe("depositBNB function test", function () {
+    describe("depositBNB() function test", function () {
         it("(1) should be reverted when nft tokenId is invalid", async function () {
             // deposit to nftID: 3
             const depositAmount = ethers.utils.parseEther("1");
@@ -191,6 +191,26 @@ describe("BeefyLPVaultAdapter Integration Test", function () {
         });
     });
 
+    describe("check withdrawal amount", function() {
+        it("(1) check withdrawal amount for alice", async function() {
+            const alicePending = await this.investor.pendingReward(
+                1,
+                this.aliceAddr
+            )
+            expect(alicePending.withdrawable).to.be.eq(0)
+            expect(alicePending.amountOut).gt(0)
+        })
+
+        it("(2) check withdrawal amount for bob", async function() {
+            const bobPending = await this.investor.pendingReward(
+                1,
+                this.bobAddr
+            )
+            expect(bobPending.withdrawable).to.be.eq(0)
+            expect(bobPending.amountOut).gt(0)
+        })
+    });
+
     describe("withdrawBNB() function test", function () {
         it("(1) revert when nft tokenId is invalid", async function () {
             for (let i = 0; i < 10; i++) {
@@ -213,6 +233,10 @@ describe("BeefyLPVaultAdapter Integration Test", function () {
 
             // withdraw from nftId: 1
             const beforeBNB = await ethers.provider.getBalance(this.aliceAddr);
+            const alicePending = await this.investor.pendingReward(
+                1,
+                this.aliceAddr
+            )
             const beforeOwnerBNB = await ethers.provider.getBalance(
                 this.treasuryAddr
             );
@@ -233,7 +257,7 @@ describe("BeefyLPVaultAdapter Integration Test", function () {
                 BigNumber.from(afterBNB).gt(BigNumber.from(beforeBNB))
             ).to.eq(true);
 
-            // check protocol fee
+            // check protocol fee and amountOut
             const rewardAmt = afterBNB.sub(beforeBNB);
             const afterOwnerBNB = await ethers.provider.getBalance(
                 this.treasuryAddr
@@ -252,7 +276,11 @@ describe("BeefyLPVaultAdapter Integration Test", function () {
                         .mul(1e4 - this.performanceFee)
                         .div(this.performanceFee)
                         .add(gas.mul(gasPrice))
-                );
+                )
+
+                expect(actualPending).gte(
+                    BigNumber.from(alicePending.amountOut).mul(98).div(1e2)
+                )
             }
 
             aliceInfo = (
@@ -285,8 +313,13 @@ describe("BeefyLPVaultAdapter Integration Test", function () {
         it("(4) should receive the BNB successfully after withdraw function for Bob", async function () {
             await ethers.provider.send("evm_increaseTime", [3600 * 24 * 30]);
             await ethers.provider.send("evm_mine", []);
+
             // withdraw from nftId: 1
             const beforeBNB = await ethers.provider.getBalance(this.bobAddr);
+            const bobPending = await this.investor.pendingReward(
+                1,
+                this.bobAddr
+            )
             const beforeOwnerBNB = await ethers.provider.getBalance(
                 this.treasuryAddr
             );
@@ -307,11 +340,11 @@ describe("BeefyLPVaultAdapter Integration Test", function () {
                 BigNumber.from(afterBNB).gt(BigNumber.from(beforeBNB))
             ).to.eq(true);
 
-            // check protocol fee
+            // check protocol fee and amountOut
             const rewardAmt = afterBNB.sub(beforeBNB);
             let actualPending = rewardAmt.add(gas.mul(gasPrice));
             if (actualPending.gt(bobInfo)) {
-                actualPending = actualPending - bobInfo;
+                actualPending = actualPending.sub(bobInfo);
                 const afterOwnerBNB = await ethers.provider.getBalance(
                     this.treasuryAddr
                 );
@@ -326,7 +359,11 @@ describe("BeefyLPVaultAdapter Integration Test", function () {
                         .mul(1e4 - this.performanceFee)
                         .div(this.performanceFee)
                         .add(gas.mul(gasPrice))
-                );
+                )
+
+                expect(actualPending).gte(
+                    BigNumber.from(bobPending.amountOut).mul(98).div(1e2)
+                )
             }
 
             bobInfo = (await this.aAdapter.userAdapterInfos(this.bobAddr, 1))
