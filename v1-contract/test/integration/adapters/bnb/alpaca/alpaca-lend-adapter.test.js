@@ -217,11 +217,11 @@ describe("AlpacaLendAdapter Integration Test", function () {
             ).to.eq(true);
 
             // check protocol fee and amountOut
+            const gasAmt = gas.mul(gasPrice)
             const rewardAmt = afterBNB.sub(beforeBNB);
             const afterOwnerBNB = await ethers.provider.getBalance(
                 this.treasuryAddr
             );
-            const gasAmt = gas.mul(gasPrice)
             let actualPending = rewardAmt.add(gasAmt);
             if (actualPending.gt(aliceInfo)) {
                 actualPending = actualPending.sub(BigNumber.from(aliceInfo));
@@ -304,8 +304,9 @@ describe("AlpacaLendAdapter Integration Test", function () {
             ).to.eq(true);
 
             // check protocol fee and amountOut
+            const gasAmt = gas.mul(gasPrice)
             const rewardAmt = afterBNB.sub(beforeBNB);
-            let actualPending = rewardAmt.add(gas.mul(gasPrice));
+            let actualPending = rewardAmt.add(gasAmt);
             if (actualPending.gt(bobInfo)) {
                 actualPending = actualPending.sub(bobInfo);
                 const afterOwnerBNB = await ethers.provider.getBalance(
@@ -317,11 +318,11 @@ describe("AlpacaLendAdapter Integration Test", function () {
                     protocolFee
                         .mul(1e4 - this.performanceFee)
                         .div(this.performanceFee)
-                        .sub(gas.mul(gasPrice)),
+                        .sub(gasAmt),
                     protocolFee
                         .mul(1e4 - this.performanceFee)
                         .div(this.performanceFee)
-                        .add(gas.mul(gasPrice))
+                        .add(gasAmt)
                 );
 
                 const estimatePending = BigNumber.from(bobPending.amountOut).mul(

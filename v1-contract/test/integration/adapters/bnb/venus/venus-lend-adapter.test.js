@@ -18,7 +18,7 @@ describe("VenusLendAdapterBsc Integration Test", function () {
 
         const [owner, alice, bob, treasury] = await ethers.getSigners();
 
-        this.performanceFee = 50;
+        this.performanceFee = 500;
         this.alice = alice;
         this.owner = owner;
         this.bob = bob;
@@ -145,6 +145,17 @@ describe("VenusLendAdapterBsc Integration Test", function () {
         });
     });
 
+    describe("check withdrawal amount", function() {
+        it("(1) check withdrawal amount", async function() {
+            const userPending = await this.investor.pendingReward(
+                1,
+                this.owner.address
+            )
+            expect(userPending.withdrawable).to.be.eq(0)
+            expect(userPending.amountOut).gte(0)
+        })
+    });
+
     describe("withdraw() function test", function () {
         it("(1)should be reverted when nft tokenId is invalid", async function () {
             // withdraw to nftID: 3
@@ -168,12 +179,23 @@ describe("VenusLendAdapterBsc Integration Test", function () {
         });
 
         it("(3)should receive the WBNB successfully after withdraw function", async function () {
+            await ethers.provider.send("evm_increaseTime", [3600 * 24 * 30]);
+            await ethers.provider.send("evm_mine", []);
+            
             // withdraw from nftId: 1
             let bnbBalBefore = await ethers.provider.getBalance(
                 this.owner.address
             );
-            await this.investor.withdrawBNB(1, {
-                gasPrice: 21e9,
+            const userPending = await this.investor.pendingReward(
+                1,
+                this.owner.address
+            )
+
+            const gasPrice = 21e9
+            const gas = await this.investor
+                .estimateGas.withdrawBNB(1, { gasPrice });
+            await this.investor.connect(this.owner).withdrawBNB(1, {
+                gasPrice
             });
 
             let bnbBalAfter = await ethers.provider.getBalance(
@@ -182,6 +204,13 @@ describe("VenusLendAdapterBsc Integration Test", function () {
             expect(
                 BigNumber.from(bnbBalAfter).gte(BigNumber.from(bnbBalBefore))
             ).to.eq(true);
+
+            const gasAmt = gas.mul(gasPrice)
+            const actualPending = bnbBalAfter.add(gasAmt).sub(bnbBalBefore)
+            const estimatePending = BigNumber.from(userPending.amountOut).mul(
+                1e4 - this.performanceFee
+            ).div(1e4)
+            console.log(actualPending, userPending, estimatePending, "actualPendingactualPendingactualPending")
 
             // withdraw from nftId: 2
             bnbBalBefore = await ethers.provider.getBalance(this.owner.address);
