@@ -16,7 +16,7 @@ describe("AlpacaLendAdapter Integration Test", function () {
         const stakingToken = "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c"; // wBNB
         const swapRouter = "0x10ED43C718714eb63d5aA57B78B54704E256024E"; // pks rounter address
 
-        this.performanceFee = 50;
+        this.performanceFee = 500;
         this.owner = owner;
         this.alice = alice;
         this.bob = bob;
@@ -221,9 +221,9 @@ describe("AlpacaLendAdapter Integration Test", function () {
             const afterOwnerBNB = await ethers.provider.getBalance(
                 this.treasuryAddr
             );
-            let actualPending = rewardAmt.add(gas.mul(gasPrice));
+            const gasAmt = gas.mul(gasPrice)
+            let actualPending = rewardAmt.add(gasAmt);
             if (actualPending.gt(aliceInfo)) {
-                console.log(alicePending.amountOut, actualPending, aliceInfo, "pendingpendingpendingpendingpending")
                 actualPending = actualPending.sub(BigNumber.from(aliceInfo));
                 const protocolFee = afterOwnerBNB.sub(beforeOwnerBNB);
                 expect(protocolFee).to.gt(0);
@@ -231,11 +231,11 @@ describe("AlpacaLendAdapter Integration Test", function () {
                     protocolFee
                         .mul(1e4 - this.performanceFee)
                         .div(this.performanceFee)
-                        .sub(gas.mul(gasPrice)),
+                        .sub(gasAmt),
                     protocolFee
                         .mul(1e4 - this.performanceFee)
                         .div(this.performanceFee)
-                        .add(gas.mul(gasPrice))
+                        .add(gasAmt)
                 );
 
                 const estimatePending = BigNumber.from(alicePending.amountOut).mul(
