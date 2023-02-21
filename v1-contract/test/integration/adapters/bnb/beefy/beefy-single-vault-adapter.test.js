@@ -274,8 +274,11 @@ describe("BeefySingleVaultAdapter Integration Test", function () {
                         .add(gas.mul(gasPrice))
                 );
 
+                const estimatePending = BigNumber.from(alicePending.amountOut).mul(
+                    1e4 - this.performanceFee
+                ).div(1e4)
                 expect(actualPending).gte(
-                    BigNumber.from(alicePending.amountOut).mul(98).div(1e2)
+                    estimatePending.mul(98).div(1e2)
                 )
             }
                         
@@ -357,8 +360,11 @@ describe("BeefySingleVaultAdapter Integration Test", function () {
                         .add(gas.mul(gasPrice))
                 );
 
+                const estimatePending = BigNumber.from(bobPending.amountOut).mul(
+                    1e4 - this.performanceFee
+                ).div(1e4)
                 expect(actualPending).gte(
-                    BigNumber.from(bobPending.amountOut).mul(98).div(1e2)
+                    estimatePending.mul(98).div(1e2)
                 )
             }
 
