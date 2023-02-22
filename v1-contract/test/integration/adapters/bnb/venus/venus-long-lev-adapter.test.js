@@ -178,9 +178,6 @@ describe("VenusLongLevAdapter Integration Test", function () {
         });
 
         it("(2) should receive the BNB successfully after withdraw function for Alice", async function () {
-            await ethers.provider.send("evm_increaseTime", [3600 * 24 * 30]);
-            await ethers.provider.send("evm_mine", []);
-
             // withdraw from nftId: 1
             const beforeBNB = await ethers.provider.getBalance(this.aliceAddr);
             await expect(

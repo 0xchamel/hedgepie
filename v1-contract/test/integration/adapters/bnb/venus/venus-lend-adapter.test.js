@@ -205,12 +205,11 @@ describe("VenusLendAdapterBsc Integration Test", function () {
                 BigNumber.from(bnbBalAfter).gte(BigNumber.from(bnbBalBefore))
             ).to.eq(true);
 
-            const gasAmt = gas.mul(gasPrice)
-            const actualPending = bnbBalAfter.add(gasAmt).sub(bnbBalBefore)
-            const estimatePending = BigNumber.from(userPending.amountOut).mul(
-                1e4 - this.performanceFee
-            ).div(1e4)
-            console.log(actualPending, userPending, estimatePending, "actualPendingactualPendingactualPending")
+            // const gasAmt = gas.mul(gasPrice)
+            // const actualPending = bnbBalAfter.add(gasAmt).sub(bnbBalBefore)
+            // const estimatePending = BigNumber.from(userPending.amountOut).mul(
+            //     1e4 - this.performanceFee
+            // ).div(1e4)
 
             // withdraw from nftId: 2
             bnbBalBefore = await ethers.provider.getBalance(this.owner.address);
