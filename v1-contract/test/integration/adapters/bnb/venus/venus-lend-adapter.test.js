@@ -9,12 +9,13 @@ const {
 
 const BigNumber = ethers.BigNumber;
 
-describe("VenusLendAdapterBsc Integration Test", function () {
+describe.only("VenusLendAdapterBsc Integration Test", function () {
     before("Deploy contract", async function () {
         const swapRouter = "0x10ED43C718714eb63d5aA57B78B54704E256024E"; // pks rounter address
         const wbnb = "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c";
         const busd = "0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56";
         const vbusd = "0x95c78222B3D6e262426483D42CfA53685A67Ab9D";
+        const venusLens = "0x7fd7E938d575Fe8ccF72ED65a82142D154C170Af";
 
         const [owner, alice, bob, treasury] = await ethers.getSigners();
 
@@ -32,6 +33,7 @@ describe("VenusLendAdapterBsc Integration Test", function () {
 
         this.adapter = await VenusLendAdapterBsc.deploy(
             this.strategy,
+            venusLens,
             busd,
             vbusd,
             swapRouter,
@@ -151,8 +153,8 @@ describe("VenusLendAdapterBsc Integration Test", function () {
                 1,
                 this.owner.address
             )
-            expect(userPending.withdrawable).to.be.eq(0)
-            expect(userPending.amountOut).gte(0)
+            expect(userPending.amountOut).gt(0)
+            expect(userPending.withdrawable).gt(0)
         })
     });
 
@@ -205,11 +207,12 @@ describe("VenusLendAdapterBsc Integration Test", function () {
                 BigNumber.from(bnbBalAfter).gte(BigNumber.from(bnbBalBefore))
             ).to.eq(true);
 
-            // const gasAmt = gas.mul(gasPrice)
-            // const actualPending = bnbBalAfter.add(gasAmt).sub(bnbBalBefore)
-            // const estimatePending = BigNumber.from(userPending.amountOut).mul(
-            //     1e4 - this.performanceFee
-            // ).div(1e4)
+            const gasAmt = gas.mul(gasPrice)
+            const actualPending = bnbBalAfter.add(gasAmt).sub(bnbBalBefore)
+            const estimatePending = BigNumber.from(userPending.amountOut).mul(
+                1e4 - this.performanceFee
+            ).div(1e4)
+            console.log(actualPending, estimatePending, "pendingpendingpendingpendingpending")
 
             // withdraw from nftId: 2
             bnbBalBefore = await ethers.provider.getBalance(this.owner.address);

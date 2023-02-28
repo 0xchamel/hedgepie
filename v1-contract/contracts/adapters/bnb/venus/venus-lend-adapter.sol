@@ -11,12 +11,25 @@ interface IStrategy {
     function mint(uint256 amount) external returns (uint256);
 
     function redeem(uint256 amount) external returns (uint256);
+
+    function comptroller() external view returns (address);
+}
+
+interface IVenusLens {
+    function pendingVenus(address, address) external view returns(uint256);
 }
 
 contract VenusLendAdapterBsc is BaseAdapterBsc {
+    IVenusLens immutable venusLens;
+
+    address private comptroller;
+
+    uint256 private pendingVenus;
+
     /**
      * @notice Construct
      * @param _strategy  address of strategy
+     * @param _venusLens  address of venus lens
      * @param _stakingToken  address of staking token
      * @param _repayToken  address of repay token
      * @param _swapRouter  address of swap router
@@ -25,6 +38,7 @@ contract VenusLendAdapterBsc is BaseAdapterBsc {
      */
     constructor(
         address _strategy,
+        address _venusLens,
         address _stakingToken,
         address _repayToken,
         address _swapRouter,
@@ -41,11 +55,20 @@ contract VenusLendAdapterBsc is BaseAdapterBsc {
         );
 
         strategy = _strategy;
+        venusLens = IVenusLens(_venusLens);
+        comptroller = IStrategy(strategy).comptroller();
         stakingToken = _stakingToken;
         repayToken = _repayToken;
         swapRouter = _swapRouter;
         wbnb = _wbnb;
         name = _name;
+    }
+
+    /**
+     * @notice Return pendingVenus
+     */
+    function _pendingVenus() private view returns(uint256) {
+        return venusLens.pendingVenus(address(this), comptroller);
     }
 
     /**
@@ -61,7 +84,6 @@ contract VenusLendAdapterBsc is BaseAdapterBsc {
         returns (uint256 amountOut)
     {
         uint256 _amountIn = msg.value;
-        AdapterInfo storage adapterInfo = adapterInfos[_tokenId];
         UserAdapterInfo storage userInfo = userAdapterInfos[_account][_tokenId];
 
         amountOut = HedgepieLibraryBsc.swapOnRouter(
@@ -80,9 +102,32 @@ contract VenusLendAdapterBsc is BaseAdapterBsc {
         );
         repayAmt = IBEP20(repayToken).balanceOf(address(this)) - repayAmt;
 
-        adapterInfo.totalStaked += amountOut;
-        userInfo.amount += repayAmt;
-        userInfo.invested += _amountIn;
+        {
+            uint256 newPending = _pendingVenus();
+            unchecked {
+                if(newPending > pendingVenus) {
+                    mAdapter.accTokenPerShare +=
+                        ((newPending - pendingVenus) * 1e12) /
+                        mAdapter.totalStaked;
+
+                    pendingVenus = newPending;
+                }
+
+                if (userInfo.amount != 0) {
+                    userInfo.rewardDebt +=
+                        (userInfo.amount *
+                            (mAdapter.accTokenPerShare - userInfo.userShares)) /
+                        1e12;
+                }
+
+                mAdapter.totalStaked += amountOut;
+
+                userInfo.amount += amountOut;
+                userInfo.invested += _amountIn;
+                userInfo.userShares1 += repayAmt;
+                userInfo.userShares = mAdapter.accTokenPerShare;
+            }
+        }
 
         // Update adapterInfo contract
         address adapterInfoBnbAddr = IHedgepieInvestorBsc(investor)
@@ -124,16 +169,16 @@ contract VenusLendAdapterBsc is BaseAdapterBsc {
         amountOut = IBEP20(stakingToken).balanceOf(address(this));
         repayAmt = IBEP20(repayToken).balanceOf(address(this));
 
-        IBEP20(repayToken).approve(strategy, userInfo.amount);
+        IBEP20(repayToken).approve(strategy, userInfo.userShares1);
         require(
-            IStrategy(strategy).redeem(userInfo.amount) == 0,
+            IStrategy(strategy).redeem(userInfo.userShares1) == 0,
             "Error: Venus internal error"
         );
 
         repayAmt = repayAmt - IBEP20(repayToken).balanceOf(address(this));
         amountOut = IBEP20(stakingToken).balanceOf(address(this)) - amountOut;
 
-        require(repayAmt == userInfo.amount, "Error: Redeem failed");
+        require(repayAmt == userInfo.userShares1, "Error: Redeem failed");
 
         amountOut = HedgepieLibraryBsc.swapforBnb(
             amountOut,
@@ -189,7 +234,9 @@ contract VenusLendAdapterBsc is BaseAdapterBsc {
             false
         );
 
-        adapterInfo.totalStaked -= userInfo.amount;
+        unchecked {
+            adapterInfo.totalStaked -= userInfo.amount;
+        }
         delete userAdapterInfos[_account][_tokenId];
 
         if (amountOut != 0) {
@@ -209,6 +256,39 @@ contract VenusLendAdapterBsc is BaseAdapterBsc {
                 ""
             );
             require(success, "Failed to send bnb");
+        }
+    }
+
+    /**
+     * @notice Return the pending reward by Bnb
+     * @param _tokenId YBNFT token id
+     * @param _account user wallet address
+     */
+    function pendingReward(uint256 _tokenId, address _account)
+        external
+        view
+        override
+        returns (uint256 reward, uint256 withdrawable)
+    {
+        UserAdapterInfo memory userInfo = userAdapterInfos[_account][_tokenId];
+
+        uint256 updatedAccTokenPerShare = mAdapter.accTokenPerShare +
+            (((_pendingVenus() - pendingVenus) * 1e12) /
+                mAdapter.totalStaked);
+
+        uint256 tokenRewards = ((updatedAccTokenPerShare -
+            userInfo.userShares) * userInfo.amount) /
+            1e12 +
+            userInfo.rewardDebt;
+
+        if (tokenRewards != 0) {
+            reward = stakingToken == wbnb
+                ? tokenRewards
+                : IPancakeRouter(swapRouter).getAmountsOut(
+                    tokenRewards,
+                    getPaths(stakingToken, wbnb)
+                )[getPaths(stakingToken, wbnb).length - 1];
+            withdrawable = reward;
         }
     }
 
