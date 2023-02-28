@@ -268,7 +268,7 @@ contract VenusLendAdapterBsc is BaseAdapterBsc {
         external
         view
         override
-        returns (uint256 reward, uint256 withdrawable)
+        returns (uint256 reward, uint256)
     {
         UserAdapterInfo memory userInfo = userAdapterInfos[_account][_tokenId];
 
@@ -282,13 +282,13 @@ contract VenusLendAdapterBsc is BaseAdapterBsc {
             userInfo.rewardDebt;
 
         if (tokenRewards != 0) {
+            address[] memory paths = getPaths(stakingToken, wbnb);
             reward = stakingToken == wbnb
                 ? tokenRewards
                 : IPancakeRouter(swapRouter).getAmountsOut(
                     tokenRewards,
-                    getPaths(stakingToken, wbnb)
-                )[getPaths(stakingToken, wbnb).length - 1];
-            withdrawable = reward;
+                    paths
+                )[paths.length - 1];
         }
     }
 

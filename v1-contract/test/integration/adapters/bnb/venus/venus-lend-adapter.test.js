@@ -9,7 +9,7 @@ const {
 
 const BigNumber = ethers.BigNumber;
 
-describe.only("VenusLendAdapterBsc Integration Test", function () {
+describe("VenusLendAdapterBsc Integration Test", function () {
     before("Deploy contract", async function () {
         const swapRouter = "0x10ED43C718714eb63d5aA57B78B54704E256024E"; // pks rounter address
         const wbnb = "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c";
@@ -25,6 +25,7 @@ describe.only("VenusLendAdapterBsc Integration Test", function () {
         this.bob = bob;
         this.strategy = vbusd;
         this.busd = busd;
+        this.treasuryAddr = treasury.address;
 
         // Deploy VenusLendAdapterBsc contract
         const VenusLendAdapterBsc = await adapterFixtureBsc(
@@ -154,7 +155,7 @@ describe.only("VenusLendAdapterBsc Integration Test", function () {
                 this.owner.address
             )
             expect(userPending.amountOut).gt(0)
-            expect(userPending.withdrawable).gt(0)
+            expect(userPending.withdrawable).to.be.eq(0)
         })
     });
 
@@ -181,38 +182,63 @@ describe.only("VenusLendAdapterBsc Integration Test", function () {
         });
 
         it("(3)should receive the WBNB successfully after withdraw function", async function () {
-            await ethers.provider.send("evm_increaseTime", [3600 * 24 * 30]);
+            await ethers.provider.send("evm_increaseTime", [3600 * 24 * 300]);
             await ethers.provider.send("evm_mine", []);
             
             // withdraw from nftId: 1
+            let userInfo = (
+                await this.adapter.userAdapterInfos(this.owner.address, 1)
+            ).invested;
             let bnbBalBefore = await ethers.provider.getBalance(
                 this.owner.address
             );
-            const userPending = await this.investor.pendingReward(
+            let userPending = await this.investor.pendingReward(
                 1,
                 this.owner.address
             )
+            let beforeTreasuryBnb = await ethers.provider.getBalance(
+                this.treasuryAddr
+            );
 
-            const gasPrice = 21e9
-            const gas = await this.investor
-                .estimateGas.withdrawBNB(1, { gasPrice });
-            await this.investor.connect(this.owner).withdrawBNB(1, {
-                gasPrice
-            });
+            const withdrawTx = await this.investor.connect(this.owner).withdrawBNB(1);
+            const withdrawResp = await withdrawTx.wait()
 
             let bnbBalAfter = await ethers.provider.getBalance(
                 this.owner.address
             );
             expect(
-                BigNumber.from(bnbBalAfter).gte(BigNumber.from(bnbBalBefore))
+                BigNumber.from(bnbBalAfter).gt(BigNumber.from(bnbBalBefore))
             ).to.eq(true);
 
-            const gasAmt = gas.mul(gasPrice)
+            const gasAmt = withdrawResp.gasUsed.mul("1000000007")
             const actualPending = bnbBalAfter.add(gasAmt).sub(bnbBalBefore)
-            const estimatePending = BigNumber.from(userPending.amountOut).mul(
-                1e4 - this.performanceFee
-            ).div(1e4)
-            console.log(actualPending, estimatePending, "pendingpendingpendingpendingpending")
+            let afterTreasuryBnb = await ethers.provider.getBalance(
+                this.treasuryAddr
+            );
+
+            if (actualPending.gt(userInfo)) { 
+                actualPending = actualPending.sub(BigNumber.from(userInfo));
+                const protocolFee = afterTreasuryBnb.sub(beforeTreasuryBnb);
+                expect(protocolFee).to.gt(0);
+
+                expect(actualPending).to.be.within(
+                    protocolFee
+                        .mul(1e4 - this.performanceFee)
+                        .div(this.performanceFee)
+                        .sub(gasAmt),
+                    protocolFee
+                        .mul(1e4 - this.performanceFee)
+                        .div(this.performanceFee)
+                        .add(gasAmt)
+                )
+                
+                const estimatePending = BigNumber.from(userPending.amountOut).mul(
+                    1e4 - this.performanceFee
+                ).div(1e4)
+                expect(actualPending).gte(
+                    estimatePending.mul(98).div(1e2)
+                )
+            }
 
             // withdraw from nftId: 2
             bnbBalBefore = await ethers.provider.getBalance(this.owner.address);
