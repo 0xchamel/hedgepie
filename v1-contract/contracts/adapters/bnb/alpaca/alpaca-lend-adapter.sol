@@ -10,9 +10,21 @@ interface IStrategy {
 
     function withdraw(uint256) external;
 
+    function config() external view returns (address);
+
     function totalSupply() external view returns (uint256);
 
-    function totalToken() external view returns (uint256);
+    function reservePool() external view returns (uint256);
+
+    function vaultDebtVal() external view returns (uint256);
+
+    function lastAccrueTime() external view returns (uint256);
+
+    function pendingInterest(uint256) external view returns (uint256);
+}
+
+interface IConfig {
+    function getReservePoolBps() external view returns (uint256);
 }
 
 contract AlpacaLendAdapter is BaseAdapterBsc {
@@ -143,7 +155,7 @@ contract AlpacaLendAdapter is BaseAdapterBsc {
         }
 
         // swap wraptoken to BNB
-        if (stakingToken != wbnb) {
+        if (!isBNB) {
             amountOut = HedgepieLibraryBsc.swapforBnb(
                 amountOut,
                 address(this),
@@ -225,8 +237,24 @@ contract AlpacaLendAdapter is BaseAdapterBsc {
     {
         UserAdapterInfo memory userInfo = userAdapterInfos[_account][_tokenId];
 
+        uint256 reservePool = IStrategy(strategy).reservePool();
+        uint vaultDebtVal = IStrategy(strategy).vaultDebtVal();
+        
+        if (block.timestamp > IStrategy(strategy).lastAccrueTime()) {
+            uint256 interest = IStrategy(strategy).pendingInterest(0);
+            uint256 toReserve = interest * (
+                IConfig(IStrategy(strategy).config()).getReservePoolBps()
+            ) / 1e4;
+
+            vaultDebtVal += interest;
+            reservePool += toReserve;
+        }
+
+        uint totalToken = IBEP20(stakingToken).balanceOf(strategy)
+            + vaultDebtVal - reservePool;
+
         reward =
-            (userInfo.userShares * (IStrategy(strategy).totalToken())) /
+            (userInfo.userShares * totalToken) /
             (IStrategy(strategy).totalSupply());
 
         if (reward < userInfo.amount) return (0, 0);

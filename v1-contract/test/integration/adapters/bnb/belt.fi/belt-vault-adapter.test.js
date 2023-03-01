@@ -187,6 +187,26 @@ describe("BeltVaultStakingAdapter Integration Test", function () {
         });
     });
 
+    describe("check withdrawal amount", function() {
+        it("(1) check withdrawal amount for alice", async function() {
+            const alicePending = await this.investor.pendingReward(
+                1,
+                this.aliceAddr
+            )
+            expect(alicePending.withdrawable).to.be.eq(0)
+            expect(alicePending.amountOut).gte(0)
+        })
+
+        it("(2) check withdrawal amount for bob", async function() {
+            const bobPending = await this.investor.pendingReward(
+                1,
+                this.bobAddr
+            )
+            expect(bobPending.withdrawable).to.be.eq(0)
+            expect(bobPending.amountOut).gte(0)
+        })
+    });
+
     describe("withdrawBNB() function test", function () {
         it("(1) revert when nft tokenId is invalid", async function () {
             for (let i = 0; i < 10; i++) {
@@ -212,6 +232,10 @@ describe("BeltVaultStakingAdapter Integration Test", function () {
             const beforeOwnerBNB = await ethers.provider.getBalance(
                 this.treasuryAddr
             );
+            const alicePending = await this.investor.pendingReward(
+                1,
+                this.aliceAddr
+            )
             let aliceInfo = (
                 await this.aAdapter.userAdapterInfos(this.aliceAddr, 1)
             ).invested;
@@ -229,7 +253,7 @@ describe("BeltVaultStakingAdapter Integration Test", function () {
                 BigNumber.from(afterBNB).gt(BigNumber.from(beforeBNB))
             ).to.eq(true);
 
-            // check protocol fee
+            // check protocol fee and amountOut
             const rewardAmt = afterBNB.sub(beforeBNB);
             const afterOwnerBNB = await ethers.provider.getBalance(
                 this.treasuryAddr
@@ -249,6 +273,13 @@ describe("BeltVaultStakingAdapter Integration Test", function () {
                         .div(this.performanceFee)
                         .add(gas.mul(gasPrice))
                 );
+
+                const estimatePending = BigNumber.from(alicePending.amountOut).mul(
+                    1e4 - this.performanceFee
+                ).div(1e4)
+                expect(actualPending).gte(
+                    estimatePending.mul(98).div(1e2)
+                )
             }
 
             aliceInfo = (
@@ -281,11 +312,16 @@ describe("BeltVaultStakingAdapter Integration Test", function () {
         it("(4) should receive the BNB successfully after withdraw function for Bob", async function () {
             await ethers.provider.send("evm_increaseTime", [3600 * 24 * 30]);
             await ethers.provider.send("evm_mine", []);
+
             // withdraw from nftId: 1
             const beforeBNB = await ethers.provider.getBalance(this.bobAddr);
             const beforeOwnerBNB = await ethers.provider.getBalance(
                 this.treasuryAddr
             );
+            const bobPending = await this.investor.pendingReward(
+                1,
+                this.bobAddr
+            )
             let bobInfo = (
                 await this.aAdapter.userAdapterInfos(this.bobAddr, 1)
             ).invested;
@@ -303,7 +339,7 @@ describe("BeltVaultStakingAdapter Integration Test", function () {
                 BigNumber.from(afterBNB).gt(BigNumber.from(beforeBNB))
             ).to.eq(true);
 
-            // check protocol fee
+            // check protocol fee and amountOut
             const rewardAmt = afterBNB.sub(beforeBNB);
             let actualPending = rewardAmt.add(gas.mul(gasPrice));
             if (actualPending.gt(bobInfo)) {
@@ -323,6 +359,13 @@ describe("BeltVaultStakingAdapter Integration Test", function () {
                         .div(this.performanceFee)
                         .add(gas.mul(gasPrice))
                 );
+
+                const estimatePending = BigNumber.from(bobPending.amountOut).mul(
+                    1e4 - this.performanceFee
+                ).div(1e4)
+                expect(actualPending).gte(
+                    estimatePending.mul(98).div(1e2)
+                )
             }
 
             bobInfo = (await this.aAdapter.userAdapterInfos(this.bobAddr, 1))

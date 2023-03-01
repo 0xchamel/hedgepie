@@ -75,7 +75,7 @@ describe("AutoVaultAdatperBsc Integration Test", function () {
         console.log("AutofarmVaultAdapterBsc: ", this.adapter.address);
     });
 
-    describe("depositBNB function test", function () {
+    describe("depositBNB() function test", function () {
         it("(1) should be reverted when nft tokenId is invalid", async function () {
             // deposit to nftID: 3
             const depositAmount = ethers.utils.parseEther("1");
@@ -188,6 +188,26 @@ describe("AutoVaultAdatperBsc Integration Test", function () {
         });
     });
 
+    describe("check withdrawal amount", function() {
+        it("(1) check withdrawal amount for alice", async function() {
+            const alicePending = await this.investor.pendingReward(
+                1,
+                this.aliceAddr
+            )
+            expect(alicePending.withdrawable).to.be.eq(0)
+            expect(alicePending.amountOut).gt(0)
+        })
+
+        it("(2) check withdrawal amount for bob", async function() {
+            const bobPending = await this.investor.pendingReward(
+                1,
+                this.bobAddr
+            )
+            expect(bobPending.withdrawable).to.be.eq(0)
+            expect(bobPending.amountOut).gt(0)
+        })
+    });
+
     describe("withdrawBNB() function test", function () {
         it("(1) revert when nft tokenId is invalid", async function () {
             // withdraw to nftID: 3
@@ -199,8 +219,15 @@ describe("AutoVaultAdatperBsc Integration Test", function () {
         });
 
         it("(2) should receive the BNB successfully after withdraw function for Alice", async function () {
+            await ethers.provider.send("evm_increaseTime", [3600 * 24 * 30]);
+            await ethers.provider.send("evm_mine", []);
+
             // withdraw from nftId: 1
             const beforeBNB = await ethers.provider.getBalance(this.aliceAddr);
+            const alicePending = await this.investor.pendingReward(
+                1,
+                this.aliceAddr
+            )
             const beforeOwnerBNB = await ethers.provider.getBalance(
                 this.treasuryAddr
             );
@@ -208,14 +235,47 @@ describe("AutoVaultAdatperBsc Integration Test", function () {
                 await this.adapter.userAdapterInfos(this.aliceAddr, 1)
             ).invested;
 
+            const gasPrice = 21e9;
+            const gas = await this.investor
+                .connect(this.alice)
+                .estimateGas.withdrawBNB(1, { gasPrice });
             await expect(
-                this.investor.connect(this.alice).withdrawBNB(1)
+                this.investor.connect(this.alice).withdrawBNB(1, { gasPrice })
             ).to.emit(this.investor, "WithdrawBNB");
 
             const afterBNB = await ethers.provider.getBalance(this.aliceAddr);
             expect(
                 BigNumber.from(afterBNB).gt(BigNumber.from(beforeBNB))
             ).to.eq(true);
+
+            // check protocol fee and amountOut
+            const rewardAmt = afterBNB.sub(beforeBNB);
+            const afterOwnerBNB = await ethers.provider.getBalance(
+                this.treasuryAddr
+            );
+            let actualPending = rewardAmt.add(gas.mul(gasPrice));
+            if (actualPending.gt(aliceInfo)) {
+                actualPending = actualPending.sub(BigNumber.from(aliceInfo));
+                const protocolFee = afterOwnerBNB.sub(beforeOwnerBNB);
+                expect(protocolFee).to.gt(0);
+                expect(actualPending).to.be.within(
+                    protocolFee
+                        .mul(1e4 - this.performanceFee)
+                        .div(this.performanceFee)
+                        .sub(gas.mul(gasPrice)),
+                    protocolFee
+                        .mul(1e4 - this.performanceFee)
+                        .div(this.performanceFee)
+                        .add(gas.mul(gasPrice))
+                )
+
+                const estimatePending = BigNumber.from(alicePending.amountOut).mul(
+                    1e4 - this.performanceFee
+                ).div(1e4)
+                expect(actualPending).gte(
+                    estimatePending.mul(98).div(1e2)
+                )
+            }
 
             aliceInfo = (await this.adapter.userAdapterInfos(this.aliceAddr, 1))
                 .invested;
@@ -244,22 +304,62 @@ describe("AutoVaultAdatperBsc Integration Test", function () {
         });
 
         it("(4) should receive the BNB successfully after withdraw function for Bob", async function () {
+            await ethers.provider.send("evm_increaseTime", [3600 * 24 * 30]);
+            await ethers.provider.send("evm_mine", []);
+
             // withdraw from nftId: 1
             const beforeBNB = await ethers.provider.getBalance(this.bobAddr);
+            const bobPending = await this.investor.pendingReward(
+                1,
+                this.bobAddr
+            )
             const beforeOwnerBNB = await ethers.provider.getBalance(
                 this.treasuryAddr
             );
             let bobInfo = (await this.adapter.userAdapterInfos(this.bobAddr, 1))
                 .invested;
-
+            
+            const gasPrice = 21e9;
+            const gas = await this.investor
+                .connect(this.bob)
+                .estimateGas.withdrawBNB(1, { gasPrice });
             await expect(
-                this.investor.connect(this.bob).withdrawBNB(1)
+                this.investor.connect(this.bob).withdrawBNB(1, { gasPrice })
             ).to.emit(this.investor, "WithdrawBNB");
 
             const afterBNB = await ethers.provider.getBalance(this.bobAddr);
             expect(
                 BigNumber.from(afterBNB).gt(BigNumber.from(beforeBNB))
             ).to.eq(true);
+
+            // check protocol fee and amountOut
+            const rewardAmt = afterBNB.sub(beforeBNB);
+            let actualPending = rewardAmt.add(gas.mul(gasPrice));
+            if (actualPending.gt(bobInfo)) {
+                actualPending = actualPending.sub(bobInfo);
+                const afterOwnerBNB = await ethers.provider.getBalance(
+                    this.treasuryAddr
+                );
+                const protocolFee = afterOwnerBNB.sub(beforeOwnerBNB);
+                expect(protocolFee).to.gt(0);
+                expect(actualPending).to.be.within(
+                    protocolFee
+                        .mul(1e4 - this.performanceFee)
+                        .div(this.performanceFee)
+                        .sub(gas.mul(gasPrice)),
+                    protocolFee
+                        .mul(1e4 - this.performanceFee)
+                        .div(this.performanceFee)
+                        .add(gas.mul(gasPrice))
+                )
+
+                const estimatePending = BigNumber.from(bobPending.amountOut).mul(
+                    1e4 - this.performanceFee
+                ).div(1e4)
+                expect(actualPending).gte(
+                    estimatePending.mul(98).div(1e2)
+                )
+            }
 
             bobInfo = (await this.adapter.userAdapterInfos(this.bobAddr, 1))
                 .invested;

@@ -52,7 +52,6 @@ contract PancakeStakeAdapterBsc is BaseAdapterBsc {
         returns (uint256 amountOut)
     {
         uint256 _amountIn = msg.value;
-
         UserAdapterInfo storage userInfo = userAdapterInfos[_account][_tokenId];
 
         if (router == address(0)) {

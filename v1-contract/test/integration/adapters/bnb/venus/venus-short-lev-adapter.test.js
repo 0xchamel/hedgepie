@@ -67,7 +67,7 @@ describe("VenusShortLevAdapter Integration Test", function () {
         console.log("Strategy: ", this.vBusd.address);
     });
 
-    describe("depositBNB function test", function () {
+    describe("depositBNB() function test", function () {
         it("(1) should be reverted when nft tokenId is invalid", async function () {
             // deposit to nftID: 3
             const depositAmount = ethers.utils.parseEther("1");
@@ -142,6 +142,26 @@ describe("VenusShortLevAdapter Integration Test", function () {
                 )
             ).to.eq(true);
         });
+    });
+
+    describe("check withdrawal amount", function() {
+        it("(1) check withdrawal amount for alice", async function() {
+            const alicePending = await this.investor.pendingReward(
+                1,
+                this.aliceAddr
+            )
+            expect(alicePending.withdrawable).to.be.eq(0)
+            expect(alicePending.amountOut).gte(0)
+        })
+
+        it("(2) check withdrawal amount for bob", async function() {
+            const bobPending = await this.investor.pendingReward(
+                1,
+                this.bobAddr
+            )
+            expect(bobPending.withdrawable).to.be.eq(0)
+            expect(bobPending.amountOut).gte(0)
+        })
     });
 
     describe("withdrawBNB() function test", function () {

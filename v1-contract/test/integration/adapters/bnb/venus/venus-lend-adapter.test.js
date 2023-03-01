@@ -15,15 +15,17 @@ describe("VenusLendAdapterBsc Integration Test", function () {
         const wbnb = "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c";
         const busd = "0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56";
         const vbusd = "0x95c78222B3D6e262426483D42CfA53685A67Ab9D";
+        const venusLens = "0x7fd7E938d575Fe8ccF72ED65a82142D154C170Af";
 
         const [owner, alice, bob, treasury] = await ethers.getSigners();
 
-        this.performanceFee = 50;
+        this.performanceFee = 500;
         this.alice = alice;
         this.owner = owner;
         this.bob = bob;
         this.strategy = vbusd;
         this.busd = busd;
+        this.treasuryAddr = treasury.address;
 
         // Deploy VenusLendAdapterBsc contract
         const VenusLendAdapterBsc = await adapterFixtureBsc(
@@ -32,6 +34,7 @@ describe("VenusLendAdapterBsc Integration Test", function () {
 
         this.adapter = await VenusLendAdapterBsc.deploy(
             this.strategy,
+            venusLens,
             busd,
             vbusd,
             swapRouter,
@@ -145,6 +148,17 @@ describe("VenusLendAdapterBsc Integration Test", function () {
         });
     });
 
+    describe("check withdrawal amount", function() {
+        it("(1) check withdrawal amount", async function() {
+            const userPending = await this.investor.pendingReward(
+                1,
+                this.owner.address
+            )
+            expect(userPending.amountOut).gt(0)
+            expect(userPending.withdrawable).to.be.eq(0)
+        })
+    });
+
     describe("withdraw() function test", function () {
         it("(1)should be reverted when nft tokenId is invalid", async function () {
             // withdraw to nftID: 3
@@ -168,20 +182,63 @@ describe("VenusLendAdapterBsc Integration Test", function () {
         });
 
         it("(3)should receive the WBNB successfully after withdraw function", async function () {
+            await ethers.provider.send("evm_increaseTime", [3600 * 24 * 300]);
+            await ethers.provider.send("evm_mine", []);
+            
             // withdraw from nftId: 1
+            let userInfo = (
+                await this.adapter.userAdapterInfos(this.owner.address, 1)
+            ).invested;
             let bnbBalBefore = await ethers.provider.getBalance(
                 this.owner.address
             );
-            await this.investor.withdrawBNB(1, {
-                gasPrice: 21e9,
-            });
+            let userPending = await this.investor.pendingReward(
+                1,
+                this.owner.address
+            )
+            let beforeTreasuryBnb = await ethers.provider.getBalance(
+                this.treasuryAddr
+            );
+
+            const withdrawTx = await this.investor.connect(this.owner).withdrawBNB(1);
+            const withdrawResp = await withdrawTx.wait()
 
             let bnbBalAfter = await ethers.provider.getBalance(
                 this.owner.address
             );
             expect(
-                BigNumber.from(bnbBalAfter).gte(BigNumber.from(bnbBalBefore))
+                BigNumber.from(bnbBalAfter).gt(BigNumber.from(bnbBalBefore))
             ).to.eq(true);
+
+            const gasAmt = withdrawResp.gasUsed.mul("1000000007")
+            const actualPending = bnbBalAfter.add(gasAmt).sub(bnbBalBefore)
+            let afterTreasuryBnb = await ethers.provider.getBalance(
+                this.treasuryAddr
+            );
+
+            if (actualPending.gt(userInfo)) { 
+                actualPending = actualPending.sub(BigNumber.from(userInfo));
+                const protocolFee = afterTreasuryBnb.sub(beforeTreasuryBnb);
+                expect(protocolFee).to.gt(0);
+
+                expect(actualPending).to.be.within(
+                    protocolFee
+                        .mul(1e4 - this.performanceFee)
+                        .div(this.performanceFee)
+                        .sub(gasAmt),
+                    protocolFee
+                        .mul(1e4 - this.performanceFee)
+                        .div(this.performanceFee)
+                        .add(gasAmt)
+                )
+                
+                const estimatePending = BigNumber.from(userPending.amountOut).mul(
+                    1e4 - this.performanceFee
+                ).div(1e4)
+                expect(actualPending).gte(
+                    estimatePending.mul(98).div(1e2)
+                )
+            }
 
             // withdraw from nftId: 2
             bnbBalBefore = await ethers.provider.getBalance(this.owner.address);
