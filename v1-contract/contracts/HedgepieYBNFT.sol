@@ -2,13 +2,18 @@
 pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/utils/Counters.sol";
+
+import "./fundToken/FundToken.sol";
 import "./interfaces/IAdapterManager.sol";
+import "./interfaces/IHedgepieInvestorBsc.sol";
+import "./interfaces/IFundToken.sol";
 import "./interfaces/IYBNFT.sol";
 import "./libraries/Ownable.sol";
 import "./type/BEP721.sol";
 
 contract YBNFT is BEP721, Ownable {
     using Counters for Counters.Counter;
+    using Strings for uint256;
 
     struct Adapter {
         uint256 allocation;
@@ -31,11 +36,15 @@ contract YBNFT is BEP721, Ownable {
     mapping(uint256 => AdapterDate) public adapterDate;
     // tokenId => performanceFee
     mapping(uint256 => uint256) public performanceFee;
+    // tokenId => fundToken
+    mapping(uint256 => address) public fundTokens;
 
     // AdapterManager handler
     IAdapterManager public adapterManager;
 
     event Mint(address indexed minter, uint256 indexed tokenId);
+
+    event FundTokenCreated(address indexed token, uint256 indexed tokenId);
 
     /**
      * @notice Construct
@@ -144,6 +153,30 @@ contract YBNFT is BEP721, Ownable {
             _adapterAddrs
         );
 
+        // deploy fund token here
+        address token;
+        bytes memory bytecode = type(FundToken).creationCode;
+        bytes32 salt = keccak256(abi.encodePacked(_tokenIdPointer._value));
+        assembly {
+            token := create2(0, add(bytecode, 32), mload(bytecode), salt)
+        }
+        IFundToken(token).initialize(
+            "YBNFT FundToken",
+            string(
+                abi.encodePacked(
+                    "YFT_",
+                    uint256(_tokenIdPointer._value).toString()
+                )
+            )
+        );
+        IFundToken(token).setMinter(
+            IAdapterManager(adapterManager).investor(),
+            true
+        );
+        fundTokens[_tokenIdPointer._value] = token;
+
+        emit FundTokenCreated(token, _tokenIdPointer._value);
+
         emit Mint(msg.sender, _tokenIdPointer._value);
     }
 
@@ -179,16 +212,25 @@ contract YBNFT is BEP721, Ownable {
             "Invalid allocation length"
         );
         require(msg.sender == ownerOf(_tokenId), "Invalid NFT Owner");
-        require(
-            _checkPercent(_adapterAllocations),
-            "Incorrect adapter allocation"
-        );
+        // TODO: uncomment after complete v2.1
+        // require(
+        //     _checkPercent(_adapterAllocations),
+        //     "Incorrect adapter allocation"
+        // );
 
         for (uint256 i; i < adapterInfo[_tokenId].length; i++) {
             adapterInfo[_tokenId][i].allocation = _adapterAllocations[i];
         }
 
         adapterDate[_tokenId].modified = uint128(block.timestamp);
+
+        // update funds
+        require(
+            IAdapterManager(adapterManager).investor() != address(0),
+            "Invalid investor address"
+        );
+        IHedgepieInvestorBsc(IAdapterManager(adapterManager).investor())
+            .updateFunds(_tokenId);
     }
 
     /**
