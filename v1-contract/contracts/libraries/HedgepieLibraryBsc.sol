@@ -5,11 +5,16 @@ import "../interfaces/IYBNFT.sol";
 import "../interfaces/IAdapterBsc.sol";
 import "../interfaces/IPancakePair.sol";
 import "../interfaces/IPancakeRouter.sol";
+import "../interfaces/IOffchainOracle.sol";
 
 import "../HedgepieInvestorBsc.sol";
 import "../adapters/BaseAdapterBsc.sol";
 
 library HedgepieLibraryBsc {
+    address constant WBNB = 0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c;
+    address constant USDT = 0x55d398326f99059fF775485246999027B3197955;
+    address constant ORACLE = 0xfbD61B037C325b959c0F6A7e69D8f37770C2c550;
+
     function swapOnRouter(
         uint256 _amountIn,
         address _adapter,
@@ -260,5 +265,9 @@ library HedgepieLibraryBsc {
                 wbnb
             );
         }
+    }
+
+    function getBNBPrice() public view returns (uint256) {
+        IOffchainOracle(ORACLE).getRate(WBNB, USDT, false);
     }
 }

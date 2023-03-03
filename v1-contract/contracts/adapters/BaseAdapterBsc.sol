@@ -204,23 +204,10 @@ abstract contract BaseAdapterBsc is Ownable {
         if (IFundToken(fundToken).totalSupply() != 0)
             amount =
                 (mAdapter.totalStaked *
+                    adapterInvested[_tokenId] *
                     IFundToken(fundToken).balanceOf(_account)) /
+                mAdapter.invested /
                 IFundToken(fundToken).totalSupply();
-    }
-
-    /**
-     * @notice Get total supply of fund token
-     * @param _tokenId YBNFT token id
-     */
-    function getfTokenSupply(uint256 _tokenId)
-        public
-        view
-        returns (uint256 amount)
-    {
-        address fundToken = IYBNFT(IHedgepieInvestorBsc(investor).ybnft())
-            .fundTokens(_tokenId);
-
-        amount = IFundToken(fundToken).totalSupply();
     }
 
     /**

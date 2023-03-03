@@ -321,7 +321,7 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapterBsc {
 
         uint256 updatedAccTokenPerShare = mAdapter.accTokenPerShare +
             ((IStrategy(strategy).pendingCake(pid, address(this)) * 1e12) /
-                getfTokenSupply(_tokenId));
+                mAdapter.invested);
 
         uint256 tokenRewards = ((updatedAccTokenPerShare -
             userInfo.userShares) * getfBNBAmount(_tokenId, _account)) /

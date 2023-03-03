@@ -11,7 +11,7 @@ const BigNumber = ethers.BigNumber;
 
 describe("PancakeSwapFarmLPAdapter Integration Test", function () {
     before("Deploy contract", async function () {
-        const [owner, alice, bob, treasury, kyle, jerry] =
+        const [owner, alice, bob, treasury, kyle, jerry, user1, user2] =
             await ethers.getSigners();
 
         const performanceFee = 500;
@@ -30,6 +30,8 @@ describe("PancakeSwapFarmLPAdapter Integration Test", function () {
         this.bob = bob;
         this.kyle = kyle;
         this.jerry = jerry;
+        this.user1 = user1;
+        this.user2 = user2;
         this.pksRouter = "0x10ED43C718714eb63d5aA57B78B54704E256024E";
 
         this.bobAddr = bob.address;
@@ -483,20 +485,29 @@ describe("PancakeSwapFarmLPAdapter Integration Test", function () {
                     BigNumber.from(actualReward1).mul(9)
                 )
             ).to.eq(true);
+
+            // Successfully withdraw
+            await expect(
+                this.investor.connect(this.kyle).withdrawBNB(1)
+            ).to.emit(this.investor, "WithdrawBNB");
+
+            await expect(
+                this.investor.connect(this.jerry).withdrawBNB(2)
+            ).to.emit(this.investor, "WithdrawBNB");
         });
     });
 
     describe("Edit fund flow", function () {
         it("test with token1 and token2 - updateAllocations", async function () {
             await this.investor
-                .connect(this.kyle)
+                .connect(this.user1)
                 .depositBNB(1, ethers.utils.parseEther("10"), {
                     gasPrice: 21e9,
                     value: ethers.utils.parseEther("10"),
                 });
 
             await this.investor
-                .connect(this.jerry)
+                .connect(this.user2)
                 .depositBNB(2, ethers.utils.parseEther("100"), {
                     gasPrice: 21e9,
                     value: ethers.utils.parseEther("100"),
@@ -529,6 +540,14 @@ describe("PancakeSwapFarmLPAdapter Integration Test", function () {
                     BigNumber.from(adaInvested1).mul(4).div(10)
                 )
             ).to.eq(true);
+
+            // Successfully withdraw
+            await expect(
+                this.investor.connect(this.user1).withdrawBNB(1)
+            ).to.emit(this.investor, "WithdrawBNB");
+            await expect(
+                this.investor.connect(this.user2).withdrawBNB(2)
+            ).to.emit(this.investor, "WithdrawBNB");
         });
     });
 });
