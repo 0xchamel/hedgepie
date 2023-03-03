@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "./libraries/SafeBEP20.sol";
 import "./interfaces/IYBNFT.sol";
 import "./interfaces/IAdapterBsc.sol";
+import "./interfaces/IFundToken.sol";
 
 contract HedgepieInvestorBsc is Ownable, ReentrancyGuard {
     using SafeBEP20 for IBEP20;
@@ -99,6 +100,10 @@ contract HedgepieInvestorBsc is Ownable, ReentrancyGuard {
             );
         }
 
+        // mint fund token
+        address fundToken = IYBNFT(ybnft).fundTokens(_tokenId);
+        IFundToken(fundToken).mint(msg.sender, msg.value);
+
         emit DepositBNB(msg.sender, ybnft, _tokenId, _amount);
     }
 
@@ -122,6 +127,13 @@ contract HedgepieInvestorBsc is Ownable, ReentrancyGuard {
                 msg.sender
             );
         }
+
+        // burn fund token
+        address fundToken = IYBNFT(ybnft).fundTokens(_tokenId);
+        IFundToken(fundToken).burn(
+            msg.sender,
+            IBEP20(fundToken).balanceOf(msg.sender)
+        );
 
         emit WithdrawBNB(msg.sender, ybnft, _tokenId, amountOut);
     }
@@ -196,6 +208,33 @@ contract HedgepieInvestorBsc is Ownable, ReentrancyGuard {
 
         treasury = _treasury;
         emit TreasuryChanged(treasury);
+    }
+
+    /**
+     * @notice Update funds for token id
+     * @param _tokenId YBNFT token id
+     */
+    function updateFunds(uint256 _tokenId) external {
+        require(msg.sender == ybnft, "Error: YBNFT address mismatch");
+
+        IYBNFT.Adapter[] memory adapterInfos = IYBNFT(ybnft).getAdapterInfo(
+            _tokenId
+        );
+
+        uint256 _amount = address(this).balance;
+        for (uint8 i; i < adapterInfos.length; i++) {
+            IYBNFT.Adapter memory adapter = adapterInfos[i];
+            IAdapterBsc(adapter.addr).removeFunds(_tokenId);
+        }
+        _amount = address(this).balance - _amount;
+        require(_amount != 0, "Error: Not get bnb from adapters");
+
+        for (uint8 i; i < adapterInfos.length; i++) {
+            IYBNFT.Adapter memory adapter = adapterInfos[i];
+
+            uint256 amountIn = (_amount * adapter.allocation) / 1e4;
+            IAdapterBsc(adapter.addr).updateFunds{value: amountIn}(_tokenId);
+        }
     }
 
     receive() external payable {}
