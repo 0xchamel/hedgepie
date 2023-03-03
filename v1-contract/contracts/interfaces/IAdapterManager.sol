@@ -16,4 +16,6 @@ interface IAdapterManager {
             address,
             bool
         );
+
+    function investor() external view returns (address);
 }

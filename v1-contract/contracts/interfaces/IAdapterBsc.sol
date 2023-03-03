@@ -58,4 +58,34 @@ interface IAdapterBsc {
         external
         view
         returns (BaseAdapterBsc.AdapterInfo memory);
+
+    function getMUserAmount(uint256 _tokenId, address _account)
+        external
+        view
+        returns (uint256 amount);
+
+    function getfTokenSupply(uint256 _tokenId)
+        external
+        view
+        returns (uint256 amount);
+
+    function getfTokenAmount(uint256 _tokenId, address _account)
+        external
+        view
+        returns (uint256 amount);
+
+    function getfBNBAmount(uint256 _tokenId, address _account)
+        external
+        view
+        returns (uint256 amount);
+
+    function removeFunds(uint256 _tokenId)
+        external
+        payable
+        returns (uint256 amount);
+
+    function updateFunds(uint256 _tokenId)
+        external
+        payable
+        returns (uint256 amount);
 }

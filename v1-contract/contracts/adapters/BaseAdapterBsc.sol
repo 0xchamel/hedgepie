@@ -3,6 +3,10 @@ pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 
+import "../interfaces/IYBNFT.sol";
+import "../interfaces/IFundToken.sol";
+import "../interfaces/IHedgepieInvestorBsc.sol";
+
 abstract contract BaseAdapterBsc is Ownable {
     struct UserAdapterInfo {
         uint256 amount; // Current staking token amount
@@ -17,6 +21,7 @@ abstract contract BaseAdapterBsc is Ownable {
         uint256 accTokenPerShare; // Accumulated per share for first reward token
         uint256 accTokenPerShare1; // Accumulated per share for second reward token
         uint256 totalStaked; // Total staked staking token
+        uint256 invested; // Total staked bnb
     }
 
     uint256 public pid;
@@ -52,6 +57,9 @@ abstract contract BaseAdapterBsc is Ownable {
 
     // nft id => AdapterInfo
     mapping(uint256 => AdapterInfo) public adapterInfos;
+
+    // nft id => adapterInvested
+    mapping(uint256 => uint256) public adapterInvested;
 
     modifier onlyInvestor() {
         require(msg.sender == investor, "Not investor");
@@ -179,4 +187,75 @@ abstract contract BaseAdapterBsc is Ownable {
         virtual
         returns (uint256 reward, uint256 withdrawable)
     {}
+
+    /**
+     * @notice Get user amount based on fundToken
+     * @param _tokenId YBNFT token id
+     * @param _account address of user
+     */
+    function getMUserAmount(uint256 _tokenId, address _account)
+        public
+        view
+        returns (uint256 amount)
+    {
+        address fundToken = IYBNFT(IHedgepieInvestorBsc(investor).ybnft())
+            .fundTokens(_tokenId);
+
+        if (IFundToken(fundToken).totalSupply() != 0)
+            amount =
+                (mAdapter.totalStaked *
+                    IFundToken(fundToken).balanceOf(_account)) /
+                IFundToken(fundToken).totalSupply();
+    }
+
+    /**
+     * @notice Get total supply of fund token
+     * @param _tokenId YBNFT token id
+     */
+    function getfTokenSupply(uint256 _tokenId)
+        public
+        view
+        returns (uint256 amount)
+    {
+        address fundToken = IYBNFT(IHedgepieInvestorBsc(investor).ybnft())
+            .fundTokens(_tokenId);
+
+        amount = IFundToken(fundToken).totalSupply();
+    }
+
+    /**
+     * @notice Get balance of fund token
+     * @param _tokenId YBNFT token id
+     * @param _account address of account
+     */
+    function getfTokenAmount(uint256 _tokenId, address _account)
+        public
+        view
+        returns (uint256 amount)
+    {
+        address fundToken = IYBNFT(IHedgepieInvestorBsc(investor).ybnft())
+            .fundTokens(_tokenId);
+
+        amount = IFundToken(fundToken).balanceOf(_account);
+    }
+
+    /**
+     * @notice Get balance of fund token
+     * @param _tokenId YBNFT token id
+     * @param _account address of account
+     */
+    function getfBNBAmount(uint256 _tokenId, address _account)
+        public
+        view
+        returns (uint256 amount)
+    {
+        address fundToken = IYBNFT(IHedgepieInvestorBsc(investor).ybnft())
+            .fundTokens(_tokenId);
+
+        if (IFundToken(fundToken).totalSupply() != 0)
+            amount =
+                (adapterInvested[_tokenId] *
+                    IFundToken(fundToken).balanceOf(_account)) /
+                IFundToken(fundToken).totalSupply();
+    }
 }

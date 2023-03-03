@@ -26,4 +26,6 @@ interface IYBNFT {
         uint256,
         string memory
     ) external;
+
+    function fundTokens(uint256 tokenId) external view returns (address);
 }

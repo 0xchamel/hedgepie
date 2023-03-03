@@ -9,4 +9,6 @@ interface IHedgepieInvestorBsc {
     function adapterManager() external view returns (address);
 
     function adapterInfo() external view returns (address);
+
+    function updateFunds(uint256 _tokenId) external;
 }

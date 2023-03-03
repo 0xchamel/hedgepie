@@ -115,7 +115,7 @@ library HedgepieLibraryBsc {
             adapterInfo.accTokenPerShare != 0
         ) {
             reward =
-                (userInfo.amount *
+                (IAdapterBsc(_adapterAddr).getfBNBAmount(_tokenId, _account) *
                     (adapterInfo.accTokenPerShare - userInfo.userShares)) /
                 1e12 +
                 userInfo.rewardDebt;
@@ -127,7 +127,7 @@ library HedgepieLibraryBsc {
             adapterInfo.accTokenPerShare1 != 0
         ) {
             reward1 =
-                (userInfo.amount *
+                (IAdapterBsc(_adapterAddr).getfBNBAmount(_tokenId, _account) *
                     (adapterInfo.accTokenPerShare1 - userInfo.userShares1)) /
                 1e12 +
                 userInfo.rewardDebt1;
