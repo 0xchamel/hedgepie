@@ -108,16 +108,12 @@ describe("PancakeSwapFarmLPAdapter Integration Test", function () {
             const aliceInfo = (
                 await this.adapter.userAdapterInfos(this.aliceAddr, 1)
             ).invested;
-            expect(Number(aliceInfo) / Math.pow(10, 18)).to.eq(10);
-
-            const aliceAdapterInfos = await this.adapter.userAdapterInfos(
-                this.aliceAddr,
-                1
+            const fTokenAmount = await this.adapter.getfTokenAmount(
+                1,
+                this.aliceAddr
             );
-            const adapterInfos = await this.adapter.mAdapter();
-            expect(BigNumber.from(adapterInfos.totalStaked)).to.eq(
-                BigNumber.from(aliceAdapterInfos.amount)
-            );
+            expect(Number(aliceInfo) / Math.pow(10, 18)).to.eq(10) &&
+                expect(Number(fTokenAmount) / Math.pow(10, 18)).to.eq(10);
 
             // Check accTokenPerShare Info
             this.accTokenPerShare = (
@@ -162,12 +158,6 @@ describe("PancakeSwapFarmLPAdapter Integration Test", function () {
             ).invested;
             expect(Number(bobInfo) / Math.pow(10, 18)).to.eq(20);
 
-            const bobAdapterInfos = await this.adapter.userAdapterInfos(
-                this.bobAddr,
-                1
-            );
-            expect(BigNumber.from(bobAdapterInfos.amount).gt(0)).to.eq(true);
-
             const afterAdapterInfos = await this.adapter.mAdapter();
 
             expect(
@@ -204,8 +194,8 @@ describe("PancakeSwapFarmLPAdapter Integration Test", function () {
         });
     });
 
-    describe("claim() function test", function() {
-        it("(1) check withdrawable and claim for alice", async function() {
+    describe("claim() function test", function () {
+        it("(1) check withdrawable and claim for alice", async function () {
             // wait 1 day
             for (let i = 0; i < 1800; i++) {
                 await ethers.provider.send("evm_mine", []);
@@ -216,54 +206,58 @@ describe("PancakeSwapFarmLPAdapter Integration Test", function () {
             const alicePending = await this.investor.pendingReward(
                 1,
                 this.aliceAddr
-            )
-            expect(alicePending.withdrawable).gt(0)
+            );
+            expect(alicePending.withdrawable).gt(0);
 
             const estimatePending = BigNumber.from(alicePending.withdrawable)
-                .mul(1e4 - this.performanceFee).div(1e4)
+                .mul(1e4 - this.performanceFee)
+                .div(1e4);
 
             const beforeBNB = await ethers.provider.getBalance(this.aliceAddr);
 
-            const claimTx = await this.investor.connect(this.alice).claim(1)
-            const claimTxResp = await claimTx.wait()
+            const claimTx = await this.investor.connect(this.alice).claim(1);
+            const claimTxResp = await claimTx.wait();
             const gasAmt = BigNumber.from(claimTxResp.effectiveGasPrice).mul(
-                BigNumber.from(claimTxResp.gasUsed))
+                BigNumber.from(claimTxResp.gasUsed)
+            );
 
             const afterBNB = await ethers.provider.getBalance(this.aliceAddr);
-            const actualPending = BigNumber.from(afterBNB).add(gasAmt).sub(beforeBNB)
+            const actualPending = BigNumber.from(afterBNB)
+                .add(gasAmt)
+                .sub(beforeBNB);
 
             // actualPending in 2% range of estimatePending
-            expect(actualPending).gte(
-                estimatePending.mul(98).div(1e2)
-            )
-        })
+            expect(actualPending).gte(estimatePending.mul(98).div(1e2));
+        });
 
-        it("(2) check withdrawable and claim for bob", async function() {
+        it("(2) check withdrawable and claim for bob", async function () {
             const bobPending = await this.investor.pendingReward(
                 1,
                 this.bobAddr
-            )
-            expect(bobPending.withdrawable).gt(0)
+            );
+            expect(bobPending.withdrawable).gt(0);
 
             const estimatePending = BigNumber.from(bobPending.withdrawable)
-                .mul(1e4 - this.performanceFee).div(1e4)
+                .mul(1e4 - this.performanceFee)
+                .div(1e4);
 
             const beforeBNB = await ethers.provider.getBalance(this.bobAddr);
 
-            const claimTx = await this.investor.connect(this.bob).claim(1)
-            const claimTxResp = await claimTx.wait()
+            const claimTx = await this.investor.connect(this.bob).claim(1);
+            const claimTxResp = await claimTx.wait();
             const gasAmt = BigNumber.from(claimTxResp.effectiveGasPrice).mul(
-                BigNumber.from(claimTxResp.gasUsed))
+                BigNumber.from(claimTxResp.gasUsed)
+            );
 
             const afterBNB = await ethers.provider.getBalance(this.bobAddr);
-            const actualPending = BigNumber.from(afterBNB).add(gasAmt).sub(beforeBNB)
+            const actualPending = BigNumber.from(afterBNB)
+                .add(gasAmt)
+                .sub(beforeBNB);
 
             // actualPending in 2% range of estimatePending
-            expect(actualPending).gte(
-                estimatePending.mul(98).div(1e2)
-            )
-        })
-    })
+            expect(actualPending).gte(estimatePending.mul(98).div(1e2));
+        });
+    });
 
     describe("withdrawBNB() function test", function () {
         it("(1) revert when nft tokenId is invalid", async function () {
@@ -452,14 +446,14 @@ describe("PancakeSwapFarmLPAdapter Integration Test", function () {
                 this.kyle.address
             );
             const actualReward1 = afterAmt1
-            .add(tx1.gasUsed.mul(tx1.effectiveGasPrice))
+                .add(tx1.gasUsed.mul(tx1.effectiveGasPrice))
                 .sub(beforeAmt1);
             treasuryAmt1 = (
                 await ethers.provider.getBalance(this.treasuryAddr)
             ).sub(treasuryAmt1);
 
             // check protocol fee
-            expect(actualReward1.div(99)).to.eq(treasuryAmt1);
+            expect(actualReward1.div(19)).to.eq(treasuryAmt1);
 
             let treasuryAmt2 = await ethers.provider.getBalance(
                 this.treasuryAddr
@@ -474,19 +468,65 @@ describe("PancakeSwapFarmLPAdapter Integration Test", function () {
                 this.jerry.address
             );
             const actualReward2 = afterAmt2
-            .add(tx2.gasUsed.mul(tx2.effectiveGasPrice))
+                .add(tx2.gasUsed.mul(tx2.effectiveGasPrice))
                 .sub(beforeAmt2);
             treasuryAmt2 = (
                 await ethers.provider.getBalance(this.treasuryAddr)
             ).sub(treasuryAmt2);
 
             // check protocol fee
-            expect(actualReward2.div(99)).to.eq(treasuryAmt2);
+            expect(actualReward2.div(19)).to.eq(treasuryAmt2);
 
             // Check mixed adapter reward results
             expect(
                 BigNumber.from(actualReward2).gt(
                     BigNumber.from(actualReward1).mul(9)
+                )
+            ).to.eq(true);
+        });
+    });
+
+    describe("Edit fund flow", function () {
+        it("test with token1 and token2 - updateAllocations", async function () {
+            await this.investor
+                .connect(this.kyle)
+                .depositBNB(1, ethers.utils.parseEther("10"), {
+                    gasPrice: 21e9,
+                    value: ethers.utils.parseEther("10"),
+                });
+
+            await this.investor
+                .connect(this.jerry)
+                .depositBNB(2, ethers.utils.parseEther("100"), {
+                    gasPrice: 21e9,
+                    value: ethers.utils.parseEther("100"),
+                });
+
+            // wait 40 mins
+            for (let i = 0; i < 7200; i++) {
+                await ethers.provider.send("evm_mine", []);
+            }
+            await ethers.provider.send("evm_increaseTime", [3600 * 24]);
+            await ethers.provider.send("evm_mine", []);
+
+            const adaInvested1 = await this.adapter.adapterInvested(1);
+            const adaInvested2 = await this.adapter.adapterInvested(2);
+
+            await this.ybNft.updateAllocations(1, [5000]);
+
+            expect(
+                BigNumber.from(adaInvested2).eq(
+                    BigNumber.from(await this.adapter.adapterInvested(2))
+                )
+            ).to.eq(true);
+            expect(
+                BigNumber.from(await this.adapter.adapterInvested(1)).lt(
+                    BigNumber.from(adaInvested1).mul(5).div(10)
+                )
+            ).to.eq(true);
+            expect(
+                BigNumber.from(await this.adapter.adapterInvested(1)).gt(
+                    BigNumber.from(adaInvested1).mul(4).div(10)
                 )
             ).to.eq(true);
         });

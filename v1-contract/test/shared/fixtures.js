@@ -134,6 +134,9 @@ async function investorFixtureBsc(
     // Add Adapter to AdapterManager
     await adapterManager.addAdapter(adapter.address);
 
+    // Set investor in adapter manager
+    await adapterManager.setInvestor(investor.address);
+
     // Mint NFTs
     // tokenID: 1
     await ybNft.mint(
@@ -152,9 +155,6 @@ async function investorFixtureBsc(
         performanceFee,
         "test tokenURI2"
     );
-
-    // Set investor in adapter manager
-    await adapterManager.setInvestor(investor.address);
 
     // Set adapter manager in investor
     await investor.setAdapterManager(adapterManager.address);
