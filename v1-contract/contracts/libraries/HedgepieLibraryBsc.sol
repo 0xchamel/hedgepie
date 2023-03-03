@@ -268,6 +268,6 @@ library HedgepieLibraryBsc {
     }
 
     function getBNBPrice() public view returns (uint256) {
-        IOffchainOracle(ORACLE).getRate(WBNB, USDT, false);
+        return IOffchainOracle(ORACLE).getRate(WBNB, USDT, false);
     }
 }

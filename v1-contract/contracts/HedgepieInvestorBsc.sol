@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
 import "./libraries/SafeBEP20.sol";
+import "./libraries/HedgepieLibraryBsc.sol";
 import "./interfaces/IYBNFT.sol";
 import "./interfaces/IAdapterBsc.sol";
 import "./interfaces/IFundToken.sol";
@@ -102,7 +103,10 @@ contract HedgepieInvestorBsc is Ownable, ReentrancyGuard {
 
         // mint fund token
         address fundToken = IYBNFT(ybnft).fundTokens(_tokenId);
-        IFundToken(fundToken).mint(msg.sender, msg.value);
+        IFundToken(fundToken).mint(
+            msg.sender,
+            (msg.value * HedgepieLibraryBsc.getBNBPrice()) / 1e18
+        );
 
         emit DepositBNB(msg.sender, ybnft, _tokenId, _amount);
     }

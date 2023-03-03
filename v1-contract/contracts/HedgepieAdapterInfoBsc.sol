@@ -53,6 +53,8 @@ contract HedgepieAdapterInfoBsc is Ownable {
     ) external isManager {
         adapterInfo[_tokenId].tvl = _adding
             ? adapterInfo[_tokenId].tvl + _value
+            : adapterInfo[_tokenId].tvl < _value
+            ? 0
             : adapterInfo[_tokenId].tvl - _value;
         _emitEvent(_tokenId);
     }

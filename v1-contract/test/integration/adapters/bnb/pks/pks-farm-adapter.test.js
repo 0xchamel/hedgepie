@@ -4,6 +4,7 @@ const { ethers } = require("hardhat");
 const { setPath } = require("../../../../shared/utilities");
 const {
     adapterFixtureBsc,
+    adapterFixtureBscWithLib,
     investorFixtureBsc,
 } = require("../../../../shared/fixtures");
 
@@ -39,9 +40,13 @@ describe("PancakeSwapFarmLPAdapter Integration Test", function () {
         this.treasuryAddr = treasury.address;
         this.accTokenPerShare = BigNumber.from(0);
 
+        const Lib = await ethers.getContractFactory("HedgepieLibraryBsc");
+        this.lib = await Lib.deploy();
+
         // Deploy PancakeSwapFarmLPAdapterBsc contract
-        const PancakeSwapFarmLPAdapterBsc = await adapterFixtureBsc(
-            "PancakeSwapFarmLPAdapterBsc"
+        const PancakeSwapFarmLPAdapterBsc = await adapterFixtureBscWithLib(
+            "PancakeSwapFarmLPAdapterBsc",
+            this.lib
         );
 
         this.adapter = await PancakeSwapFarmLPAdapterBsc.deploy(
@@ -60,7 +65,8 @@ describe("PancakeSwapFarmLPAdapter Integration Test", function () {
                 this.adapter,
                 treasury.address,
                 lpToken,
-                this.performanceFee
+                this.performanceFee,
+                this.lib
             );
 
         await setPath(this.adapter, this.wbnb, this.cake);
@@ -114,8 +120,15 @@ describe("PancakeSwapFarmLPAdapter Integration Test", function () {
                 1,
                 this.aliceAddr
             );
+            const bnbPrice = BigNumber.from(await this.lib.getBNBPrice());
             expect(Number(aliceInfo) / Math.pow(10, 18)).to.eq(10) &&
-                expect(Number(fTokenAmount) / Math.pow(10, 18)).to.eq(10);
+                expect(
+                    Math.floor(Number(fTokenAmount) / Math.pow(10, 18))
+                ).to.eq(
+                    BigNumber.from(10)
+                        .mul(bnbPrice)
+                        .div(BigNumber.from(10).pow(18))
+                );
 
             // Check accTokenPerShare Info
             this.accTokenPerShare = (
@@ -324,9 +337,11 @@ describe("PancakeSwapFarmLPAdapter Integration Test", function () {
             const nftInfo = await this.adapterInfo.adapterInfo(1);
 
             expect(
-                Number(
-                    ethers.utils.formatEther(
-                        BigNumber.from(nftInfo.tvl).toString()
+                Math.floor(
+                    Number(
+                        ethers.utils.formatEther(
+                            BigNumber.from(nftInfo.tvl).toString()
+                        )
                     )
                 )
             ).to.be.eq(20) &&
@@ -376,9 +391,11 @@ describe("PancakeSwapFarmLPAdapter Integration Test", function () {
             const nftInfo = await this.adapterInfo.adapterInfo(1);
 
             expect(
-                Number(
-                    ethers.utils.formatEther(
-                        BigNumber.from(nftInfo.tvl).toString()
+                Math.floor(
+                    Number(
+                        ethers.utils.formatEther(
+                            BigNumber.from(nftInfo.tvl).toString()
+                        )
                     )
                 )
             ).to.be.eq(0) &&

@@ -6,5 +6,5 @@ interface IOffchainOracle {
         address srcToken,
         address dstToken,
         bool
-    ) external view;
+    ) external view returns (uint256);
 }

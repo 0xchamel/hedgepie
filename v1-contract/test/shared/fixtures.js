@@ -92,7 +92,8 @@ async function investorFixtureBsc(
     adapter,
     treasuryAddr,
     stakingToken,
-    performanceFee
+    performanceFee,
+    lib = null
 ) {
     // Deploy Adaptor Manager contract
     const AdapterManager = await ethers.getContractFactory(
@@ -119,7 +120,12 @@ async function investorFixtureBsc(
 
     // Deploy Investor contract
     const InvestorFactory = await ethers.getContractFactory(
-        "HedgepieInvestorBsc"
+        "HedgepieInvestorBsc",
+        {
+            libraries: {
+                HedgepieLibraryBsc: lib.address,
+            },
+        }
     );
     const investor = await InvestorFactory.deploy(
         ybNft.address,
@@ -167,6 +173,16 @@ async function adapterFixtureBsc(adapterName) {
     const Lib = await ethers.getContractFactory("HedgepieLibraryBsc");
     const lib = await Lib.deploy();
 
+    const Adapter = await ethers.getContractFactory(adapterName, {
+        libraries: {
+            HedgepieLibraryBsc: lib.address,
+        },
+    });
+
+    return Adapter;
+}
+
+async function adapterFixtureBscWithLib(adapterName, lib) {
     const Adapter = await ethers.getContractFactory(adapterName, {
         libraries: {
             HedgepieLibraryBsc: lib.address,
@@ -268,6 +284,7 @@ module.exports = {
     adapterFixture,
     investorFixture,
     adapterFixtureBsc,
+    adapterFixtureBscWithLib,
     investorFixtureBsc,
     adapterFixtureMatic,
     investorFixtureMatic,

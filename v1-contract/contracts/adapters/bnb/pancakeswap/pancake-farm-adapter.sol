@@ -99,11 +99,7 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapterBsc {
                 1e12;
         }
         userInfo.userShares = mAdapter.accTokenPerShare;
-        // userInfo.amount += amountOut;
         userInfo.invested += _amountIn;
-        mAdapter.totalStaked += amountOut;
-        mAdapter.invested += _amountIn;
-        adapterInvested[_tokenId] += _amountIn;
 
         // Update adapterInfo contract
         address adapterInfoBnbAddr = IHedgepieInvestorBsc(investor)
@@ -123,6 +119,11 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapterBsc {
             _account,
             true
         );
+
+        _amountIn = (_amountIn * HedgepieLibraryBsc.getBNBPrice()) / 1e18;
+        mAdapter.totalStaked += amountOut;
+        mAdapter.invested += _amountIn;
+        adapterInvested[_tokenId] += _amountIn;
 
         return _amountIn;
     }
@@ -205,7 +206,7 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapterBsc {
         // Update adapterInfo contract
         IHedgepieAdapterInfoBsc(adapterInfoBnbAddr).updateTVLInfo(
             _tokenId,
-            userInfo.invested,
+            rewardBnb != 0 ? amountOut - rewardBnb : amountOut,
             false
         );
         IHedgepieAdapterInfoBsc(adapterInfoBnbAddr).updateTradedInfo(
@@ -385,6 +386,16 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapterBsc {
         // update invested information for token id
         mAdapter.invested -= adapterInvested[_tokenId];
         mAdapter.totalStaked -= lpAmt;
+
+        // Update adapterInfo contract
+        address adapterInfoBnbAddr = IHedgepieInvestorBsc(investor)
+            .adapterInfo();
+        IHedgepieAdapterInfoBsc(adapterInfoBnbAddr).updateTVLInfo(
+            _tokenId,
+            amountOut,
+            false
+        );
+
         delete adapterInvested[_tokenId];
 
         // send to investor
@@ -435,10 +446,6 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapterBsc {
                 mAdapter.invested;
         }
 
-        mAdapter.totalStaked += amountOut;
-        mAdapter.invested += _amountIn;
-        adapterInvested[_tokenId] += _amountIn;
-
         // Update adapterInfo contract
         address adapterInfoBnbAddr = IHedgepieInvestorBsc(investor)
             .adapterInfo();
@@ -447,11 +454,11 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapterBsc {
             _amountIn,
             true
         );
-        IHedgepieAdapterInfoBsc(adapterInfoBnbAddr).updateTradedInfo(
-            _tokenId,
-            _amountIn,
-            true
-        );
+
+        _amountIn = (_amountIn * HedgepieLibraryBsc.getBNBPrice()) / 1e18;
+        mAdapter.totalStaked += amountOut;
+        mAdapter.invested += _amountIn;
+        adapterInvested[_tokenId] += _amountIn;
 
         return _amountIn;
     }
