@@ -5,18 +5,19 @@ const { setPath } = require("../../../../shared/utilities");
 const {
     adapterFixtureBsc,
     investorFixtureBsc,
+    adapterFixtureBscWithLib,
 } = require("../../../../shared/fixtures");
 
 const BigNumber = ethers.BigNumber;
 
 describe("PancakeStakeAdapterBsc Integration Test", function () {
     before("Deploy contract", async function () {
-        const [owner, alice, bob, tom, treasury, kyle, jerry] =
+        const [owner, alice, bob, tom, treasury, kyle, jerry, user1, user2] =
             await ethers.getSigners();
 
         const wbnb = "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c";
         const cake = "0x0e09fabb73bd3ade0a17ecc321fd13a19e81ce82";
-        const arena = "0xCfFD4D3B517b77BE32C76DA768634dE6C738889B";
+        const squad = "0x724A32dFFF9769A0a0e1F0515c0012d1fB14c3bd";
         const busd = "0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56";
         const swapRouter = "0x10ED43C718714eb63d5aA57B78B54704E256024E"; // pks rounter address
 
@@ -26,22 +27,28 @@ describe("PancakeStakeAdapterBsc Integration Test", function () {
         this.tom = tom;
         this.kyle = kyle;
         this.jerry = jerry;
+        this.user1 = user1;
+        this.user2 = user2;
 
         this.bobAddr = bob.address;
         this.aliceAddr = alice.address;
         this.tomAddr = tom.address;
 
         this.performanceFee = 100;
-        this.strategy = "0xDe9FC6485b5f4A1905d8011fcd201EB78CF34073";
+        this.strategy = "0x08C9d626a2F0CC1ed9BD07eBEdeF8929F45B83d3";
         this.stakingToken = cake;
-        this.rewardToken = arena;
+        this.rewardToken = squad;
         this.treasuryAddr = treasury.address;
         this.swapRouter = swapRouter;
         this.accTokenPerShare = BigNumber.from(0);
 
+        const Lib = await ethers.getContractFactory("HedgepieLibraryBsc");
+        this.lib = await Lib.deploy();
+
         // Deploy PancakeStakeAdapterBsc contract
-        const PancakeStakeAdapterBsc = await adapterFixtureBsc(
-            "PancakeStakeAdapterBsc"
+        const PancakeStakeAdapterBsc = await adapterFixtureBscWithLib(
+            "PancakeStakeAdapterBsc",
+            this.lib
         );
 
         this.adapter = await PancakeStakeAdapterBsc.deploy(
@@ -50,7 +57,7 @@ describe("PancakeStakeAdapterBsc Integration Test", function () {
             this.rewardToken,
             this.swapRouter,
             wbnb,
-            "PK::STAKE::ARENA-ADAPTER"
+            "PK::STAKE::SQUAD-ADAPTER"
         );
         await this.adapter.deployed();
 
@@ -59,7 +66,8 @@ describe("PancakeStakeAdapterBsc Integration Test", function () {
                 this.adapter,
                 this.treasuryAddr,
                 this.stakingToken,
-                this.performanceFee
+                this.performanceFee,
+                this.lib
             );
 
         await setPath(this.adapter, wbnb, cake);
@@ -110,16 +118,19 @@ describe("PancakeStakeAdapterBsc Integration Test", function () {
             const aliceInfo = (
                 await this.adapter.userAdapterInfos(this.aliceAddr, 1)
             ).invested;
-            expect(Number(aliceInfo) / Math.pow(10, 18)).to.eq(10);
-
-            const aliceAdapterInfos = await this.adapter.userAdapterInfos(
-                this.aliceAddr,
-                1
+            const fTokenAmount = await this.adapter.getfTokenAmount(
+                1,
+                this.aliceAddr
             );
-            const adapterInfos = await this.adapter.mAdapter();
-            expect(BigNumber.from(adapterInfos.totalStaked)).to.eq(
-                BigNumber.from(aliceAdapterInfos.amount)
-            );
+            const bnbPrice = BigNumber.from(await this.lib.getBNBPrice());
+            expect(Number(aliceInfo) / Math.pow(10, 18)).to.eq(10) &&
+                expect(
+                    Math.floor(Number(fTokenAmount) / Math.pow(10, 18))
+                ).to.eq(
+                    BigNumber.from(10)
+                        .mul(bnbPrice)
+                        .div(BigNumber.from(10).pow(18))
+                );
 
             // Check accTokenPerShare Info
             this.accTokenPerShare = (
@@ -164,12 +175,6 @@ describe("PancakeStakeAdapterBsc Integration Test", function () {
             ).invested;
             expect(Number(bobInfo) / Math.pow(10, 18)).to.eq(20);
 
-            const bobAdapterInfos = await this.adapter.userAdapterInfos(
-                this.bobAddr,
-                1
-            );
-            expect(BigNumber.from(bobAdapterInfos.amount).gt(0)).to.eq(true);
-
             const afterAdapterInfos = await this.adapter.mAdapter();
 
             expect(
@@ -206,8 +211,8 @@ describe("PancakeStakeAdapterBsc Integration Test", function () {
         });
     });
 
-    describe("claim() function test", function() {
-        it("(1) check withdrawable and claim for alice", async function() {
+    describe("claim() function test", function () {
+        it("(1) check withdrawable and claim for alice", async function () {
             // wait 1 day
             for (let i = 0; i < 1800; i++) {
                 await ethers.provider.send("evm_mine", []);
@@ -218,54 +223,58 @@ describe("PancakeStakeAdapterBsc Integration Test", function () {
             const alicePending = await this.investor.pendingReward(
                 1,
                 this.aliceAddr
-            )
-            expect(alicePending.withdrawable).gt(0)
+            );
+            expect(alicePending.withdrawable).gt(0);
 
             const estimatePending = BigNumber.from(alicePending.withdrawable)
-                .mul(1e4 - this.performanceFee).div(1e4)
+                .mul(1e4 - this.performanceFee)
+                .div(1e4);
 
             const beforeBNB = await ethers.provider.getBalance(this.aliceAddr);
 
-            const claimTx = await this.investor.connect(this.alice).claim(1)
-            const claimTxResp = await claimTx.wait()
+            const claimTx = await this.investor.connect(this.alice).claim(1);
+            const claimTxResp = await claimTx.wait();
             const gasAmt = BigNumber.from(claimTxResp.effectiveGasPrice).mul(
-                BigNumber.from(claimTxResp.gasUsed))
+                BigNumber.from(claimTxResp.gasUsed)
+            );
 
             const afterBNB = await ethers.provider.getBalance(this.aliceAddr);
-            const actualPending = BigNumber.from(afterBNB).add(gasAmt).sub(beforeBNB)
+            const actualPending = BigNumber.from(afterBNB)
+                .add(gasAmt)
+                .sub(beforeBNB);
 
             // actualPending in 2% range of estimatePending
-            expect(actualPending).gte(
-                estimatePending.mul(98).div(1e2)
-            )
-        })
+            expect(actualPending).gte(estimatePending.mul(98).div(1e2));
+        });
 
-        it("(2) check withdrawable and claim for bob", async function() {
+        it("(2) check withdrawable and claim for bob", async function () {
             const bobPending = await this.investor.pendingReward(
                 1,
                 this.bobAddr
-            )
-            expect(bobPending.withdrawable).gt(0)
+            );
+            expect(bobPending.withdrawable).gt(0);
 
             const estimatePending = BigNumber.from(bobPending.withdrawable)
-                .mul(1e4 - this.performanceFee).div(1e4)
+                .mul(1e4 - this.performanceFee)
+                .div(1e4);
 
             const beforeBNB = await ethers.provider.getBalance(this.bobAddr);
 
-            const claimTx = await this.investor.connect(this.bob).claim(1)
-            const claimTxResp = await claimTx.wait()
+            const claimTx = await this.investor.connect(this.bob).claim(1);
+            const claimTxResp = await claimTx.wait();
             const gasAmt = BigNumber.from(claimTxResp.effectiveGasPrice).mul(
-                BigNumber.from(claimTxResp.gasUsed))
+                BigNumber.from(claimTxResp.gasUsed)
+            );
 
             const afterBNB = await ethers.provider.getBalance(this.bobAddr);
-            const actualPending = BigNumber.from(afterBNB).add(gasAmt).sub(beforeBNB)
+            const actualPending = BigNumber.from(afterBNB)
+                .add(gasAmt)
+                .sub(beforeBNB);
 
             // actualPending in 2% range of estimatePending
-            expect(actualPending).gte(
-                estimatePending.mul(98).div(1e2)
-            )
-        })
-    })
+            expect(actualPending).gte(estimatePending.mul(98).div(1e2));
+        });
+    });
 
     describe("withdrawBNB() function test", function () {
         it("(1) revert when nft tokenId is invalid", async function () {
@@ -493,6 +502,60 @@ describe("PancakeStakeAdapterBsc Integration Test", function () {
                     BigNumber.from(actualReward1).mul(9)
                 )
             ).to.eq(true);
+        });
+    });
+
+    describe("Edit fund flow", function () {
+        it("test with token1 and token2 - updateAllocations", async function () {
+            await this.investor
+                .connect(this.user1)
+                .depositBNB(1, ethers.utils.parseEther("10"), {
+                    gasPrice: 21e9,
+                    value: ethers.utils.parseEther("10"),
+                });
+
+            await this.investor
+                .connect(this.user2)
+                .depositBNB(2, ethers.utils.parseEther("100"), {
+                    gasPrice: 21e9,
+                    value: ethers.utils.parseEther("100"),
+                });
+
+            // wait 40 mins
+            for (let i = 0; i < 7200; i++) {
+                await ethers.provider.send("evm_mine", []);
+            }
+            await ethers.provider.send("evm_increaseTime", [3600 * 24]);
+            await ethers.provider.send("evm_mine", []);
+
+            const adaInvested1 = await this.adapter.adapterInvested(1);
+            const adaInvested2 = await this.adapter.adapterInvested(2);
+
+            await this.ybNft.updateAllocations(1, [5000]);
+
+            expect(
+                BigNumber.from(adaInvested2).eq(
+                    BigNumber.from(await this.adapter.adapterInvested(2))
+                )
+            ).to.eq(true);
+            expect(
+                BigNumber.from(await this.adapter.adapterInvested(1)).lt(
+                    BigNumber.from(adaInvested1).mul(5).div(10)
+                )
+            ).to.eq(true);
+            expect(
+                BigNumber.from(await this.adapter.adapterInvested(1)).gt(
+                    BigNumber.from(adaInvested1).mul(4).div(10)
+                )
+            ).to.eq(true);
+
+            // Successfully withdraw
+            await expect(
+                this.investor.connect(this.user1).withdrawBNB(1)
+            ).to.emit(this.investor, "WithdrawBNB");
+            await expect(
+                this.investor.connect(this.user2).withdrawBNB(2)
+            ).to.emit(this.investor, "WithdrawBNB");
         });
     });
 });
