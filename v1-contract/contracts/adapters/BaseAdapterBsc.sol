@@ -177,6 +177,28 @@ abstract contract BaseAdapterBsc is Ownable {
     {}
 
     /**
+     * @notice Remove funds
+     * @param _tokenId YBNFT token id
+     */
+    function removeFunds(uint256 _tokenId)
+        external
+        payable
+        virtual
+        returns (uint256 amountOut)
+    {}
+
+    /**
+     * @notice Update funds
+     * @param _tokenId YBNFT token id
+     */
+    function updateFunds(uint256 _tokenId)
+        external
+        payable
+        virtual
+        returns (uint256 amountOut)
+    {}
+
+    /**
      * @notice Get pending token reward
      * @param _tokenId YBNFT token id
      * @param _account address of user

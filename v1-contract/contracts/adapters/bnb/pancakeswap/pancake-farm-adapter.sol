@@ -347,6 +347,7 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapterBsc {
     function removeFunds(uint256 _tokenId)
         external
         payable
+        override
         onlyInvestor
         returns (uint256 amountOut)
     {
@@ -410,6 +411,7 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapterBsc {
     function updateFunds(uint256 _tokenId)
         external
         payable
+        override
         onlyInvestor
         returns (uint256 amountOut)
     {
