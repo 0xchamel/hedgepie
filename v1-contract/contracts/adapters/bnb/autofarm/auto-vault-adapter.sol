@@ -70,7 +70,6 @@ contract AutoVaultAdapterBsc is BaseAdapterBsc {
         returns (uint256 amountOut)
     {
         uint256 _amountIn = msg.value;
-        AdapterInfo storage adapterInfo = adapterInfos[_tokenId];
         UserAdapterInfo storage userInfo = userAdapterInfos[_account][_tokenId];
 
         // get LP
@@ -92,9 +91,6 @@ contract AutoVaultAdapterBsc is BaseAdapterBsc {
             address(this)
         );
 
-        adapterInfo.totalStaked += amountOut;
-        userInfo.amount += amountOut;
-        userInfo.userShares += afterShare - beforeShare;
         userInfo.invested += _amountIn;
 
         // Update adapterInfo contract
@@ -115,6 +111,13 @@ contract AutoVaultAdapterBsc is BaseAdapterBsc {
             _account,
             true
         );
+
+        _amountIn = (_amountIn * HedgepieLibraryBsc.getBNBPrice()) / 1e18;
+        mAdapter.totalStaked += afterShare - beforeShare;
+        mAdapter.invested += _amountIn;
+        adapterInvested[_tokenId] += _amountIn;
+
+        return _amountIn;
     }
 
     /**
@@ -129,11 +132,10 @@ contract AutoVaultAdapterBsc is BaseAdapterBsc {
         onlyInvestor
         returns (uint256 amountOut)
     {
-        AdapterInfo storage adapterInfo = adapterInfos[_tokenId];
         UserAdapterInfo memory userInfo = userAdapterInfos[_account][_tokenId];
 
-        // withdraw from MasterChef
-        uint256 vAmount = (userInfo.userShares *
+        // withdraw from Vault
+        uint256 vAmount = (getMUserAmount(_tokenId, _account) *
             IVaultStrategy(vStrategy).wantLockedTotal()) /
             IVaultStrategy(vStrategy).sharesTotal();
         uint256 lpOut = IBEP20(stakingToken).balanceOf(address(this));
@@ -181,7 +183,9 @@ contract AutoVaultAdapterBsc is BaseAdapterBsc {
         );
 
         unchecked {
-            adapterInfo.totalStaked -= userInfo.amount;
+            mAdapter.totalStaked -= getMUserAmount(_tokenId, _account);
+            mAdapter.invested -= getfBNBAmount(_tokenId, _account);
+            adapterInvested[_tokenId] -= getfBNBAmount(_tokenId, _account);
         }
 
         delete userAdapterInfos[_account][_tokenId];
@@ -217,20 +221,18 @@ contract AutoVaultAdapterBsc is BaseAdapterBsc {
     {
         UserAdapterInfo memory userInfo = userAdapterInfos[_account][_tokenId];
 
-        uint256 vAmount = (userInfo.userShares *
+        uint256 vAmount = (getMUserAmount(_tokenId, _account) *
             IVaultStrategy(vStrategy).wantLockedTotal()) /
             IVaultStrategy(vStrategy).sharesTotal();
-
-        if (vAmount < userInfo.amount) return (0, 0);
 
         address token0 = IPancakePair(stakingToken).token0();
         address token1 = IPancakePair(stakingToken).token1();
         (uint112 reserve0, uint112 reserve1, ) = IPancakePair(stakingToken)
             .getReserves();
 
-        uint256 amount0 = (reserve0 * (vAmount - userInfo.amount)) /
+        uint256 amount0 = (reserve0 * vAmount) /
             IPancakePair(stakingToken).totalSupply();
-        uint256 amount1 = (reserve1 * (vAmount - userInfo.amount)) /
+        uint256 amount1 = (reserve1 * vAmount) /
             IPancakePair(stakingToken).totalSupply();
 
         if (token0 == wbnb) reward += amount0;
@@ -250,6 +252,117 @@ contract AutoVaultAdapterBsc is BaseAdapterBsc {
                     amount1,
                     getPaths(token1, wbnb)
                 )[getPaths(token1, wbnb).length - 1];
+
+        if (reward <= userInfo.invested) return (0, 0);
+        return (reward - userInfo.invested, 0);
+    }
+
+    /**
+     * @notice Remove funds
+     * @param _tokenId YBNFT token id
+     */
+    function removeFunds(uint256 _tokenId)
+        external
+        payable
+        override
+        onlyInvestor
+        returns (uint256 amountOut)
+    {
+        // get shares amount to withdraw
+        uint256 shareAmt = (mAdapter.totalStaked * adapterInvested[_tokenId]) /
+            mAdapter.invested;
+
+        // withdraw from Vault
+        amountOut = IBEP20(stakingToken).balanceOf(address(this));
+        uint256 vAmount = (shareAmt *
+            IVaultStrategy(vStrategy).wantLockedTotal()) /
+            IVaultStrategy(vStrategy).sharesTotal();
+        IStrategy(strategy).withdraw(pid, vAmount);
+        amountOut = IBEP20(stakingToken).balanceOf(address(this)) - amountOut;
+
+        // swap withdrawn lp to bnb
+        if (router == address(0)) {
+            amountOut = HedgepieLibraryBsc.swapforBnb(
+                amountOut,
+                address(this),
+                stakingToken,
+                swapRouter,
+                wbnb
+            );
+        } else {
+            amountOut = HedgepieLibraryBsc.withdrawLP(
+                IYBNFT.Adapter(0, stakingToken, address(this)),
+                wbnb,
+                amountOut
+            );
+        }
+
+        // update invested information for token id
+        mAdapter.invested -= adapterInvested[_tokenId];
+        mAdapter.totalStaked -= shareAmt;
+
+        // Update adapterInfo contract
+        address adapterInfoBnbAddr = IHedgepieInvestorBsc(investor)
+            .adapterInfo();
+        IHedgepieAdapterInfoBsc(adapterInfoBnbAddr).updateTVLInfo(
+            _tokenId,
+            amountOut,
+            false
+        );
+
+        delete adapterInvested[_tokenId];
+
+        // send to investor
+        (bool success, ) = payable(investor).call{value: amountOut}("");
+        require(success, "Failed to send bnb to investor");
+    }
+
+    /**
+     * @notice Update funds
+     * @param _tokenId YBNFT token id
+     */
+    function updateFunds(uint256 _tokenId)
+        external
+        payable
+        override
+        onlyInvestor
+        returns (uint256 amountOut)
+    {
+        uint256 _amountIn = msg.value;
+
+        // get LP
+        amountOut = HedgepieLibraryBsc.getLP(
+            IYBNFT.Adapter(0, stakingToken, address(this)),
+            wbnb,
+            _amountIn
+        );
+
+        // deposit
+        (uint256 beforeShare, ) = IStrategy(strategy).userInfo(
+            pid,
+            address(this)
+        );
+        IBEP20(stakingToken).approve(strategy, amountOut);
+        IStrategy(strategy).deposit(pid, amountOut);
+        (uint256 afterShare, ) = IStrategy(strategy).userInfo(
+            pid,
+            address(this)
+        );
+        // Update adapterInfo contract
+        address adapterInfoBnbAddr = IHedgepieInvestorBsc(investor)
+            .adapterInfo();
+        IHedgepieAdapterInfoBsc(adapterInfoBnbAddr).updateTVLInfo(
+            _tokenId,
+            _amountIn,
+            true
+        );
+
+        _amountIn = (_amountIn * HedgepieLibraryBsc.getBNBPrice()) / 1e18;
+        mAdapter.totalStaked += afterShare - beforeShare;
+        mAdapter.invested += _amountIn;
+        adapterInvested[_tokenId] += _amountIn;
+
+        return _amountIn;
     }
 
     receive() external payable {}
