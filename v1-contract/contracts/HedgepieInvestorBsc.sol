@@ -231,13 +231,17 @@ contract HedgepieInvestorBsc is Ownable, ReentrancyGuard {
             IAdapterBsc(adapter.addr).removeFunds(_tokenId);
         }
         _amount = address(this).balance - _amount;
-        require(_amount != 0, "Error: Not get bnb from adapters");
+
+        if (_amount == 0) return;
 
         for (uint8 i; i < adapterInfos.length; i++) {
             IYBNFT.Adapter memory adapter = adapterInfos[i];
 
             uint256 amountIn = (_amount * adapter.allocation) / 1e4;
-            IAdapterBsc(adapter.addr).updateFunds{value: amountIn}(_tokenId);
+            if (amountIn != 0)
+                IAdapterBsc(adapter.addr).updateFunds{value: amountIn}(
+                    _tokenId
+                );
         }
     }
 

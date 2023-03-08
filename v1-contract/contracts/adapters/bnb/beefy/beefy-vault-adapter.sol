@@ -279,6 +279,8 @@ contract BeefyVaultAdapter is BaseAdapterBsc {
         onlyInvestor
         returns (uint256 amountOut)
     {
+        if (adapterInvested[_tokenId] == 0) return 0;
+
         // get shares amount to withdraw
         uint256 shareAmt = (mAdapter.totalStaked * adapterInvested[_tokenId]) /
             mAdapter.invested;
