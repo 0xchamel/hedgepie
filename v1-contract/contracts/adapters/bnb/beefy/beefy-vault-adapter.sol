@@ -55,7 +55,6 @@ contract BeefyVaultAdapter is BaseAdapterBsc {
         returns (uint256 amountOut)
     {
         uint256 _amountIn = msg.value;
-        AdapterInfo storage adapterInfo = adapterInfos[_tokenId];
         UserAdapterInfo storage userInfo = userAdapterInfos[_account][_tokenId];
 
         // get stakingToken
@@ -83,12 +82,7 @@ contract BeefyVaultAdapter is BaseAdapterBsc {
 
         unchecked {
             repayAmt = IBEP20(repayToken).balanceOf(address(this)) - repayAmt;
-
-            adapterInfo.totalStaked += amountOut;
-
-            userInfo.amount += amountOut;
             userInfo.invested += _amountIn;
-            userInfo.userShares += repayAmt;
         }
 
         // Update adapterInfo contract
@@ -109,6 +103,13 @@ contract BeefyVaultAdapter is BaseAdapterBsc {
             _account,
             true
         );
+
+        _amountIn = (_amountIn * HedgepieLibraryBsc.getBNBPrice()) / 1e18;
+        mAdapter.totalStaked += repayAmt;
+        mAdapter.invested += _amountIn;
+        adapterInvested[_tokenId] += _amountIn;
+
+        return _amountIn;
     }
 
     /**
@@ -123,13 +124,12 @@ contract BeefyVaultAdapter is BaseAdapterBsc {
         onlyInvestor
         returns (uint256 amountOut)
     {
-        AdapterInfo storage adapterInfo = adapterInfos[_tokenId];
         UserAdapterInfo memory userInfo = userAdapterInfos[_account][_tokenId];
 
         amountOut = IBEP20(stakingToken).balanceOf(address(this));
 
         // withdraw
-        IStrategy(strategy).withdraw(userInfo.userShares);
+        IStrategy(strategy).withdraw(getMUserAmount(_tokenId, _account));
 
         unchecked {
             amountOut =
@@ -185,7 +185,9 @@ contract BeefyVaultAdapter is BaseAdapterBsc {
         );
 
         unchecked {
-            adapterInfo.totalStaked -= userInfo.amount;
+            mAdapter.totalStaked -= getMUserAmount(_tokenId, _account);
+            mAdapter.invested -= getfBNBAmount(_tokenId, _account);
+            adapterInvested[_tokenId] -= getfBNBAmount(_tokenId, _account);
         }
 
         delete userAdapterInfos[_account][_tokenId];
@@ -221,13 +223,10 @@ contract BeefyVaultAdapter is BaseAdapterBsc {
     {
         UserAdapterInfo memory userInfo = userAdapterInfos[_account][_tokenId];
 
-        uint256 _reward = (userInfo.userShares *
+        uint256 _reward = (getMUserAmount(_tokenId, _account) *
             (IStrategy(strategy).balance())) /
             (IStrategy(strategy).totalSupply());
 
-        if (_reward < userInfo.amount) return (0, 0);
-
-        _reward = _reward - userInfo.amount;
         if (router == address(0)) {
             if (stakingToken != wbnb)
                 reward += _reward == 0
@@ -265,6 +264,118 @@ contract BeefyVaultAdapter is BaseAdapterBsc {
                         getPaths(token1, wbnb)
                     )[getPaths(token1, wbnb).length - 1];
         }
+        if (reward <= userInfo.invested) return (0, 0);
+        reward -= userInfo.invested;
+    }
+
+    /**
+     * @notice Remove funds
+     * @param _tokenId YBNFT token id
+     */
+    function removeFunds(uint256 _tokenId)
+        external
+        payable
+        override
+        onlyInvestor
+        returns (uint256 amountOut)
+    {
+        // get shares amount to withdraw
+        uint256 shareAmt = (mAdapter.totalStaked * adapterInvested[_tokenId]) /
+            mAdapter.invested;
+
+        // withdraw from Vault
+        amountOut = IBEP20(stakingToken).balanceOf(address(this));
+        IStrategy(strategy).withdraw(shareAmt);
+        amountOut = IBEP20(stakingToken).balanceOf(address(this)) - amountOut;
+
+        // swap withdrawn lp to bnb
+        if (router == address(0)) {
+            amountOut = HedgepieLibraryBsc.swapforBnb(
+                amountOut,
+                address(this),
+                stakingToken,
+                swapRouter,
+                wbnb
+            );
+        } else {
+            amountOut = HedgepieLibraryBsc.withdrawLP(
+                IYBNFT.Adapter(0, stakingToken, address(this)),
+                wbnb,
+                amountOut
+            );
+        }
+
+        // update invested information for token id
+        mAdapter.invested -= adapterInvested[_tokenId];
+        mAdapter.totalStaked -= shareAmt;
+
+        // Update adapterInfo contract
+        address adapterInfoBnbAddr = IHedgepieInvestorBsc(investor)
+            .adapterInfo();
+        IHedgepieAdapterInfoBsc(adapterInfoBnbAddr).updateTVLInfo(
+            _tokenId,
+            amountOut,
+            false
+        );
+
+        delete adapterInvested[_tokenId];
+
+        // send to investor
+        (bool success, ) = payable(investor).call{value: amountOut}("");
+        require(success, "Failed to send bnb to investor");
+    }
+
+    /**
+     * @notice Update funds
+     * @param _tokenId YBNFT token id
+     */
+    function updateFunds(uint256 _tokenId)
+        external
+        payable
+        override
+        onlyInvestor
+        returns (uint256 amountOut)
+    {
+        uint256 _amountIn = msg.value;
+
+        // get stakingToken
+        if (router == address(0)) {
+            amountOut = HedgepieLibraryBsc.swapOnRouter(
+                _amountIn,
+                address(this),
+                stakingToken,
+                swapRouter,
+                wbnb
+            );
+        } else {
+            amountOut = HedgepieLibraryBsc.getLP(
+                IYBNFT.Adapter(0, stakingToken, address(this)),
+                wbnb,
+                _amountIn
+            );
+        }
+
+        // deposit
+        uint256 repayAmt = IBEP20(repayToken).balanceOf(address(this));
+        IBEP20(stakingToken).approve(strategy, amountOut);
+        IStrategy(strategy).deposit(amountOut);
+        repayAmt = IBEP20(repayToken).balanceOf(address(this)) - repayAmt;
+
+        // Update adapterInfo contract
+        address adapterInfoBnbAddr = IHedgepieInvestorBsc(investor)
+            .adapterInfo();
+        IHedgepieAdapterInfoBsc(adapterInfoBnbAddr).updateTVLInfo(
+            _tokenId,
+            _amountIn,
+            true
+        );
+
+        _amountIn = (_amountIn * HedgepieLibraryBsc.getBNBPrice()) / 1e18;
+        mAdapter.totalStaked += repayAmt;
+        mAdapter.invested += _amountIn;
+        adapterInvested[_tokenId] += _amountIn;
+
+        return _amountIn;
     }
 
     receive() external payable {}
