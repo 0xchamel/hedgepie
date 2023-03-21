@@ -1,13 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.4;
 
-import "@openzeppelin/contracts/access/Ownable.sol";
-
 import "../interfaces/IYBNFT.sol";
 import "../interfaces/IFundToken.sol";
+import "../interfaces/IPathFinder.sol";
 import "../interfaces/IHedgepieInvestor.sol";
+import "../interfaces/IHedgepieAuthority.sol";
 
-abstract contract BaseAdapter is Ownable {
+import "./HedgepieAccessControlled.sol";
+
+abstract contract BaseAdapter is HedgepieAccessControlled {
     struct UserAdapterInfo {
         uint256 amount; // Staking token amount
         uint256[2] userShare; // Reward tokens' share
@@ -17,7 +19,6 @@ abstract contract BaseAdapter is Ownable {
     struct AdapterInfo {
         uint256[2] accTokenPerShare; // Accumulated per share for first reward token
         uint256 totalStaked; // Total staked staking token
-        uint256 invested; // Total staked bnb
     }
 
     uint256 public pid;
@@ -36,16 +37,11 @@ abstract contract BaseAdapter is Ownable {
 
     address public swapRouter;
 
-    IHedgepieInvestor public investor;
-
     address public wbnb;
 
     string public name;
 
     AdapterInfo public mAdapter;
-
-    // inToken => outToken => paths
-    mapping(address => mapping(address => address[])) public paths;
 
     // nft id => UserAdapterInfo
     mapping(uint256 => UserAdapterInfo) public userAdapterInfos;
@@ -53,91 +49,15 @@ abstract contract BaseAdapter is Ownable {
     // nft id => AdapterInfo
     mapping(uint256 => AdapterInfo) public adapterInfos;
 
-    modifier onlyInvestor() {
-        require(msg.sender == address(investor), "Not investor");
-        _;
-    }
-
-    event InvestorUpdated(address investor);
-
-    /**
-     * @notice Get path
-     * @param _inToken token address of inToken
-     * @param _outToken token address of outToken
-     */
-    function getPaths(address _inToken, address _outToken)
-        public
-        view
-        returns (address[] memory)
-    {
-        require(
-            paths[_inToken][_outToken].length > 1,
-            "Path length is not valid"
-        );
-        require(
-            paths[_inToken][_outToken][0] == _inToken,
-            "Path is not existed"
-        );
-        require(
-            paths[_inToken][_outToken][paths[_inToken][_outToken].length - 1] ==
-                _outToken,
-            "Path is not existed"
-        );
-
-        return paths[_inToken][_outToken];
-    }
-
-    /**
-     * @notice Set paths from inToken to outToken
-     * @param _inToken token address of inToken
-     * @param _outToken token address of outToken
-     * @param _paths swapping paths
-     */
-    function setPath(
-        address _inToken,
-        address _outToken,
-        address[] memory _paths
-    ) external onlyOwner {
-        require(_paths.length > 1, "Invalid paths length");
-        require(_inToken == _paths[0], "Invalid inToken address");
-        require(
-            _outToken == _paths[_paths.length - 1],
-            "Invalid inToken address"
-        );
-
-        uint8 i;
-        for (i; i < _paths.length; i++) {
-            if (i < paths[_inToken][_outToken].length) {
-                paths[_inToken][_outToken][i] = _paths[i];
-            } else {
-                paths[_inToken][_outToken].push(_paths[i]);
-            }
-        }
-
-        if (paths[_inToken][_outToken].length > _paths.length)
-            for (
-                i = 0;
-                i < paths[_inToken][_outToken].length - _paths.length;
-                i++
-            ) paths[_inToken][_outToken].pop();
-    }
-
-    /**
-     * @notice Set investor
-     * @param _investor  address of investor
-     */
-    function setInvestor(address _investor) external onlyOwner {
-        require(_investor != address(0), "Error: Investor zero address");
-        investor = IHedgepieInvestor(_investor);
-        emit InvestorUpdated(investor);
-    }
+    constructor(address _hedgepieAuthority)
+        HedgepieAccessControlled(IHedgepieAuthority(_hedgepieAuthority))
+    {}
 
     /**
      * @notice deposit to strategy
      * @param _tokenId YBNFT token id
-     * @param _account address of user
      */
-    function deposit(uint256 _tokenId, address _account)
+    function deposit(uint256 _tokenId)
         external
         payable
         virtual
@@ -147,9 +67,9 @@ abstract contract BaseAdapter is Ownable {
     /**
      * @notice withdraw from strategy
      * @param _tokenId YBNFT token id
-     * @param _account address of user
+     * @param _amount amount of staking tokens to withdraw
      */
-    function withdraw(uint256 _tokenId, address _account)
+    function withdraw(uint256 _tokenId, uint256 _amount)
         external
         payable
         virtual
@@ -159,9 +79,8 @@ abstract contract BaseAdapter is Ownable {
     /**
      * @notice claim reward from strategy
      * @param _tokenId YBNFT token id
-     * @param _account address of user
      */
-    function claim(uint256 _tokenId, address _account)
+    function claim(uint256 _tokenId)
         external
         payable
         virtual
@@ -193,67 +112,11 @@ abstract contract BaseAdapter is Ownable {
     /**
      * @notice Get pending token reward
      * @param _tokenId YBNFT token id
-     * @param _account address of user
      */
-    function pendingReward(uint256 _tokenId, address _account)
+    function pendingReward(uint256 _tokenId)
         external
         view
         virtual
         returns (uint256 reward, uint256 withdrawable)
     {}
-
-    /**
-     * @notice Get user amount based on fundToken
-     * @param _tokenId YBNFT token id
-     * @param _account address of user
-     */
-    function getMUserAmount(uint256 _tokenId, address _account)
-        public
-        view
-        returns (uint256 amount)
-    {
-        address fundToken = IYBNFT(investor.ybnft()).fundTokens(_tokenId);
-
-        if (IFundToken(fundToken).totalSupply() != 0)
-            amount =
-                (mAdapter.totalStaked *
-                    adapterInvested[_tokenId] *
-                    IFundToken(fundToken).balanceOf(_account)) /
-                mAdapter.invested /
-                IFundToken(fundToken).totalSupply();
-    }
-
-    /**
-     * @notice Get balance of fund token
-     * @param _tokenId YBNFT token id
-     * @param _account address of account
-     */
-    function getfTokenAmount(uint256 _tokenId, address _account)
-        public
-        view
-        returns (uint256 amount)
-    {
-        address fundToken = IYBNFT(investor.ybnft()).fundTokens(_tokenId);
-
-        amount = IFundToken(fundToken).balanceOf(_account);
-    }
-
-    /**
-     * @notice Get balance of fund token
-     * @param _tokenId YBNFT token id
-     * @param _account address of account
-     */
-    function getfBNBAmount(uint256 _tokenId, address _account)
-        public
-        view
-        returns (uint256 amount)
-    {
-        address fundToken = IYBNFT(investor.ybnft()).fundTokens(_tokenId);
-
-        if (IFundToken(fundToken).totalSupply() != 0)
-            amount =
-                (adapterInvested[_tokenId] *
-                    IFundToken(fundToken).balanceOf(_account)) /
-                IFundToken(fundToken).totalSupply();
-    }
 }

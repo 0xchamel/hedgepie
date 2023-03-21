@@ -3,7 +3,6 @@ pragma solidity ^0.8.4;
 
 import "../../libraries/HedgepieLibraryBsc.sol";
 import "../../interfaces/IHedgepieInvestor.sol";
-import "../../interfaces/IHedgepieAdapterInfo.sol";
 
 interface IStrategy {
     function pendingCake(uint256 _pid, address _user)
@@ -16,13 +15,17 @@ interface IStrategy {
     function withdraw(uint256 pid, uint256 shares) external;
 }
 
-contract PancakeSwapFarmLPAdapterBsc is BaseAdapterBsc {
+contract PancakeSwapFarmLPAdapterBsc is BaseAdapter {
     /**
      * @notice Construct
+     * @param _pid  pool id of strategy
      * @param _strategy  address of strategy
      * @param _stakingToken  address of staking token
      * @param _rewardToken  address of reward token
+     * @param _router  address of router for lp token
+     * @param _wbnb  wbnb address
      * @param _name  adatper name
+     * @param _hedgepieAuthority  hedgepieAuthority address
      */
     constructor(
         uint256 _pid,
@@ -31,8 +34,9 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapterBsc {
         address _rewardToken,
         address _router,
         address _wbnb,
-        string memory _name
-    ) {
+        string memory _name,
+        address _hedgepieAuthority
+    ) BaseAdapter(_hedgepieAuthority) {
         pid = _pid;
         stakingToken = _stakingToken;
         rewardToken = _rewardToken;
@@ -54,13 +58,11 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapterBsc {
         onlyInvestor
         returns (uint256 amountOut)
     {
-        uint256 _amountIn = msg.value;
-
         UserAdapterInfo storage userInfo = userAdapterInfos[_tokenId];
 
         // swap to staking token
         amountOut = HedgepieLibraryBsc.swapOnRouter(
-            _amountIn,
+            msg.value,
             address(this),
             stakingToken,
             router,
@@ -69,10 +71,10 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapterBsc {
 
         // calc rewardToken amount
         uint256 rewardAmt0;
-        rewardAmt0 = IBEP20(rewardToken).balanceOf(address(this));
-        IBEP20(stakingToken).approve(strategy, amountOut);
+        rewardAmt0 = IERC20(rewardToken).balanceOf(address(this));
+        IERC20(stakingToken).approve(strategy, amountOut);
         IStrategy(strategy).deposit(pid, amountOut);
-        rewardAmt0 = IBEP20(rewardToken).balanceOf(address(this)) - rewardAmt0;
+        rewardAmt0 = IERC20(rewardToken).balanceOf(address(this)) - rewardAmt0;
 
         // update accTokenPerShare if reward is generated
         if (
@@ -80,45 +82,42 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapterBsc {
             rewardToken != address(0) &&
             mAdapter.totalStaked != 0
         ) {
-            mAdapter.accTokenPerShare +=
+            mAdapter.accTokenPerShare[0] +=
                 (rewardAmt0 * 1e12) /
                 mAdapter.totalStaked;
         }
 
         // update user's rewardDebt value when user staked several times
         if (userInfo.amount != 0) {
-            userInfo.rewardDebt +=
+            userInfo.rewardDebt[0] +=
                 (userInfo.amount *
-                    (mAdapter.accTokenPerShare - userInfo.userShares)) /
+                    (mAdapter.accTokenPerShare[0] - userInfo.userShare[0])) /
                 1e12;
         }
 
-        // update user's share values
+        // // Update adapterInfo contract
+        // address adapterInfoBnbAddr = IHedgepieInvestor(investor).adapterInfo();
+        // IHedgepieAdapterInfo(adapterInfoBnbAddr).updateTVLInfo(
+        //     _tokenId,
+        //     msg.value,
+        //     true
+        // );
+        // IHedgepieAdapterInfo(adapterInfoBnbAddr).updateTradedInfo(
+        //     _tokenId,
+        //     msg.value,
+        //     true
+        // );
+        // IHedgepieAdapterInfo(adapterInfoBnbAddr).updateParticipantInfo(
+        //     _tokenId,
+        //     _account,
+        //     true
+        // );
+        // update mAdapter & userInfo
         userInfo.amount += amountOut;
-        userInfo.userShares = mAdapter.accTokenPerShare;
-
-        // Update adapterInfo contract
-        address adapterInfoBnbAddr = IHedgepieInvestor(investor).adapterInfo();
-        IHedgepieAdapterInfo(adapterInfoBnbAddr).updateTVLInfo(
-            _tokenId,
-            _amountIn,
-            true
-        );
-        IHedgepieAdapterInfo(adapterInfoBnbAddr).updateTradedInfo(
-            _tokenId,
-            _amountIn,
-            true
-        );
-        IHedgepieAdapterInfo(adapterInfoBnbAddr).updateParticipantInfo(
-            _tokenId,
-            _account,
-            true
-        );
-
+        userInfo.userShare[0] = mAdapter.accTokenPerShare[0];
         mAdapter.totalStaked += amountOut;
-        mAdapter.invested += _amountIn;
 
-        return _amountIn;
+        return msg.value;
     }
 
     /**
@@ -133,24 +132,27 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapterBsc {
         onlyInvestor
         returns (uint256 amountOut)
     {
-        UserAdapterInfo storage userInfo = userAdapterInfos[_account][_tokenId];
+        UserAdapterInfo storage userInfo = userAdapterInfos[_tokenId];
+
+        // validation of _amount parameter
         require(_amount <= userInfo.amount, "Not enough balance to withdraw");
 
         // calc reward and withdrawn amount
-        uint256 rewardAmt0 = IBEP20(rewardToken).balanceOf(address(this));
-        amountOut = IBEP20(stakingToken).balanceOf(address(this));
+        uint256 rewardAmt0 = IERC20(rewardToken).balanceOf(address(this));
+        amountOut = IERC20(stakingToken).balanceOf(address(this));
         IStrategy(strategy).withdraw(pid, _amount);
-        rewardAmt0 = IBEP20(rewardToken).balanceOf(address(this)) - rewardAmt0;
-        amountOut = IBEP20(stakingToken).balanceOf(address(this)) - amountOut;
+        rewardAmt0 = IERC20(rewardToken).balanceOf(address(this)) - rewardAmt0;
+        amountOut = IERC20(stakingToken).balanceOf(address(this)) - amountOut;
         require(_amount == amountOut, "Failed to withdraw");
 
         // update accTokenPerShare if reward is generated
         if (rewardAmt0 != 0 && rewardToken != address(0)) {
-            mAdapter.accTokenPerShare +=
+            mAdapter.accTokenPerShare[0] +=
                 (rewardAmt0 * 1e12) /
                 mAdapter.totalStaked;
         }
 
+        // swap withdrawn staking tokens to bnb
         if (router == address(0)) {
             amountOut = HedgepieLibraryBsc.swapForBnb(
                 amountOut,
@@ -167,12 +169,13 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapterBsc {
             );
         }
 
+        // get user's rewards
         (uint256 reward, ) = HedgepieLibraryBsc.getMRewards(
             _tokenId,
-            address(this),
-            _account
+            address(this)
         );
 
+        // swap reward to bnb
         uint256 rewardBnb;
         if (reward != 0) {
             rewardBnb = HedgepieLibraryBsc.swapForBnb(
@@ -184,54 +187,54 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapterBsc {
             );
         }
 
-        address adapterInfoBnbAddr = IHedgepieInvestor(investor).adapterInfo();
+        // address adapterInfoBnbAddr = IHedgepieInvestor(investor).adapterInfo();
         if (rewardBnb != 0) {
             amountOut += rewardBnb;
-            IHedgepieAdapterInfo(adapterInfoBnbAddr).updateProfitInfo(
-                _tokenId,
-                rewardBnb,
-                true
-            );
+            // IHedgepieAdapterInfo(adapterInfoBnbAddr).updateProfitInfo(
+            //     _tokenId,
+            //     rewardBnb,
+            //     true
+            // );
         }
 
-        // Update adapterInfo contract
-        IHedgepieAdapterInfo(adapterInfoBnbAddr).updateTVLInfo(
-            _tokenId,
-            rewardBnb != 0 ? amountOut - rewardBnb : amountOut,
-            false
-        );
-        IHedgepieAdapterInfo(adapterInfoBnbAddr).updateTradedInfo(
-            _tokenId,
-            userInfo.invested,
-            true
-        );
-        IHedgepieAdapterInfo(adapterInfoBnbAddr).updateParticipantInfo(
-            _tokenId,
-            _account,
-            false
-        );
+        // // Update adapterInfo contract
+        // IHedgepieAdapterInfo(adapterInfoBnbAddr).updateTVLInfo(
+        //     _tokenId,
+        //     rewardBnb != 0 ? amountOut - rewardBnb : amountOut,
+        //     false
+        // );
+        // IHedgepieAdapterInfo(adapterInfoBnbAddr).updateTradedInfo(
+        //     _tokenId,
+        //     userInfo.invested,
+        //     true
+        // );
+        // IHedgepieAdapterInfo(adapterInfoBnbAddr).updateParticipantInfo(
+        //     _tokenId,
+        //     _account,
+        //     false
+        // );
 
-        mAdapter.totalStaked -= getMUserAmount(_tokenId, _account);
-        mAdapter.invested -= getfBNBAmount(_tokenId, _account);
-        adapterInvested[_tokenId] -= getfBNBAmount(_tokenId, _account);
-        delete userAdapterInfos[_account][_tokenId];
+        // update mAdapter & user Info
+        mAdapter.totalStaked -= userInfo.amount;
+        userInfo.amount -= _amount;
+        userInfo.userShare[0] = mAdapter.accTokenPerShare[0];
 
         if (amountOut != 0) {
             bool success;
             if (rewardBnb != 0) {
                 rewardBnb =
                     (rewardBnb *
-                        IYBNFT(IHedgepieInvestor(investor).ybnft())
-                            .performanceFee(_tokenId)) /
+                        IYBNFT(authority.hYBNFT()).performanceFee(_tokenId)) /
                     1e4;
-                (success, ) = payable(IHedgepieInvestor(investor).treasury())
-                    .call{value: rewardBnb}("");
+                (success, ) = payable(
+                    IHedgepieInvestor(authority.hInvestor()).treasury()
+                ).call{value: rewardBnb}("");
                 require(success, "Failed to send bnb to Treasury");
             }
 
-            (success, ) = payable(_account).call{value: amountOut - rewardBnb}(
-                ""
-            );
+            (success, ) = payable(msg.sender).call{
+                value: amountOut - rewardBnb
+            }("");
             require(success, "Failed to send bnb");
         }
     }
@@ -239,38 +242,42 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapterBsc {
     /**
      * @notice Claim the pending reward
      * @param _tokenId YBNFT token id
-     * @param _account user wallet address
      */
-    function claim(uint256 _tokenId, address _account)
+    function claim(uint256 _tokenId)
         external
         payable
         override
         onlyInvestor
         returns (uint256 amountOut)
     {
-        UserAdapterInfo storage userInfo = userAdapterInfos[_account][_tokenId];
+        UserAdapterInfo storage userInfo = userAdapterInfos[_tokenId];
 
         // claim rewards
-        uint256 rewardAmt0 = IBEP20(rewardToken).balanceOf(address(this));
+        uint256 rewardAmt0 = IERC20(rewardToken).balanceOf(address(this));
         IStrategy(strategy).withdraw(pid, 0);
-        rewardAmt0 = IBEP20(rewardToken).balanceOf(address(this)) - rewardAmt0;
-        if (rewardAmt0 != 0 && rewardToken != address(0)) {
-            mAdapter.accTokenPerShare +=
+        rewardAmt0 = IERC20(rewardToken).balanceOf(address(this)) - rewardAmt0;
+        if (
+            rewardAmt0 != 0 &&
+            rewardToken != address(0) &&
+            mAdapter.totalStaked != 0
+        ) {
+            mAdapter.accTokenPerShare[0] +=
                 (rewardAmt0 * 1e12) /
-                mAdapter.invested;
+                mAdapter.totalStaked;
         }
 
+        // get reward amount
         (uint256 reward, ) = HedgepieLibraryBsc.getMRewards(
             _tokenId,
-            address(this),
-            _account
+            address(this)
         );
 
-        userInfo.userShares = mAdapter.accTokenPerShare;
-        userInfo.rewardDebt = 0;
+        // update user info
+        userInfo.userShare[0] = mAdapter.accTokenPerShare[0];
+        userInfo.rewardDebt[0] = 0;
 
         if (reward != 0 && rewardToken != address(0)) {
-            amountOut = HedgepieLibraryBsc.swapForBnb(
+            amountOut += HedgepieLibraryBsc.swapForBnb(
                 reward,
                 address(this),
                 rewardToken,
@@ -279,52 +286,58 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapterBsc {
             );
 
             uint256 taxAmount = (amountOut *
-                IYBNFT(IHedgepieInvestor(investor).ybnft()).performanceFee(
-                    _tokenId
-                )) / 1e4;
-            (bool success, ) = payable(IHedgepieInvestor(investor).treasury())
-                .call{value: taxAmount}("");
+                IYBNFT(authority.hYBNFT()).performanceFee(_tokenId)) / 1e4;
+            (bool success, ) = payable(
+                IHedgepieInvestor(authority.hInvestor()).treasury()
+            ).call{value: taxAmount}("");
             require(success, "Failed to send bnb to Treasury");
 
-            (success, ) = payable(_account).call{value: amountOut - taxAmount}(
-                ""
-            );
+            (success, ) = payable(msg.sender).call{
+                value: amountOut - taxAmount
+            }("");
             require(success, "Failed to send bnb");
 
-            IHedgepieAdapterInfo(IHedgepieInvestor(investor).adapterInfo())
-                .updateProfitInfo(_tokenId, amountOut, true);
+            // IHedgepieAdapterInfo(IHedgepieInvestor(investor).adapterInfo())
+            //     .updateProfitInfo(_tokenId, amountOut, true);
         }
     }
 
     /**
      * @notice Return the pending reward by Bnb
      * @param _tokenId YBNFT token id
-     * @param _account user wallet address
      */
-    function pendingReward(uint256 _tokenId, address _account)
+    function pendingReward(uint256 _tokenId)
         external
         view
         override
         returns (uint256 reward, uint256 withdrawable)
     {
-        UserAdapterInfo memory userInfo = userAdapterInfos[_account][_tokenId];
+        UserAdapterInfo memory userInfo = userAdapterInfos[_tokenId];
 
-        uint256 updatedAccTokenPerShare = mAdapter.accTokenPerShare +
+        uint256 updatedAccTokenPerShare = mAdapter.accTokenPerShare[0] +
             ((IStrategy(strategy).pendingCake(pid, address(this)) * 1e12) /
-                mAdapter.invested);
+                mAdapter.totalStaked);
 
         uint256 tokenRewards = ((updatedAccTokenPerShare -
-            userInfo.userShares) * getfBNBAmount(_tokenId, _account)) /
+            userInfo.userShare[0]) * userInfo.amount) /
             1e12 +
-            userInfo.rewardDebt;
+            userInfo.rewardDebt[0];
 
         if (tokenRewards != 0) {
             reward = rewardToken == wbnb
                 ? tokenRewards
                 : IPancakeRouter(swapRouter).getAmountsOut(
                     tokenRewards,
-                    getPaths(rewardToken, wbnb)
-                )[getPaths(rewardToken, wbnb).length - 1];
+                    IPathFinder(authority.pathFinder()).getPaths(
+                        swapRouter,
+                        rewardToken,
+                        wbnb
+                    )
+                )[
+                        IPathFinder(authority.pathFinder())
+                            .getPaths(swapRouter, rewardToken, wbnb)
+                            .length - 1
+                    ];
             withdrawable = reward;
         }
     }
@@ -340,22 +353,21 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapterBsc {
         onlyInvestor
         returns (uint256 amountOut)
     {
-        if (adapterInvested[_tokenId] == 0) return 0;
+        UserAdapterInfo storage userInfo = userAdapterInfos[_tokenId];
+        if (userInfo.amount == 0) return 0;
 
-        // get lp amount to withdraw
-        uint256 lpAmt = (mAdapter.totalStaked * adapterInvested[_tokenId]) /
-            mAdapter.invested;
+        // update reward infor after withdraw all staking tokens
+        uint256 rewardAmt0 = IERC20(rewardToken).balanceOf(address(this));
+        amountOut = IERC20(stakingToken).balanceOf(address(this));
+        IStrategy(strategy).withdraw(pid, userInfo.amount);
+        amountOut = IERC20(stakingToken).balanceOf(address(this)) - amountOut;
+        rewardAmt0 = IERC20(rewardToken).balanceOf(address(this)) - rewardAmt0;
+        require(userInfo.amount == amountOut, "Failed to remove funds");
 
-        // update reward infor
-        uint256 rewardAmt0 = IBEP20(rewardToken).balanceOf(address(this));
-        amountOut = IBEP20(stakingToken).balanceOf(address(this));
-        IStrategy(strategy).withdraw(pid, lpAmt);
-        amountOut = IBEP20(stakingToken).balanceOf(address(this)) - amountOut;
-        rewardAmt0 = IBEP20(rewardToken).balanceOf(address(this)) - rewardAmt0;
         if (rewardAmt0 != 0 && rewardToken != address(0)) {
-            mAdapter.accTokenPerShare +=
+            mAdapter.accTokenPerShare[0] +=
                 (rewardAmt0 * 1e12) /
-                mAdapter.invested;
+                mAdapter.totalStaked;
         }
 
         // swap withdrawn lp to bnb
@@ -376,21 +388,24 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapterBsc {
         }
 
         // update invested information for token id
-        mAdapter.invested -= adapterInvested[_tokenId];
-        mAdapter.totalStaked -= lpAmt;
+        mAdapter.totalStaked -= userInfo.amount;
 
-        // Update adapterInfo contract
-        address adapterInfoBnbAddr = IHedgepieInvestor(investor).adapterInfo();
-        IHedgepieAdapterInfo(adapterInfoBnbAddr).updateTVLInfo(
-            _tokenId,
-            amountOut,
-            false
-        );
+        // // Update adapterInfo contract
+        // address adapterInfoBnbAddr = IHedgepieInvestor(investor).adapterInfo();
+        // IHedgepieAdapterInfo(adapterInfoBnbAddr).updateTVLInfo(
+        //     _tokenId,
+        //     amountOut,
+        //     false
+        // );
 
-        delete adapterInvested[_tokenId];
+        userInfo.amount = 0;
+        userInfo.userShare[0] = 0;
+        userInfo.rewardDebt[0] = 0;
 
         // send to investor
-        (bool success, ) = payable(investor).call{value: amountOut}("");
+        (bool success, ) = payable(authority.hInvestor()).call{
+            value: amountOut
+        }("");
         require(success, "Failed to send bnb to investor");
     }
 
@@ -405,11 +420,14 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapterBsc {
         onlyInvestor
         returns (uint256 amountOut)
     {
-        uint256 _amountIn = msg.value;
+        if (msg.value == 0) return 0;
 
+        UserAdapterInfo storage userInfo = userAdapterInfos[_tokenId];
+
+        // swap bnb to staking token
         if (router == address(0)) {
             amountOut = HedgepieLibraryBsc.swapOnRouter(
-                _amountIn,
+                msg.value,
                 address(this),
                 stakingToken,
                 swapRouter,
@@ -419,39 +437,37 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapterBsc {
             amountOut = HedgepieLibraryBsc.getLP(
                 IYBNFT.Adapter(0, stakingToken, address(this)),
                 wbnb,
-                _amountIn
+                msg.value
             );
         }
-        uint256 rewardAmt0;
-
-        rewardAmt0 = IBEP20(rewardToken).balanceOf(address(this));
-        IBEP20(stakingToken).approve(strategy, amountOut);
+        uint256 rewardAmt0 = IERC20(rewardToken).balanceOf(address(this));
+        IERC20(stakingToken).approve(strategy, amountOut);
         IStrategy(strategy).deposit(pid, amountOut);
-        rewardAmt0 = IBEP20(rewardToken).balanceOf(address(this)) - rewardAmt0;
+        rewardAmt0 = IERC20(rewardToken).balanceOf(address(this)) - rewardAmt0;
+
+        // update reward infor
         if (
             rewardAmt0 != 0 &&
             rewardToken != address(0) &&
-            mAdapter.invested != 0
+            mAdapter.totalStaked != 0
         ) {
-            mAdapter.accTokenPerShare +=
+            mAdapter.accTokenPerShare[0] +=
                 (rewardAmt0 * 1e12) /
-                mAdapter.invested;
+                mAdapter.totalStaked;
         }
 
-        // Update adapterInfo contract
-        address adapterInfoBnbAddr = IHedgepieInvestor(investor).adapterInfo();
-        IHedgepieAdapterInfo(adapterInfoBnbAddr).updateTVLInfo(
-            _tokenId,
-            _amountIn,
-            true
-        );
+        // // Update adapterInfo contract
+        // address adapterInfoBnbAddr = IHedgepieInvestor(investor).adapterInfo();
+        // IHedgepieAdapterInfo(adapterInfoBnbAddr).updateTVLInfo(
+        //     _tokenId,
+        //     msg.value,
+        //     true
+        // );
 
-        _amountIn = (_amountIn * HedgepieLibraryBsc.getBNBPrice()) / 1e18;
         mAdapter.totalStaked += amountOut;
-        mAdapter.invested += _amountIn;
-        adapterInvested[_tokenId] += _amountIn;
+        userInfo.userShare[0] = mAdapter.accTokenPerShare[0];
 
-        return _amountIn;
+        return msg.value;
     }
 
     receive() external payable {}

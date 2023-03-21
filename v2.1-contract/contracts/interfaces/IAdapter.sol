@@ -4,12 +4,7 @@ pragma solidity ^0.8.4;
 import "./IWrap.sol";
 import "../base/BaseAdapter.sol";
 
-interface IAdapterBsc {
-    function getPaths(address _inToken, address _outToken)
-        external
-        view
-        returns (address[] memory);
-
+interface IAdapter {
     function stakingToken() external view returns (address);
 
     function strategy() external view returns (address);
@@ -23,6 +18,8 @@ interface IAdapterBsc {
     function router() external view returns (address);
 
     function swapRouter() external view returns (address);
+
+    function authority() external view returns (address);
 
     function deposit(uint256 _tokenId)
         external

@@ -2,20 +2,22 @@
 pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/utils/Counters.sol";
+import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 
-import "./fundToken/FundToken.sol";
-import "./interfaces/IAdapterManager.sol";
-import "./interfaces/IHedgepieInvestorBsc.sol";
-import "./interfaces/IFundToken.sol";
-import "./interfaces/IYBNFT.sol";
-import "./libraries/Ownable.sol";
-import "./type/BEP721.sol";
+import "../interfaces/IAdapterManager.sol";
+import "../interfaces/IHedgepieInvestor.sol";
+import "../interfaces/IFundToken.sol";
+import "../interfaces/IYBNFT.sol";
+import "../interfaces/IHedgepieAuthority.sol";
 
-contract YBNFT is BEP721, Ownable {
+import "./HedgepieAccessControlled.sol";
+import "./FundToken.sol";
+
+contract YBNFT is ERC721, HedgepieAccessControlled {
     using Counters for Counters.Counter;
     using Strings for uint256;
 
-    struct Adapter {
+    struct AdapterParam {
         uint256 allocation;
         address token;
         address addr;
@@ -26,16 +28,31 @@ contract YBNFT is BEP721, Ownable {
         uint128 modified;
     }
 
+    struct TokenInfo {
+        uint256 tvl;
+        uint256 participant;
+        uint256 traded;
+        uint256 profit;
+    }
+
     // current max tokenId
     Counters.Counter private _tokenIdPointer;
+
     // tokenId => token uri
     mapping(uint256 => string) private _tokenURIs;
-    // tokenId => Adapter[]
-    mapping(uint256 => Adapter[]) public adapterInfo;
+
+    // tokenId => AdapterParam[]
+    mapping(uint256 => AdapterParam[]) public adapterParams;
+
     // tokenId => AdapterDate
     mapping(uint256 => AdapterDate) public adapterDate;
+
+    // tokenId => TokenInfo
+    mapping(uint256 => TokenInfo) public tokenInfos;
+
     // tokenId => performanceFee
     mapping(uint256 => uint256) public performanceFee;
+
     // tokenId => fundToken
     mapping(uint256 => address) public fundTokens;
 
@@ -48,8 +65,12 @@ contract YBNFT is BEP721, Ownable {
 
     /**
      * @notice Construct
+     * @param _hedgepieAuthority HedgepieAuthority address
      */
-    constructor() BEP721("Hedgepie YBNFT", "YBNFT") {}
+    constructor(address _hedgepieAuthority)
+        ERC721("Hedgepie YBNFT", "YBNFT")
+        HedgepieAccessControlled(IHedgepieAuthority(_hedgepieAuthority))
+    {}
 
     /**
      * @notice Get current nft token id
@@ -59,15 +80,15 @@ contract YBNFT is BEP721, Ownable {
     }
 
     /**
-     * @notice Get adapter info from nft tokenId
+     * @notice Get adapter parameters from nft tokenId
      * @param _tokenId  YBNft token id
      */
-    function getAdapterInfo(uint256 _tokenId)
+    function getTokenAdapterParams(uint256 _tokenId)
         public
         view
-        returns (Adapter[] memory)
+        returns (AdapterParam[] memory)
     {
-        return adapterInfo[_tokenId];
+        return adapterParams[_tokenId];
     }
 
     /**
@@ -208,18 +229,17 @@ contract YBNFT is BEP721, Ownable {
         uint256[] calldata _adapterAllocations
     ) external {
         require(
-            _adapterAllocations.length == adapterInfo[_tokenId].length,
+            _adapterAllocations.length == adapterParams[_tokenId].length,
             "Invalid allocation length"
         );
         require(msg.sender == ownerOf(_tokenId), "Invalid NFT Owner");
-        // TODO: uncomment after complete v2.1
-        // require(
-        //     _checkPercent(_adapterAllocations),
-        //     "Incorrect adapter allocation"
-        // );
+        require(
+            _checkPercent(_adapterAllocations),
+            "Incorrect adapter allocation"
+        );
 
-        for (uint256 i; i < adapterInfo[_tokenId].length; i++) {
-            adapterInfo[_tokenId][i].allocation = _adapterAllocations[i];
+        for (uint256 i; i < adapterParams[_tokenId].length; i++) {
+            adapterParams[_tokenId][i].allocation = _adapterAllocations[i];
         }
 
         adapterDate[_tokenId].modified = uint128(block.timestamp);
@@ -229,7 +249,7 @@ contract YBNFT is BEP721, Ownable {
             IAdapterManager(adapterManager).investor() != address(0),
             "Invalid investor address"
         );
-        IHedgepieInvestorBsc(IAdapterManager(adapterManager).investor())
+        IHedgepieInvestor(IAdapterManager(adapterManager).investor())
             .updateFunds(_tokenId);
     }
 
@@ -276,8 +296,8 @@ contract YBNFT is BEP721, Ownable {
         address[] calldata _adapterAddrs
     ) internal {
         for (uint256 i = 0; i < _adapterTokens.length; i++) {
-            adapterInfo[_tokenId].push(
-                Adapter({
+            adapterParams[_tokenId].push(
+                AdapterParam({
                     allocation: _adapterAllocations[i],
                     token: _adapterTokens[i],
                     addr: _adapterAddrs[i]
@@ -305,13 +325,5 @@ contract YBNFT is BEP721, Ownable {
         }
 
         return totalAlloc <= 1e4;
-    }
-
-    /**
-     * @notice Set adapter manager address
-     * @param _adapterManager adapter manager address
-     */
-    function setAdapterManager(address _adapterManager) external onlyOwner {
-        adapterManager = IAdapterManager(_adapterManager);
     }
 }

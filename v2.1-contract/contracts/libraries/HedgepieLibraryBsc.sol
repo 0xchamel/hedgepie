@@ -1,11 +1,16 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.4;
 
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
 import "../interfaces/IYBNFT.sol";
 import "../interfaces/IAdapter.sol";
+import "../interfaces/IPathFinder.sol";
 import "../interfaces/IPancakePair.sol";
 import "../interfaces/IPancakeRouter.sol";
 import "../interfaces/IOffchainOracle.sol";
+import "../interfaces/IHedgepieAuthority.sol";
+
 import "../base/BaseAdapter.sol";
 
 library HedgepieLibraryBsc {
@@ -20,15 +25,17 @@ library HedgepieLibraryBsc {
         address _router,
         address _wbnb
     ) public returns (uint256 amountOut) {
-        address[] memory path = IAdapter(_adapter).getPaths(_wbnb, _outToken);
-        uint256 beforeBalance = IBEP20(_outToken).balanceOf(address(this));
+        address[] memory path = IPathFinder(
+            IHedgepieAuthority(IAdapter(_adapter).authority()).pathFinder()
+        ).getPaths(_router, _wbnb, _outToken);
+        uint256 beforeBalance = IERC20(_outToken).balanceOf(address(this));
 
         IPancakeRouter(_router)
             .swapExactETHForTokensSupportingFeeOnTransferTokens{
             value: _amountIn
         }(0, path, address(this), block.timestamp + 2 hours);
 
-        uint256 afterBalance = IBEP20(_outToken).balanceOf(address(this));
+        uint256 afterBalance = IERC20(_outToken).balanceOf(address(this));
         amountOut = afterBalance - beforeBalance;
     }
 
@@ -43,13 +50,12 @@ library HedgepieLibraryBsc {
             IWrap(_wbnb).withdraw(_amountIn);
             amountOut = _amountIn;
         } else {
-            address[] memory path = IAdapter(_adapter).getPaths(
-                _inToken,
-                _wbnb
-            );
+            address[] memory path = IPathFinder(
+                IHedgepieAuthority(IAdapter(_adapter).authority()).pathFinder()
+            ).getPaths(_router, _inToken, _wbnb);
             uint256 beforeBalance = address(this).balance;
 
-            IBEP20(_inToken).approve(_router, _amountIn);
+            IERC20(_inToken).approve(_router, _amountIn);
 
             IPancakeRouter(_router)
                 .swapExactTokensForETHSupportingFeeOnTransferTokens(
@@ -65,71 +71,38 @@ library HedgepieLibraryBsc {
         }
     }
 
-    function getRewards(
-        uint256 _tokenId,
-        address _adapterAddr,
-        address _account
-    ) public view returns (uint256 reward, uint256 reward1) {
-        BaseAdapter.AdapterInfo memory adapterInfo = IAdapter(_adapterAddr)
-            .adapterInfos(_tokenId);
-        BaseAdapter.UserAdapterInfo memory userInfo = IAdapter(_adapterAddr)
-            .userAdapterInfos(_account, _tokenId);
-
-        if (
-            IAdapter(_adapterAddr).rewardToken() != address(0) &&
-            adapterInfo.totalStaked != 0 &&
-            adapterInfo.accTokenPerShare != 0
-        ) {
-            reward =
-                ((adapterInfo.accTokenPerShare - userInfo.userShares) *
-                    userInfo.amount) /
-                1e12;
-        }
-
-        if (
-            IAdapter(_adapterAddr).rewardToken1() != address(0) &&
-            adapterInfo.totalStaked != 0 &&
-            adapterInfo.accTokenPerShare1 != 0
-        ) {
-            reward1 =
-                ((adapterInfo.accTokenPerShare1 - userInfo.userShares1) *
-                    userInfo.amount) /
-                1e12;
-        }
-    }
-
-    function getMRewards(
-        uint256 _tokenId,
-        address _adapterAddr,
-        address _account
-    ) public view returns (uint256 reward, uint256 reward1) {
+    function getMRewards(uint256 _tokenId, address _adapterAddr)
+        public
+        view
+        returns (uint256 reward, uint256 reward1)
+    {
         BaseAdapter.AdapterInfo memory adapterInfo = IAdapter(_adapterAddr)
             .mAdapter();
         BaseAdapter.UserAdapterInfo memory userInfo = IAdapter(_adapterAddr)
-            .userAdapterInfos(_account, _tokenId);
+            .userAdapterInfos(_tokenId);
 
         if (
             IAdapter(_adapterAddr).rewardToken() != address(0) &&
             adapterInfo.totalStaked != 0 &&
-            adapterInfo.accTokenPerShare != 0
+            adapterInfo.accTokenPerShare[0] != 0
         ) {
             reward =
-                (IAdapter(_adapterAddr).getfBNBAmount(_tokenId, _account) *
-                    (adapterInfo.accTokenPerShare - userInfo.userShares)) /
+                (userInfo.amount *
+                    (adapterInfo.accTokenPerShare[0] - userInfo.userShare[0])) /
                 1e12 +
-                userInfo.rewardDebt;
+                userInfo.rewardDebt[0];
         }
 
         if (
             IAdapter(_adapterAddr).rewardToken1() != address(0) &&
             adapterInfo.totalStaked != 0 &&
-            adapterInfo.accTokenPerShare1 != 0
+            adapterInfo.accTokenPerShare[1] != 0
         ) {
             reward1 =
-                (IAdapter(_adapterAddr).getfBNBAmount(_tokenId, _account) *
-                    (adapterInfo.accTokenPerShare1 - userInfo.userShares1)) /
+                (userInfo.amount *
+                    (adapterInfo.accTokenPerShare[1] - userInfo.userShare[1])) /
                 1e12 +
-                userInfo.rewardDebt1;
+                userInfo.rewardDebt[1];
         }
     }
 
@@ -157,7 +130,7 @@ library HedgepieLibraryBsc {
                 _router,
                 wbnb
             );
-            IBEP20(tokens[0]).approve(_router, tokenAmount[0]);
+            IERC20(tokens[0]).approve(_router, tokenAmount[0]);
         }
 
         if (tokens[1] != wbnb) {
@@ -168,7 +141,7 @@ library HedgepieLibraryBsc {
                 _router,
                 wbnb
             );
-            IBEP20(tokens[1]).approve(_router, tokenAmount[1]);
+            IERC20(tokens[1]).approve(_router, tokenAmount[1]);
         }
 
         if (tokenAmount[0] != 0 && tokenAmount[1] != 0) {
@@ -210,7 +183,7 @@ library HedgepieLibraryBsc {
         address _router = IAdapter(_adapter.addr).router();
         address swapRouter = IAdapter(_adapter.addr).swapRouter();
 
-        IBEP20(_adapter.token).approve(_router, _amountIn);
+        IERC20(_adapter.token).approve(_router, _amountIn);
 
         if (tokens[0] == wbnb || tokens[1] == wbnb) {
             address tokenAddr = tokens[0] == wbnb ? tokens[1] : tokens[0];

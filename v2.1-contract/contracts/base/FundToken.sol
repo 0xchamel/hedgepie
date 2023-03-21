@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.4;
 
-import "../type/BEP20.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
-contract FundToken is BEP20 {
+contract FundToken is ERC20 {
     // factory address
     address public factory;
 
@@ -21,7 +21,7 @@ contract FundToken is BEP20 {
         _;
     }
 
-    constructor() BEP20("", "") {
+    constructor() ERC20("", "") {
         factory = msg.sender;
     }
 
