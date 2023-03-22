@@ -44,4 +44,6 @@ interface IHedgepieAuthority {
     function hAdapterList() external view returns (address);
 
     function pathFinder() external view returns (address);
+
+    function paused() external view returns (bool);
 }

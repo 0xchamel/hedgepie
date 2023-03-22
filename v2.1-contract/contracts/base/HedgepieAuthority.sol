@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.4;
 
 import "./HedgepieAccessControlled.sol";
@@ -26,6 +27,8 @@ contract HedgepieAuthority is IHedgepieAuthority, HedgepieAccessControlled {
 
     address public newAdapterManager;
 
+    bool public override paused;
+
     /* ========== Constructor ========== */
 
     constructor(
@@ -43,10 +46,10 @@ contract HedgepieAuthority is IHedgepieAuthority, HedgepieAccessControlled {
 
     /* ========== GOV ONLY ========== */
 
-    function pushGovernor(address _newGovernor, bool _effectiveImmediately)
-        external
-        onlyGovernor
-    {
+    function pushGovernor(
+        address _newGovernor,
+        bool _effectiveImmediately
+    ) external onlyGovernor {
         if (_effectiveImmediately) governor = _newGovernor;
         newGovernor = _newGovernor;
         emit GovernorPushed(governor, newGovernor, _effectiveImmediately);
@@ -76,6 +79,14 @@ contract HedgepieAuthority is IHedgepieAuthority, HedgepieAccessControlled {
             newAdapterManager,
             _effectiveImmediately
         );
+    }
+
+    function pause() external onlyGovernor {
+        paused = true;
+    }
+
+    function unpause() external onlyGovernor {
+        paused = false;
     }
 
     function setHInvestor(address _hInvestor) external onlyGovernor {

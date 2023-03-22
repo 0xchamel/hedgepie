@@ -71,11 +71,10 @@ library HedgepieLibraryBsc {
         }
     }
 
-    function getMRewards(uint256 _tokenId, address _adapterAddr)
-        public
-        view
-        returns (uint256 reward, uint256 reward1)
-    {
+    function getMRewards(
+        uint256 _tokenId,
+        address _adapterAddr
+    ) public view returns (uint256 reward, uint256 reward1) {
         BaseAdapter.AdapterInfo memory adapterInfo = IAdapter(_adapterAddr)
             .mAdapter();
         BaseAdapter.UserAdapterInfo memory userInfo = IAdapter(_adapterAddr)
@@ -107,7 +106,7 @@ library HedgepieLibraryBsc {
     }
 
     function getLP(
-        IYBNFT.Adapter memory _adapter,
+        IYBNFT.AdapterParam memory _adapter,
         address wbnb,
         uint256 _amountIn
     ) public returns (uint256 amountOut) {
@@ -172,7 +171,7 @@ library HedgepieLibraryBsc {
     }
 
     function withdrawLP(
-        IYBNFT.Adapter memory _adapter,
+        IYBNFT.AdapterParam memory _adapter,
         address wbnb,
         uint256 _amountIn
     ) public returns (uint256 amountOut) {

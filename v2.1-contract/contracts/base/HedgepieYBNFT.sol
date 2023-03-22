@@ -4,14 +4,12 @@ pragma solidity ^0.8.4;
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 
-import "../interfaces/IAdapterManager.sol";
+import "../interfaces/IHedgepieAdapterList.sol";
 import "../interfaces/IHedgepieInvestor.sol";
-import "../interfaces/IFundToken.sol";
 import "../interfaces/IYBNFT.sol";
 import "../interfaces/IHedgepieAuthority.sol";
 
 import "./HedgepieAccessControlled.sol";
-import "./FundToken.sol";
 
 contract YBNFT is ERC721, HedgepieAccessControlled {
     using Counters for Counters.Counter;
@@ -40,34 +38,32 @@ contract YBNFT is ERC721, HedgepieAccessControlled {
 
     // tokenId => token uri
     mapping(uint256 => string) private _tokenURIs;
-
     // tokenId => AdapterParam[]
     mapping(uint256 => AdapterParam[]) public adapterParams;
-
     // tokenId => AdapterDate
     mapping(uint256 => AdapterDate) public adapterDate;
-
     // tokenId => TokenInfo
     mapping(uint256 => TokenInfo) public tokenInfos;
-
+    // nftId => participant's address existing
+    mapping(uint256 => mapping(address => bool)) public participants;
     // tokenId => performanceFee
     mapping(uint256 => uint256) public performanceFee;
 
-    // tokenId => fundToken
-    mapping(uint256 => address) public fundTokens;
-
-    // AdapterManager handler
-    IAdapterManager public adapterManager;
-
     event Mint(address indexed minter, uint256 indexed tokenId);
-
-    event FundTokenCreated(address indexed token, uint256 indexed tokenId);
+    event AdapterInfoUpdated(
+        uint256 indexed tokenId,
+        uint256 participant,
+        uint256 traded,
+        uint256 profit
+    );
 
     /**
      * @notice Construct
      * @param _hedgepieAuthority HedgepieAuthority address
      */
-    constructor(address _hedgepieAuthority)
+    constructor(
+        address _hedgepieAuthority
+    )
         ERC721("Hedgepie YBNFT", "YBNFT")
         HedgepieAccessControlled(IHedgepieAuthority(_hedgepieAuthority))
     {}
@@ -83,11 +79,9 @@ contract YBNFT is ERC721, HedgepieAccessControlled {
      * @notice Get adapter parameters from nft tokenId
      * @param _tokenId  YBNft token id
      */
-    function getTokenAdapterParams(uint256 _tokenId)
-        public
-        view
-        returns (AdapterParam[] memory)
-    {
+    function getTokenAdapterParams(
+        uint256 _tokenId
+    ) public view returns (AdapterParam[] memory) {
         return adapterParams[_tokenId];
     }
 
@@ -95,12 +89,9 @@ contract YBNFT is ERC721, HedgepieAccessControlled {
      * @notice Get tokenURI from token id
      * @param _tokenId token id
      */
-    function tokenURI(uint256 _tokenId)
-        public
-        view
-        override
-        returns (string memory)
-    {
+    function tokenURI(
+        uint256 _tokenId
+    ) public view override returns (string memory) {
         return _tokenURIs[_tokenId];
     }
 
@@ -126,21 +117,18 @@ contract YBNFT is ERC721, HedgepieAccessControlled {
         uint256 _performanceFee,
         string memory _tokenURI
     ) external {
+        require(_performanceFee < 1e4, "Fee should be less than 10%");
         require(
-            _performanceFee < 1000,
-            "Performance fee should be less than 10%"
-        );
-        require(
-            _adapterTokens.length > 0 &&
+            _adapterTokens.length != 0 &&
                 _adapterTokens.length == _adapterAllocations.length &&
                 _adapterTokens.length == _adapterAddrs.length,
             "Mismatched adapters"
         );
+        require(_checkPercent(_adapterAllocations), "Incorrect allocation");
         require(
-            _checkPercent(_adapterAllocations),
-            "Incorrect adapter allocation"
+            address(authority.hAdapterList()) != address(0),
+            "AdaterList not set"
         );
-        require(address(adapterManager) != address(0), "AdapterManger not set");
 
         for (uint256 i = 0; i < _adapterAddrs.length; i++) {
             (
@@ -148,7 +136,7 @@ contract YBNFT is ERC721, HedgepieAccessControlled {
                 ,
                 address stakingToken,
                 bool status
-            ) = IAdapterManager(adapterManager).getAdapterInfo(
+            ) = IHedgepieAdapterList(authority.hAdapterList()).getAdapterInfo(
                     _adapterAddrs[i]
                 );
             require(
@@ -174,30 +162,6 @@ contract YBNFT is ERC721, HedgepieAccessControlled {
             _adapterAddrs
         );
 
-        // deploy fund token here
-        address token;
-        bytes memory bytecode = type(FundToken).creationCode;
-        bytes32 salt = keccak256(abi.encodePacked(_tokenIdPointer._value));
-        assembly {
-            token := create2(0, add(bytecode, 32), mload(bytecode), salt)
-        }
-        IFundToken(token).initialize(
-            "YBNFT FundToken",
-            string(
-                abi.encodePacked(
-                    "YFT_",
-                    uint256(_tokenIdPointer._value).toString()
-                )
-            )
-        );
-        IFundToken(token).setMinter(
-            IAdapterManager(adapterManager).investor(),
-            true
-        );
-        fundTokens[_tokenIdPointer._value] = token;
-
-        emit FundTokenCreated(token, _tokenIdPointer._value);
-
         emit Mint(msg.sender, _tokenIdPointer._value);
     }
 
@@ -206,11 +170,12 @@ contract YBNFT is ERC721, HedgepieAccessControlled {
      * @param _tokenId  tokenId of NFT
      * @param _performanceFee  address of adapters
      */
-    function updatePerformanceFee(uint256 _tokenId, uint256 _performanceFee)
-        external
-    {
+    function updatePerformanceFee(
+        uint256 _tokenId,
+        uint256 _performanceFee
+    ) external {
         require(
-            _performanceFee < 1000,
+            _performanceFee < 1e4,
             "Performance fee should be less than 10%"
         );
         require(msg.sender == ownerOf(_tokenId), "Invalid NFT Owner");
@@ -246,11 +211,10 @@ contract YBNFT is ERC721, HedgepieAccessControlled {
 
         // update funds
         require(
-            IAdapterManager(adapterManager).investor() != address(0),
+            authority.hInvestor() != address(0),
             "Invalid investor address"
         );
-        IHedgepieInvestor(IAdapterManager(adapterManager).investor())
-            .updateFunds(_tokenId);
+        IHedgepieInvestor(authority.hInvestor()).updateFunds(_tokenId);
     }
 
     /**
@@ -258,24 +222,101 @@ contract YBNFT is ERC721, HedgepieAccessControlled {
      * @param _tokenId  tokenId of NFT
      * @param _tokenURI  URI of NFT
      */
-    function updateTokenURI(uint256 _tokenId, string memory _tokenURI)
-        external
-    {
+    function updateTokenURI(
+        uint256 _tokenId,
+        string memory _tokenURI
+    ) external {
         require(msg.sender == ownerOf(_tokenId), "Invalid NFT Owner");
 
         _setTokenURI(_tokenId, _tokenURI);
         adapterDate[_tokenId].modified = uint128(block.timestamp);
     }
 
+    /////////////////////////
+    /// Manager Functions ///
+    /////////////////////////
+
+    function updateTVLInfo(
+        uint256 _tokenId,
+        uint256 _value,
+        bool _adding
+    ) external onlyInvestor {
+        TokenInfo memory tokenInfo = tokenInfos[_tokenId];
+        if (_adding) tokenInfo.tvl += _value;
+        else
+            tokenInfo.tvl = tokenInfo.tvl < _value ? 0 : tokenInfo.tvl - _value;
+
+        tokenInfos[_tokenId] = tokenInfo;
+        _emitEvent(_tokenId);
+    }
+
+    function updateTradedInfo(
+        uint256 _tokenId,
+        uint256 _value,
+        bool _adding
+    ) external onlyInvestor {
+        TokenInfo memory tokenInfo = tokenInfos[_tokenId];
+        if (_adding) tokenInfo.traded += _value;
+        else
+            tokenInfo.traded = tokenInfo.traded < _value
+                ? 0
+                : tokenInfo.traded - _value;
+
+        tokenInfos[_tokenId] = tokenInfo;
+        _emitEvent(_tokenId);
+    }
+
+    function updateProfitInfo(
+        uint256 _tokenId,
+        uint256 _value,
+        bool _adding
+    ) external onlyInvestor {
+        TokenInfo memory tokenInfo = tokenInfos[_tokenId];
+        if (_adding) tokenInfo.profit += _value;
+        else
+            tokenInfo.profit = tokenInfo.profit < _value
+                ? 0
+                : tokenInfo.profit - _value;
+
+        tokenInfos[_tokenId] = tokenInfo;
+        _emitEvent(_tokenId);
+    }
+
+    function updateParticipantInfo(
+        uint256 _tokenId,
+        address _account,
+        bool _adding
+    ) external onlyInvestor {
+        bool isExisted = participants[_tokenId][_account];
+
+        TokenInfo memory tokenInfo = tokenInfos[_tokenId];
+        if (_adding && !isExisted) {
+            tokenInfo.participant++;
+            participants[_tokenId][_account] = true;
+        } else if (!_adding && isExisted) {
+            tokenInfo.participant--;
+            participants[_tokenId][_account] = false;
+        }
+
+        if (_adding != isExisted) {
+            tokenInfos[_tokenId] = tokenInfo;
+            _emitEvent(_tokenId);
+        }
+    }
+
+    /////////////////////////
+    /// Internal Functions //
+    /////////////////////////
+
     /**
      * @notice Set token uri
      * @param _tokenId  token id
      * @param _tokenURI  token uri
      */
-    function _setTokenURI(uint256 _tokenId, string memory _tokenURI)
-        internal
-        virtual
-    {
+    function _setTokenURI(
+        uint256 _tokenId,
+        string memory _tokenURI
+    ) internal virtual {
         require(
             _exists(_tokenId),
             "ERC721Metadata: URI set of nonexistent token"
@@ -314,16 +355,27 @@ contract YBNFT is ERC721, HedgepieAccessControlled {
      * @notice Check if total percent of adapters is valid
      * @param _adapterAllocations  allocation of adapters
      */
-    function _checkPercent(uint256[] calldata _adapterAllocations)
-        internal
-        pure
-        returns (bool)
-    {
+    function _checkPercent(
+        uint256[] calldata _adapterAllocations
+    ) internal pure returns (bool) {
         uint256 totalAlloc;
         for (uint256 i; i < _adapterAllocations.length; i++) {
             totalAlloc = totalAlloc + _adapterAllocations[i];
         }
 
         return totalAlloc <= 1e4;
+    }
+
+    /**
+     * @notice Emit events for updated
+     * @param _tokenId  token id
+     */
+    function _emitEvent(uint256 _tokenId) internal {
+        emit AdapterInfoUpdated(
+            _tokenId,
+            tokenInfos[_tokenId].participant,
+            tokenInfos[_tokenId].traded,
+            tokenInfos[_tokenId].profit
+        );
     }
 }

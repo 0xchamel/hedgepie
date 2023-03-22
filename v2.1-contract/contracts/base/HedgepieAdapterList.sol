@@ -29,9 +29,9 @@ contract HedgepieAdapterList is HedgepieAccessControlled {
      * @notice Construct
      * @param _hedgepieAuthority HedgepieAuthority address
      */
-    constructor(address _hedgepieAuthority)
-        HedgepieAccessControlled(IHedgepieAuthority(_hedgepieAuthority))
-    {}
+    constructor(
+        address _hedgepieAuthority
+    ) HedgepieAccessControlled(IHedgepieAuthority(_hedgepieAuthority)) {}
 
     /// @dev modifier for active adapters
     modifier onlyActiveAdapter(address _adapter) {
@@ -50,7 +50,9 @@ contract HedgepieAdapterList is HedgepieAccessControlled {
      * @notice Get adapter infor
      * @param _adapterAddr address of adapter that need to get information
      */
-    function getAdapterInfo(address _adapterAddr)
+    function getAdapterInfo(
+        address _adapterAddr
+    )
         external
         view
         returns (
@@ -76,52 +78,61 @@ contract HedgepieAdapterList is HedgepieAccessControlled {
      * @notice Get strategy address of adapter contract
      * @param _adapter  adapter address
      */
-    function getAdapterStrat(address _adapter)
-        external
-        view
-        onlyActiveAdapter(_adapter)
-        returns (address adapterStrat)
-    {
+    function getAdapterStrat(
+        address _adapter
+    ) external view onlyActiveAdapter(_adapter) returns (address adapterStrat) {
         adapterStrat = IAdapter(_adapter).strategy();
     }
 
     // ===== AdapterManager functions =====
     /**
-     * @notice Add adapter
-     * @param _adapter  adapter address
+     * @notice Add adapters
+     * @param _adapters  array of adapter address
      */
     /// #if_succeeds {:msg "Adapter not set correctly"} adapterList.length == old(adapterInfo.length) + 1;
-    function addAdapter(address _adapter) external onlyAdapterManager {
-        require(!adapterExist[_adapter], "Already added");
-        require(_adapter != address(0), "Invalid adapter address");
+    function addAdapters(
+        address[] memory _adapters
+    ) external onlyAdapterManager {
+        for (uint i = 0; i < _adapters.length; i++) {
+            require(!adapterExist[_adapters[i]], "Already added");
+            require(_adapters[i] != address(0), "Invalid adapter address");
 
-        adapterList.push(
-            AdapterInfo({
-                addr: _adapter,
-                name: IAdapter(_adapter).name(),
-                stakingToken: IAdapter(_adapter).stakingToken(),
-                status: true
-            })
-        );
-        adapterExist[_adapter] = true;
+            adapterList.push(
+                AdapterInfo({
+                    addr: _adapters[i],
+                    name: IAdapter(_adapters[i]).name(),
+                    stakingToken: IAdapter(_adapters[i]).stakingToken(),
+                    status: true
+                })
+            );
+            adapterExist[_adapters[i]] = true;
 
-        emit AdapterAdded(_adapter);
+            emit AdapterAdded(_adapters[i]);
+        }
     }
 
     /**
      * @notice Remove adapter
-     * @param _adapterId  adapter id
-     * @param _status  adapter status
+     * @param _adapterId  array of adapter id
+     * @param _status  array of adapter status
      */
     /// #if_succeeds {:msg "Status not updated"} adapterList[_adapterId].status == _status;
-    function setAdapter(uint256 _adapterId, bool _status)
-        external
-        onlyAdapterManager
-    {
-        require(_adapterId < adapterList.length, "Invalid adapter address");
-        adapterList[_adapterId].status = _status;
+    function setAdapters(
+        uint256[] memory _adapterId,
+        bool[] memory _status
+    ) external onlyAdapterManager {
+        require(_adapterId.length == _status.length, "Invalid array length");
 
-        if (_status) emit AdapterActivated(adapterList[_adapterId].addr);
-        else emit AdapterDeactivated(adapterList[_adapterId].addr);
+        for (uint i = 0; i < _adapterId.length; i++) {
+            require(
+                _adapterId[i] < adapterList.length,
+                "Invalid adapter address"
+            );
+            adapterList[_adapterId[i]].status = _status[i];
+
+            if (_status[i])
+                emit AdapterActivated(adapterList[_adapterId[i]].addr);
+            else emit AdapterDeactivated(adapterList[_adapterId[i]].addr);
+        }
     }
 }

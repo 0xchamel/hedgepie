@@ -10,6 +10,8 @@ abstract contract HedgepieAccessControlled {
 
     string UNAUTHORIZED = "UNAUTHORIZED"; // save gas
 
+    string PAUSED = "PAUSED"; // save gas
+
     /* ========== STATE VARIABLES ========== */
 
     IHedgepieAuthority public authority;
@@ -22,6 +24,11 @@ abstract contract HedgepieAccessControlled {
     }
 
     /* ========== MODIFIERS ========== */
+
+    modifier whenNotPaused() {
+        require(!authority.paused(), PAUSED);
+        _;
+    }
 
     modifier onlyGovernor() {
         require(msg.sender == authority.governor(), UNAUTHORIZED);
@@ -45,10 +52,9 @@ abstract contract HedgepieAccessControlled {
 
     /* ========== GOV ONLY ========== */
 
-    function setAuthority(IHedgepieAuthority _newAuthority)
-        external
-        onlyGovernor
-    {
+    function setAuthority(
+        IHedgepieAuthority _newAuthority
+    ) external onlyGovernor {
         authority = _newAuthority;
         emit AuthorityUpdated(_newAuthority);
     }

@@ -5,10 +5,10 @@ import "../../libraries/HedgepieLibraryBsc.sol";
 import "../../interfaces/IHedgepieInvestor.sol";
 
 interface IStrategy {
-    function pendingCake(uint256 _pid, address _user)
-        external
-        view
-        returns (uint256);
+    function pendingCake(
+        uint256 _pid,
+        address _user
+    ) external view returns (uint256);
 
     function deposit(uint256 pid, uint256 shares) external;
 
@@ -51,13 +51,9 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapter {
      * @notice Deposit with BNB
      * @param _tokenId YBNFT token id
      */
-    function deposit(uint256 _tokenId)
-        external
-        payable
-        override
-        onlyInvestor
-        returns (uint256 amountOut)
-    {
+    function deposit(
+        uint256 _tokenId
+    ) external payable override onlyInvestor returns (uint256 amountOut) {
         UserAdapterInfo storage userInfo = userAdapterInfos[_tokenId];
 
         // swap to staking token
@@ -95,23 +91,6 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapter {
                 1e12;
         }
 
-        // // Update adapterInfo contract
-        // address adapterInfoBnbAddr = IHedgepieInvestor(investor).adapterInfo();
-        // IHedgepieAdapterInfo(adapterInfoBnbAddr).updateTVLInfo(
-        //     _tokenId,
-        //     msg.value,
-        //     true
-        // );
-        // IHedgepieAdapterInfo(adapterInfoBnbAddr).updateTradedInfo(
-        //     _tokenId,
-        //     msg.value,
-        //     true
-        // );
-        // IHedgepieAdapterInfo(adapterInfoBnbAddr).updateParticipantInfo(
-        //     _tokenId,
-        //     _account,
-        //     true
-        // );
         // update mAdapter & userInfo
         userInfo.amount += amountOut;
         userInfo.userShare[0] = mAdapter.accTokenPerShare[0];
@@ -125,13 +104,10 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapter {
      * @param _tokenId YBNFT token id
      * @param _amount amount of staking token to withdraw
      */
-    function withdraw(uint256 _tokenId, uint256 _amount)
-        external
-        payable
-        override
-        onlyInvestor
-        returns (uint256 amountOut)
-    {
+    function withdraw(
+        uint256 _tokenId,
+        uint256 _amount
+    ) external payable override onlyInvestor returns (uint256 amountOut) {
         UserAdapterInfo storage userInfo = userAdapterInfos[_tokenId];
 
         // validation of _amount parameter
@@ -163,7 +139,7 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapter {
             );
         } else {
             amountOut = HedgepieLibraryBsc.withdrawLP(
-                IYBNFT.Adapter(0, stakingToken, address(this)),
+                IYBNFT.AdapterParam(0, stakingToken, address(this)),
                 wbnb,
                 amountOut
             );
@@ -187,37 +163,13 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapter {
             );
         }
 
-        // address adapterInfoBnbAddr = IHedgepieInvestor(investor).adapterInfo();
-        if (rewardBnb != 0) {
-            amountOut += rewardBnb;
-            // IHedgepieAdapterInfo(adapterInfoBnbAddr).updateProfitInfo(
-            //     _tokenId,
-            //     rewardBnb,
-            //     true
-            // );
-        }
-
-        // // Update adapterInfo contract
-        // IHedgepieAdapterInfo(adapterInfoBnbAddr).updateTVLInfo(
-        //     _tokenId,
-        //     rewardBnb != 0 ? amountOut - rewardBnb : amountOut,
-        //     false
-        // );
-        // IHedgepieAdapterInfo(adapterInfoBnbAddr).updateTradedInfo(
-        //     _tokenId,
-        //     userInfo.invested,
-        //     true
-        // );
-        // IHedgepieAdapterInfo(adapterInfoBnbAddr).updateParticipantInfo(
-        //     _tokenId,
-        //     _account,
-        //     false
-        // );
+        if (rewardBnb != 0) amountOut += rewardBnb;
 
         // update mAdapter & user Info
         mAdapter.totalStaked -= userInfo.amount;
         userInfo.amount -= _amount;
         userInfo.userShare[0] = mAdapter.accTokenPerShare[0];
+        userInfo.rewardDebt[0] = 0;
 
         if (amountOut != 0) {
             bool success;
@@ -243,13 +195,9 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapter {
      * @notice Claim the pending reward
      * @param _tokenId YBNFT token id
      */
-    function claim(uint256 _tokenId)
-        external
-        payable
-        override
-        onlyInvestor
-        returns (uint256 amountOut)
-    {
+    function claim(
+        uint256 _tokenId
+    ) external payable override onlyInvestor returns (uint256 amountOut) {
         UserAdapterInfo storage userInfo = userAdapterInfos[_tokenId];
 
         // claim rewards
@@ -266,7 +214,7 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapter {
                 mAdapter.totalStaked;
         }
 
-        // get reward amount
+        // get user's rewards
         (uint256 reward, ) = HedgepieLibraryBsc.getMRewards(
             _tokenId,
             address(this)
@@ -296,9 +244,6 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapter {
                 value: amountOut - taxAmount
             }("");
             require(success, "Failed to send bnb");
-
-            // IHedgepieAdapterInfo(IHedgepieInvestor(investor).adapterInfo())
-            //     .updateProfitInfo(_tokenId, amountOut, true);
         }
     }
 
@@ -306,12 +251,9 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapter {
      * @notice Return the pending reward by Bnb
      * @param _tokenId YBNFT token id
      */
-    function pendingReward(uint256 _tokenId)
-        external
-        view
-        override
-        returns (uint256 reward, uint256 withdrawable)
-    {
+    function pendingReward(
+        uint256 _tokenId
+    ) external view override returns (uint256 reward, uint256 withdrawable) {
         UserAdapterInfo memory userInfo = userAdapterInfos[_tokenId];
 
         uint256 updatedAccTokenPerShare = mAdapter.accTokenPerShare[0] +
@@ -346,13 +288,9 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapter {
      * @notice Remove funds
      * @param _tokenId YBNFT token id
      */
-    function removeFunds(uint256 _tokenId)
-        external
-        payable
-        override
-        onlyInvestor
-        returns (uint256 amountOut)
-    {
+    function removeFunds(
+        uint256 _tokenId
+    ) external payable override onlyInvestor returns (uint256 amountOut) {
         UserAdapterInfo storage userInfo = userAdapterInfos[_tokenId];
         if (userInfo.amount == 0) return 0;
 
@@ -381,7 +319,7 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapter {
             );
         } else {
             amountOut = HedgepieLibraryBsc.withdrawLP(
-                IYBNFT.Adapter(0, stakingToken, address(this)),
+                IYBNFT.AdapterParam(0, stakingToken, address(this)),
                 wbnb,
                 amountOut
             );
@@ -389,18 +327,7 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapter {
 
         // update invested information for token id
         mAdapter.totalStaked -= userInfo.amount;
-
-        // // Update adapterInfo contract
-        // address adapterInfoBnbAddr = IHedgepieInvestor(investor).adapterInfo();
-        // IHedgepieAdapterInfo(adapterInfoBnbAddr).updateTVLInfo(
-        //     _tokenId,
-        //     amountOut,
-        //     false
-        // );
-
-        userInfo.amount = 0;
-        userInfo.userShare[0] = 0;
-        userInfo.rewardDebt[0] = 0;
+        delete userAdapterInfos[_tokenId];
 
         // send to investor
         (bool success, ) = payable(authority.hInvestor()).call{
@@ -413,13 +340,9 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapter {
      * @notice Update funds
      * @param _tokenId YBNFT token id
      */
-    function updateFunds(uint256 _tokenId)
-        external
-        payable
-        override
-        onlyInvestor
-        returns (uint256 amountOut)
-    {
+    function updateFunds(
+        uint256 _tokenId
+    ) external payable override onlyInvestor returns (uint256 amountOut) {
         if (msg.value == 0) return 0;
 
         UserAdapterInfo storage userInfo = userAdapterInfos[_tokenId];
@@ -435,7 +358,7 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapter {
             );
         } else {
             amountOut = HedgepieLibraryBsc.getLP(
-                IYBNFT.Adapter(0, stakingToken, address(this)),
+                IYBNFT.AdapterParam(0, stakingToken, address(this)),
                 wbnb,
                 msg.value
             );
@@ -455,14 +378,6 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapter {
                 (rewardAmt0 * 1e12) /
                 mAdapter.totalStaked;
         }
-
-        // // Update adapterInfo contract
-        // address adapterInfoBnbAddr = IHedgepieInvestor(investor).adapterInfo();
-        // IHedgepieAdapterInfo(adapterInfoBnbAddr).updateTVLInfo(
-        //     _tokenId,
-        //     msg.value,
-        //     true
-        // );
 
         mAdapter.totalStaked += amountOut;
         userInfo.userShare[0] = mAdapter.accTokenPerShare[0];

@@ -2,7 +2,6 @@
 pragma solidity ^0.8.4;
 
 import "../interfaces/IYBNFT.sol";
-import "../interfaces/IFundToken.sol";
 import "../interfaces/IPathFinder.sol";
 import "../interfaces/IHedgepieInvestor.sol";
 import "../interfaces/IHedgepieAuthority.sol";
@@ -49,74 +48,64 @@ abstract contract BaseAdapter is HedgepieAccessControlled {
     // nft id => AdapterInfo
     mapping(uint256 => AdapterInfo) public adapterInfos;
 
-    constructor(address _hedgepieAuthority)
-        HedgepieAccessControlled(IHedgepieAuthority(_hedgepieAuthority))
-    {}
+    constructor(
+        address _hedgepieAuthority
+    ) HedgepieAccessControlled(IHedgepieAuthority(_hedgepieAuthority)) {}
+
+    /** @notice get user staked amount */
+    function getUserAmount(
+        uint256 _tokenId
+    ) external view returns (uint256 amount) {
+        return userAdapterInfos[_tokenId].amount;
+    }
 
     /**
      * @notice deposit to strategy
      * @param _tokenId YBNFT token id
      */
-    function deposit(uint256 _tokenId)
-        external
-        payable
-        virtual
-        returns (uint256 amountOut)
-    {}
+    function deposit(
+        uint256 _tokenId
+    ) external payable virtual returns (uint256 amountOut) {}
 
     /**
      * @notice withdraw from strategy
      * @param _tokenId YBNFT token id
      * @param _amount amount of staking tokens to withdraw
      */
-    function withdraw(uint256 _tokenId, uint256 _amount)
-        external
-        payable
-        virtual
-        returns (uint256 amountOut)
-    {}
+    function withdraw(
+        uint256 _tokenId,
+        uint256 _amount
+    ) external payable virtual returns (uint256 amountOut) {}
 
     /**
      * @notice claim reward from strategy
      * @param _tokenId YBNFT token id
      */
-    function claim(uint256 _tokenId)
-        external
-        payable
-        virtual
-        returns (uint256 amountOut)
-    {}
+    function claim(
+        uint256 _tokenId
+    ) external payable virtual returns (uint256 amountOut) {}
 
     /**
      * @notice Remove funds
      * @param _tokenId YBNFT token id
      */
-    function removeFunds(uint256 _tokenId)
-        external
-        payable
-        virtual
-        returns (uint256 amountOut)
-    {}
+    function removeFunds(
+        uint256 _tokenId
+    ) external payable virtual returns (uint256 amountOut) {}
 
     /**
      * @notice Update funds
      * @param _tokenId YBNFT token id
      */
-    function updateFunds(uint256 _tokenId)
-        external
-        payable
-        virtual
-        returns (uint256 amountOut)
-    {}
+    function updateFunds(
+        uint256 _tokenId
+    ) external payable virtual returns (uint256 amountOut) {}
 
     /**
      * @notice Get pending token reward
      * @param _tokenId YBNFT token id
      */
-    function pendingReward(uint256 _tokenId)
-        external
-        view
-        virtual
-        returns (uint256 reward, uint256 withdrawable)
-    {}
+    function pendingReward(
+        uint256 _tokenId
+    ) external view virtual returns (uint256 reward, uint256 withdrawable) {}
 }

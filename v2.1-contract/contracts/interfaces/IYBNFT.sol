@@ -2,7 +2,7 @@
 pragma solidity ^0.8.4;
 
 interface IYBNFT {
-    struct Adapter {
+    struct AdapterParam {
         uint256 allocation;
         address token;
         address addr;
@@ -12,10 +12,9 @@ interface IYBNFT {
 
     function performanceFee(uint256 tokenId) external view returns (uint256);
 
-    function getAdapterInfo(uint256 tokenId)
-        external
-        view
-        returns (Adapter[] memory);
+    function getTokenAdapterParams(
+        uint256 tokenId
+    ) external view returns (AdapterParam[] memory);
 
     function exists(uint256) external view returns (bool);
 
@@ -27,5 +26,27 @@ interface IYBNFT {
         string memory
     ) external;
 
-    function fundTokens(uint256 tokenId) external view returns (address);
+    function updateTVLInfo(
+        uint256 _tokenId,
+        uint256 _value,
+        bool _adding
+    ) external;
+
+    function updateTradedInfo(
+        uint256 _tokenId,
+        uint256 _value,
+        bool _adding
+    ) external;
+
+    function updateProfitInfo(
+        uint256 _tokenId,
+        uint256 _value,
+        bool _adding
+    ) external;
+
+    function updateParticipantInfo(
+        uint256 _tokenId,
+        address _account,
+        bool _adding
+    ) external;
 }
