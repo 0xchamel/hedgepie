@@ -57,13 +57,21 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapter {
         UserAdapterInfo storage userInfo = userAdapterInfos[_tokenId];
 
         // swap to staking token
-        amountOut = HedgepieLibraryBsc.swapOnRouter(
-            msg.value,
-            address(this),
-            stakingToken,
-            router,
-            wbnb
-        );
+        if (router == address(0)) {
+            amountOut = HedgepieLibraryBsc.swapOnRouter(
+                msg.value,
+                address(this),
+                stakingToken,
+                router,
+                wbnb
+            );
+        } else {
+            amountOut = HedgepieLibraryBsc.getLP(
+                IYBNFT.AdapterParam(0, stakingToken, address(this)),
+                wbnb,
+                msg.value
+            );
+        }
 
         // calc rewardToken amount
         uint256 rewardAmt0;
@@ -78,22 +86,22 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapter {
             rewardToken != address(0) &&
             mAdapter.totalStaked != 0
         ) {
-            mAdapter.accTokenPerShare[0] +=
+            mAdapter.accTokenPerShare1 +=
                 (rewardAmt0 * 1e12) /
                 mAdapter.totalStaked;
         }
 
         // update user's rewardDebt value when user staked several times
         if (userInfo.amount != 0) {
-            userInfo.rewardDebt[0] +=
+            userInfo.rewardDebt1 +=
                 (userInfo.amount *
-                    (mAdapter.accTokenPerShare[0] - userInfo.userShare[0])) /
+                    (mAdapter.accTokenPerShare1 - userInfo.userShare1)) /
                 1e12;
         }
 
         // update mAdapter & userInfo
         userInfo.amount += amountOut;
-        userInfo.userShare[0] = mAdapter.accTokenPerShare[0];
+        userInfo.userShare1 = mAdapter.accTokenPerShare1;
         mAdapter.totalStaked += amountOut;
 
         return msg.value;
@@ -123,7 +131,7 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapter {
 
         // update accTokenPerShare if reward is generated
         if (rewardAmt0 != 0 && rewardToken != address(0)) {
-            mAdapter.accTokenPerShare[0] +=
+            mAdapter.accTokenPerShare1 +=
                 (rewardAmt0 * 1e12) /
                 mAdapter.totalStaked;
         }
@@ -166,10 +174,10 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapter {
         if (rewardBnb != 0) amountOut += rewardBnb;
 
         // update mAdapter & user Info
-        mAdapter.totalStaked -= userInfo.amount;
+        mAdapter.totalStaked -= _amount;
         userInfo.amount -= _amount;
-        userInfo.userShare[0] = mAdapter.accTokenPerShare[0];
-        userInfo.rewardDebt[0] = 0;
+        userInfo.userShare1 = mAdapter.accTokenPerShare1;
+        userInfo.rewardDebt1 = 0;
 
         if (amountOut != 0) {
             bool success;
@@ -209,7 +217,7 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapter {
             rewardToken != address(0) &&
             mAdapter.totalStaked != 0
         ) {
-            mAdapter.accTokenPerShare[0] +=
+            mAdapter.accTokenPerShare1 +=
                 (rewardAmt0 * 1e12) /
                 mAdapter.totalStaked;
         }
@@ -221,8 +229,8 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapter {
         );
 
         // update user info
-        userInfo.userShare[0] = mAdapter.accTokenPerShare[0];
-        userInfo.rewardDebt[0] = 0;
+        userInfo.userShare1 = mAdapter.accTokenPerShare1;
+        userInfo.rewardDebt1 = 0;
 
         if (reward != 0 && rewardToken != address(0)) {
             amountOut += HedgepieLibraryBsc.swapForBnb(
@@ -256,14 +264,17 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapter {
     ) external view override returns (uint256 reward, uint256 withdrawable) {
         UserAdapterInfo memory userInfo = userAdapterInfos[_tokenId];
 
-        uint256 updatedAccTokenPerShare = mAdapter.accTokenPerShare[0] +
-            ((IStrategy(strategy).pendingCake(pid, address(this)) * 1e12) /
-                mAdapter.totalStaked);
+        uint256 updatedAccTokenPerShare = mAdapter.accTokenPerShare1;
+        if (mAdapter.totalStaked != 0)
+            updatedAccTokenPerShare += ((IStrategy(strategy).pendingCake(
+                pid,
+                address(this)
+            ) * 1e12) / mAdapter.totalStaked);
 
         uint256 tokenRewards = ((updatedAccTokenPerShare -
-            userInfo.userShare[0]) * userInfo.amount) /
+            userInfo.userShare1) * userInfo.amount) /
             1e12 +
-            userInfo.rewardDebt[0];
+            userInfo.rewardDebt1;
 
         if (tokenRewards != 0) {
             reward = rewardToken == wbnb
@@ -303,9 +314,16 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapter {
         require(userInfo.amount == amountOut, "Failed to remove funds");
 
         if (rewardAmt0 != 0 && rewardToken != address(0)) {
-            mAdapter.accTokenPerShare[0] +=
+            mAdapter.accTokenPerShare1 +=
                 (rewardAmt0 * 1e12) /
                 mAdapter.totalStaked;
+        }
+
+        if (userInfo.amount != 0) {
+            userInfo.rewardDebt1 +=
+                (userInfo.amount *
+                    (mAdapter.accTokenPerShare1 - userInfo.userShare1)) /
+                1e12;
         }
 
         // swap withdrawn lp to bnb
@@ -327,7 +345,8 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapter {
 
         // update invested information for token id
         mAdapter.totalStaked -= userInfo.amount;
-        delete userAdapterInfos[_tokenId];
+        userInfo.amount = 0;
+        userInfo.userShare1 = mAdapter.accTokenPerShare1;
 
         // send to investor
         (bool success, ) = payable(authority.hInvestor()).call{
@@ -374,13 +393,14 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapter {
             rewardToken != address(0) &&
             mAdapter.totalStaked != 0
         ) {
-            mAdapter.accTokenPerShare[0] +=
+            mAdapter.accTokenPerShare1 +=
                 (rewardAmt0 * 1e12) /
                 mAdapter.totalStaked;
         }
 
         mAdapter.totalStaked += amountOut;
-        userInfo.userShare[0] = mAdapter.accTokenPerShare[0];
+        userInfo.amount = amountOut;
+        userInfo.userShare1 = mAdapter.accTokenPerShare1;
 
         return msg.value;
     }

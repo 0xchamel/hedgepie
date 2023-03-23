@@ -83,25 +83,25 @@ library HedgepieLibraryBsc {
         if (
             IAdapter(_adapterAddr).rewardToken() != address(0) &&
             adapterInfo.totalStaked != 0 &&
-            adapterInfo.accTokenPerShare[0] != 0
+            adapterInfo.accTokenPerShare1 != 0
         ) {
             reward =
                 (userInfo.amount *
-                    (adapterInfo.accTokenPerShare[0] - userInfo.userShare[0])) /
+                    (adapterInfo.accTokenPerShare1 - userInfo.userShare1)) /
                 1e12 +
-                userInfo.rewardDebt[0];
+                userInfo.rewardDebt1;
         }
 
         if (
             IAdapter(_adapterAddr).rewardToken1() != address(0) &&
             adapterInfo.totalStaked != 0 &&
-            adapterInfo.accTokenPerShare[1] != 0
+            adapterInfo.accTokenPerShare2 != 0
         ) {
             reward1 =
                 (userInfo.amount *
-                    (adapterInfo.accTokenPerShare[1] - userInfo.userShare[1])) /
+                    (adapterInfo.accTokenPerShare2 - userInfo.userShare2)) /
                 1e12 +
-                userInfo.rewardDebt[1];
+                userInfo.rewardDebt2;
         }
     }
 

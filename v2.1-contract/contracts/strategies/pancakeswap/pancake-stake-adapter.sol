@@ -79,22 +79,22 @@ contract PancakeStakeAdapterBsc is BaseAdapter {
             rewardToken != address(0) &&
             mAdapter.totalStaked != 0
         ) {
-            mAdapter.accTokenPerShare[0] +=
+            mAdapter.accTokenPerShare1 +=
                 (rewardAmt0 * 1e12) /
                 mAdapter.totalStaked;
         }
 
         // update user's info - rewardDebt, userShare
         if (userInfo.amount != 0) {
-            userInfo.rewardDebt[0] +=
+            userInfo.rewardDebt1 +=
                 (userInfo.amount *
-                    (mAdapter.accTokenPerShare[0] - userInfo.userShare[0])) /
+                    (mAdapter.accTokenPerShare1 - userInfo.userShare1)) /
                 1e12;
         }
 
         // update mAdapter & user Info
         mAdapter.totalStaked += amountOut;
-        userInfo.userShare[0] = mAdapter.accTokenPerShare[0];
+        userInfo.userShare1 = mAdapter.accTokenPerShare1;
         userInfo.amount += amountOut;
 
         return _amountIn;
@@ -128,7 +128,7 @@ contract PancakeStakeAdapterBsc is BaseAdapter {
             rewardToken != address(0) &&
             mAdapter.totalStaked != 0
         ) {
-            mAdapter.accTokenPerShare[0] +=
+            mAdapter.accTokenPerShare1 +=
                 (rewardAmt0 * 1e12) /
                 mAdapter.totalStaked;
         }
@@ -171,10 +171,10 @@ contract PancakeStakeAdapterBsc is BaseAdapter {
         if (rewardBnb != 0) amountOut += rewardBnb;
 
         // update mAdapter & user Info
-        mAdapter.totalStaked -= userInfo.amount;
+        mAdapter.totalStaked -= _amount;
         userInfo.amount -= _amount;
-        userInfo.userShare[0] = mAdapter.accTokenPerShare[0];
-        userInfo.rewardDebt[0] = 0;
+        userInfo.userShare1 = mAdapter.accTokenPerShare1;
+        userInfo.rewardDebt1 = 0;
 
         if (amountOut != 0) {
             bool success;
@@ -214,7 +214,7 @@ contract PancakeStakeAdapterBsc is BaseAdapter {
             rewardToken != address(0) &&
             mAdapter.totalStaked != 0
         ) {
-            mAdapter.accTokenPerShare[0] +=
+            mAdapter.accTokenPerShare1 +=
                 (rewardAmt0 * 1e12) /
                 mAdapter.totalStaked;
         }
@@ -226,8 +226,8 @@ contract PancakeStakeAdapterBsc is BaseAdapter {
         );
 
         // update user info
-        userInfo.userShare[0] = mAdapter.accTokenPerShare[0];
-        userInfo.rewardDebt[0] = 0;
+        userInfo.userShare1 = mAdapter.accTokenPerShare1;
+        userInfo.rewardDebt1 = 0;
 
         if (reward != 0 && rewardToken != address(0)) {
             amountOut += HedgepieLibraryBsc.swapForBnb(
@@ -261,14 +261,16 @@ contract PancakeStakeAdapterBsc is BaseAdapter {
     ) external view override returns (uint256 reward, uint256 withdrawable) {
         UserAdapterInfo memory userInfo = userAdapterInfos[_tokenId];
 
-        uint256 updatedAccTokenPerShare = mAdapter.accTokenPerShare[0] +
-            ((IStrategy(strategy).pendingReward(address(this)) * 1e12) /
-                mAdapter.totalStaked);
+        uint256 updatedAccTokenPerShare = mAdapter.accTokenPerShare1;
+        if (mAdapter.totalStaked != 0)
+            updatedAccTokenPerShare += ((IStrategy(strategy).pendingReward(
+                address(this)
+            ) * 1e12) / mAdapter.totalStaked);
 
         uint256 tokenRewards = ((updatedAccTokenPerShare -
-            userInfo.userShare[0]) * userInfo.amount) /
+            userInfo.userShare1) * userInfo.amount) /
             1e12 +
-            userInfo.rewardDebt[0];
+            userInfo.rewardDebt1;
 
         if (tokenRewards != 0) {
             reward = rewardToken == wbnb
@@ -308,9 +310,16 @@ contract PancakeStakeAdapterBsc is BaseAdapter {
         require(userInfo.amount == amountOut, "Failed to remove funds");
 
         if (rewardAmt0 != 0 && rewardToken != address(0)) {
-            mAdapter.accTokenPerShare[0] +=
+            mAdapter.accTokenPerShare1 +=
                 (rewardAmt0 * 1e12) /
                 mAdapter.totalStaked;
+        }
+
+        if (userInfo.amount != 0) {
+            userInfo.rewardDebt1 +=
+                (userInfo.amount *
+                    (mAdapter.accTokenPerShare1 - userInfo.userShare1)) /
+                1e12;
         }
 
         // swap withdrawn lp to bnb
@@ -332,7 +341,8 @@ contract PancakeStakeAdapterBsc is BaseAdapter {
 
         // update invested information for token id
         mAdapter.totalStaked -= userInfo.amount;
-        delete userAdapterInfos[_tokenId];
+        userInfo.amount = 0;
+        userInfo.userShare1 = mAdapter.accTokenPerShare1;
 
         // send to investor
         (bool success, ) = payable(authority.hInvestor()).call{
@@ -381,7 +391,7 @@ contract PancakeStakeAdapterBsc is BaseAdapter {
             rewardToken != address(0) &&
             mAdapter.totalStaked != 0
         ) {
-            mAdapter.accTokenPerShare[0] +=
+            mAdapter.accTokenPerShare1 +=
                 (rewardAmt0 * 1e12) /
                 mAdapter.totalStaked;
         }
@@ -389,7 +399,7 @@ contract PancakeStakeAdapterBsc is BaseAdapter {
         // update mAdapter & userInfo
         mAdapter.totalStaked += amountOut;
         userInfo.amount = amountOut;
-        userInfo.userShare[0] = mAdapter.accTokenPerShare[0];
+        userInfo.userShare1 = mAdapter.accTokenPerShare1;
 
         return msg.value;
     }

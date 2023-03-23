@@ -78,7 +78,7 @@ contract HedgepieInvestor is ReentrancyGuard, HedgepieAccessControlled {
      */
     function deposit(
         uint256 _tokenId
-    ) external payable nonReentrant onlyValidNFT(_tokenId) whenNotPaused {
+    ) external payable whenNotPaused nonReentrant onlyValidNFT(_tokenId) {
         require(msg.value != 0, "Error: Insufficient BNB");
         UserInfo storage userInfo = userInfos[msg.sender];
         TokenInfo storage tokenInfo = tokenInfos[_tokenId];
@@ -136,6 +136,7 @@ contract HedgepieInvestor is ReentrancyGuard, HedgepieAccessControlled {
             .getTokenAdapterParams(_tokenId);
 
         uint256 amountOut;
+        uint256 beforeAmt = address(this).balance;
         for (uint8 i; i < adapterInfos.length; i++) {
             uint256 tAmount = IAdapter(adapterInfos[i].addr).getUserAmount(
                 _tokenId
@@ -145,6 +146,10 @@ contract HedgepieInvestor is ReentrancyGuard, HedgepieAccessControlled {
                 (tAmount * userInfo.amount) / tokenInfo.totalStaked
             );
         }
+        require(
+            amountOut == address(this).balance - beforeAmt,
+            "Failed to withdraw"
+        );
 
         // withdraw reward
         _withdrawReward(_tokenId);
@@ -172,7 +177,12 @@ contract HedgepieInvestor is ReentrancyGuard, HedgepieAccessControlled {
         // update user info
         delete userInfos[msg.sender];
 
-        emit Withdrawn(msg.sender, authority.hYBNFT(), _tokenId, amountOut);
+        if (amountOut != 0) {
+            (bool success, ) = payable(msg.sender).call{value: amountOut}("");
+            require(success, "Failed to withdraw");
+
+            emit Withdrawn(msg.sender, authority.hYBNFT(), _tokenId, amountOut);
+        }
     }
 
     /**
@@ -181,17 +191,15 @@ contract HedgepieInvestor is ReentrancyGuard, HedgepieAccessControlled {
      */
     function claim(
         uint256 _tokenId
-    ) public nonReentrant onlyValidNFT(_tokenId) whenNotPaused {
+    ) public nonReentrant whenNotPaused onlyValidNFT(_tokenId) {
         TokenInfo storage tokenInfo = tokenInfos[_tokenId];
 
         IYBNFT.AdapterParam[] memory adapterInfos = IYBNFT(authority.hYBNFT())
             .getTokenAdapterParams(_tokenId);
 
         uint256 pending = address(this).balance;
-        uint256 amountOut;
-        for (uint8 i; i < adapterInfos.length; i++) {
-            amountOut += IAdapter(adapterInfos[i].addr).claim(_tokenId);
-        }
+        for (uint8 i; i < adapterInfos.length; i++)
+            IAdapter(adapterInfos[i].addr).claim(_tokenId);
         pending = address(this).balance - pending;
 
         // update profit info in YBNFT
@@ -208,11 +216,13 @@ contract HedgepieInvestor is ReentrancyGuard, HedgepieAccessControlled {
     /**
      * @notice pendingReward
      * @param _tokenId  YBNft token id
+     * @param _account  user address
      */
     function pendingReward(
-        uint256 _tokenId
+        uint256 _tokenId,
+        address _account
     ) public view returns (uint256 amountOut, uint256 withdrawable) {
-        UserInfo memory userInfo = userInfos[msg.sender];
+        UserInfo memory userInfo = userInfos[_account];
         TokenInfo memory tokenInfo = tokenInfos[_tokenId];
 
         if (!IYBNFT(authority.hYBNFT()).exists(_tokenId)) return (0, 0);
@@ -300,8 +310,11 @@ contract HedgepieInvestor is ReentrancyGuard, HedgepieAccessControlled {
         TokenInfo storage tokenInfo = tokenInfos[_tokenId];
 
         uint256 pending = address(this).balance;
-        claim(_tokenId);
+        _claim(_tokenId);
         pending = address(this).balance - pending;
+
+        // update profit info in YBNFT
+        IYBNFT(authority.hYBNFT()).updateProfitInfo(_tokenId, pending, true);
 
         if (userInfo.amount != 0) {
             userInfo.rewardDebt +=
@@ -338,11 +351,26 @@ contract HedgepieInvestor is ReentrancyGuard, HedgepieAccessControlled {
             1e12 +
             userInfo.rewardDebt;
         userInfo.rewardDebt = 0;
+        userInfo.userShare = tokenInfo.accRewardShare;
 
-        (bool success, ) = payable(msg.sender).call{value: rewardAmt}("");
-        require(success, "Failed to withdraw reward");
+        if (rewardAmt != 0) {
+            (bool success, ) = payable(msg.sender).call{value: rewardAmt}("");
+            require(success, "Failed to withdraw reward");
 
-        emit Claimed(msg.sender, rewardAmt);
+            emit Claimed(msg.sender, rewardAmt);
+        }
+    }
+
+    /**
+     * @notice Claim internal
+     * @param _tokenId  YBNft token id
+     */
+    function _claim(uint256 _tokenId) internal {
+        IYBNFT.AdapterParam[] memory adapterInfos = IYBNFT(authority.hYBNFT())
+            .getTokenAdapterParams(_tokenId);
+
+        for (uint8 i; i < adapterInfos.length; i++)
+            IAdapter(adapterInfos[i].addr).claim(_tokenId);
     }
 
     receive() external payable {}

@@ -13,6 +13,7 @@ interface IHedgepieInvestor {
     function claim(uint256 _tokenId) external;
 
     function pendingReward(
-        uint256 _tokenId
+        uint256 _tokenId,
+        address _account
     ) external returns (uint256 amountOut, uint256 withdrawable);
 }
