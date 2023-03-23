@@ -37,14 +37,19 @@ async function forkPolygonNetwork() {
     });
 }
 
-async function setPath(adapter, first, second, third = null) {
-    if (third) {
-        await adapter.setPath(first, second, [first, third, second]);
-        await adapter.setPath(second, first, [second, third, first]);
-    } else {
-        await adapter.setPath(first, second, [first, second]);
-        await adapter.setPath(second, first, [second, first]);
-    }
+async function setPath(pathFinder, pathManager, router, paths) {
+    await pathFinder.connect(pathManager).setRouter(router, true);
+    await pathFinder
+        .connect(pathManager)
+        .setPath(router, paths[0], paths[paths.length - 1], paths);
+
+    const tmp = paths[0];
+    paths[0] = paths[paths.length - 1];
+    paths[paths.length - 1] = tmp;
+
+    await pathFinder
+        .connect(pathManager)
+        .setPath(router, paths[0], paths[paths.length - 1], paths);
 }
 
 function encode(types, values) {

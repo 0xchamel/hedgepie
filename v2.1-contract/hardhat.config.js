@@ -22,7 +22,7 @@ module.exports = {
                 // url: "https://bscrpc.com",
                 // url: "https://bsc-dataseed1.binance.org/",
                 enabled: true,
-                // blockNumber: 19717000,
+                blockNumber: 25710942,
             },
         },
         local: {
