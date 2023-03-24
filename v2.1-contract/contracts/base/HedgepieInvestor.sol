@@ -30,7 +30,7 @@ contract HedgepieInvestor is ReentrancyGuard, HedgepieAccessControlled {
     mapping(uint256 => TokenInfo) public tokenInfos;
 
     // address => user info
-    mapping(address => UserInfo) public userInfos;
+    mapping(uint256 => mapping(address => UserInfo)) public userInfos;
 
     // treasury address
     address public treasury;
@@ -80,7 +80,7 @@ contract HedgepieInvestor is ReentrancyGuard, HedgepieAccessControlled {
         uint256 _tokenId
     ) external payable whenNotPaused nonReentrant onlyValidNFT(_tokenId) {
         require(msg.value != 0, "Error: Insufficient BNB");
-        UserInfo storage userInfo = userInfos[msg.sender];
+        UserInfo storage userInfo = userInfos[_tokenId][msg.sender];
         TokenInfo storage tokenInfo = tokenInfos[_tokenId];
 
         // calc reward
@@ -127,7 +127,7 @@ contract HedgepieInvestor is ReentrancyGuard, HedgepieAccessControlled {
     function withdraw(
         uint256 _tokenId
     ) external nonReentrant onlyValidNFT(_tokenId) whenNotPaused {
-        UserInfo memory userInfo = userInfos[msg.sender];
+        UserInfo memory userInfo = userInfos[_tokenId][msg.sender];
         TokenInfo storage tokenInfo = tokenInfos[_tokenId];
 
         // calc reward
@@ -176,7 +176,7 @@ contract HedgepieInvestor is ReentrancyGuard, HedgepieAccessControlled {
         );
 
         // update user info
-        delete userInfos[msg.sender];
+        delete userInfos[_tokenId][msg.sender];
 
         if (amountOut != 0) {
             (bool success, ) = payable(msg.sender).call{value: amountOut}("");
@@ -223,7 +223,7 @@ contract HedgepieInvestor is ReentrancyGuard, HedgepieAccessControlled {
         uint256 _tokenId,
         address _account
     ) public view returns (uint256 amountOut, uint256 withdrawable) {
-        UserInfo memory userInfo = userInfos[_account];
+        UserInfo memory userInfo = userInfos[_tokenId][_account];
         TokenInfo memory tokenInfo = tokenInfos[_tokenId];
 
         if (!IYBNFT(authority.hYBNFT()).exists(_tokenId)) return (0, 0);
@@ -307,7 +307,7 @@ contract HedgepieInvestor is ReentrancyGuard, HedgepieAccessControlled {
      * @param _tokenId YBNFT token id
      */
     function _calcReward(uint256 _tokenId) internal {
-        UserInfo storage userInfo = userInfos[msg.sender];
+        UserInfo storage userInfo = userInfos[_tokenId][msg.sender];
         TokenInfo storage tokenInfo = tokenInfos[_tokenId];
 
         uint256 pending = address(this).balance;
@@ -344,7 +344,7 @@ contract HedgepieInvestor is ReentrancyGuard, HedgepieAccessControlled {
      * @param _tokenId YBNFT token id
      */
     function _withdrawReward(uint256 _tokenId) internal {
-        UserInfo storage userInfo = userInfos[msg.sender];
+        UserInfo storage userInfo = userInfos[_tokenId][msg.sender];
         TokenInfo memory tokenInfo = tokenInfos[_tokenId];
 
         uint256 rewardAmt = (userInfo.amount *

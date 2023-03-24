@@ -201,7 +201,10 @@ describe("PancakeSwap Adapters Integration Test", function () {
                     depositAmount
                 );
 
-            const aliceInfo = await this.investor.userInfos(this.alice.address);
+            const aliceInfo = await this.investor.userInfos(
+                1,
+                this.alice.address
+            );
             const bnbPrice = BigNumber.from(await this.lib.getBNBPrice());
             expect(aliceInfo.amount).to.eq(BigNumber.from(10).mul(bnbPrice));
         });
@@ -245,7 +248,7 @@ describe("PancakeSwap Adapters Integration Test", function () {
                     depositAmount
                 );
 
-            const bobInfo = await this.investor.userInfos(this.bob.address);
+            const bobInfo = await this.investor.userInfos(1, this.bob.address);
             const bnbPrice = BigNumber.from(await this.lib.getBNBPrice());
             expect(bobInfo.amount).to.eq(BigNumber.from(20).mul(bnbPrice));
 
@@ -343,11 +346,14 @@ describe("PancakeSwap Adapters Integration Test", function () {
             ).to.be.gt(9.9);
 
             // check userInfo
-            let aliceInfo = await this.investor.userInfos(this.alice.address);
+            let aliceInfo = await this.investor.userInfos(
+                1,
+                this.alice.address
+            );
             expect(aliceInfo.amount).to.eq(BigNumber.from(0));
 
             //------- check bob info -----//
-            const bobInfo = await this.investor.userInfos(this.bob.address);
+            const bobInfo = await this.investor.userInfos(1, this.bob.address);
             const bnbPrice = BigNumber.from(await this.lib.getBNBPrice());
             expect(bobInfo.amount).to.eq(BigNumber.from(20).mul(bnbPrice));
 
@@ -392,7 +398,7 @@ describe("PancakeSwap Adapters Integration Test", function () {
                 )
             ).to.be.gt(19.9);
 
-            let bobInfo = await this.investor.userInfos(this.bob.address);
+            let bobInfo = await this.investor.userInfos(1, this.bob.address);
             expect(bobInfo.amount).to.eq(BigNumber.from(0));
 
             await this.checkAccRewardShare(1);
