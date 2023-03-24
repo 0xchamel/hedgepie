@@ -335,6 +335,13 @@ describe("PancakeSwap Adapters Integration Test", function () {
                 BigNumber.from(afterBNB).gt(BigNumber.from(beforeBNB))
             ).to.eq(true);
 
+            // check withdrawn balance
+            expect(
+                Number(
+                    ethers.utils.formatEther(afterBNB.sub(beforeBNB).toString())
+                )
+            ).to.be.gt(9.9);
+
             // check userInfo
             let aliceInfo = await this.investor.userInfos(this.alice.address);
             expect(aliceInfo.amount).to.eq(BigNumber.from(0));
@@ -377,6 +384,13 @@ describe("PancakeSwap Adapters Integration Test", function () {
             expect(
                 BigNumber.from(afterBNB).gt(BigNumber.from(beforeBNB))
             ).to.eq(true);
+
+            // check withdrawn balance
+            expect(
+                Number(
+                    ethers.utils.formatEther(afterBNB.sub(beforeBNB).toString())
+                )
+            ).to.be.gt(19.9);
 
             let bobInfo = await this.investor.userInfos(this.bob.address);
             expect(bobInfo.amount).to.eq(BigNumber.from(0));
@@ -456,6 +470,12 @@ describe("PancakeSwap Adapters Integration Test", function () {
     });
 
     describe("Edit fund flow", function () {
+        it("test possibility to set zero percent", async function () {
+            await this.ybNft
+                .connect(this.governor)
+                .updateAllocations(1, [0, 10000]);
+        });
+
         it("test with token1 and token2 - updateAllocations", async function () {
             await this.investor.connect(this.user1).deposit(1, {
                 gasPrice: 21e9,
@@ -473,8 +493,13 @@ describe("PancakeSwap Adapters Integration Test", function () {
             }
             await ethers.provider.send("evm_increaseTime", [3600 * 24]);
             await ethers.provider.send("evm_mine", []);
+        });
 
+        it("test pendingReward, invested amount ratio after allocation change", async function () {
             // Check reward increase after updateAllocation
+            const allocation = [2000, 8000];
+            const bTokenInfo1 = await this.adapter[0].userAdapterInfos(2);
+            const bTokenInfo2 = await this.adapter[1].userAdapterInfos(2);
             const bPending1 = await this.investor.pendingReward(
                 1,
                 this.user1.address
@@ -485,8 +510,9 @@ describe("PancakeSwap Adapters Integration Test", function () {
             );
             await this.ybNft
                 .connect(this.governor)
-                .updateAllocations(2, [2000, 8000]);
+                .updateAllocations(2, allocation);
 
+            // check pendingReward amount
             const aPending1 = await this.investor.pendingReward(
                 1,
                 this.user1.address
@@ -500,6 +526,24 @@ describe("PancakeSwap Adapters Integration Test", function () {
             expect(aPending2[0]).gt(bPending2[0]) &&
                 expect(aPending2[1]).gt(bPending2[1]);
 
+            // check invested amount
+            const aTokenInfo1 = await this.adapter[0].userAdapterInfos(2);
+            const aTokenInfo2 = await this.adapter[1].userAdapterInfos(2);
+            expect(BigNumber.from(bTokenInfo1.amount).div(50)).to.be.gt(
+                BigNumber.from(aTokenInfo1.amount)
+                    .div(allocation[0])
+                    .mul(95)
+                    .div(100)
+            );
+            expect(BigNumber.from(bTokenInfo2.amount).div(50)).to.be.gt(
+                BigNumber.from(aTokenInfo2.amount)
+                    .div(allocation[1])
+                    .mul(95)
+                    .div(100)
+            );
+        });
+
+        it("test claimed rewards after allocation change", async function () {
             // Check pending reward by claim
             await checkPendingWithClaim(
                 this.investor,
@@ -513,7 +557,9 @@ describe("PancakeSwap Adapters Integration Test", function () {
                 2,
                 this.performanceFee
             );
+        });
 
+        it("test withdraw after allocation change", async function () {
             // Successfully withdraw
             await expect(this.investor.connect(this.user1).withdraw(1)).to.emit(
                 this.investor,

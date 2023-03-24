@@ -94,7 +94,8 @@ contract HedgepieInvestor is ReentrancyGuard, HedgepieAccessControlled {
             IYBNFT.AdapterParam memory adapter = adapterInfos[i];
 
             uint256 amountIn = (msg.value * adapter.allocation) / 1e4;
-            IAdapter(adapter.addr).deposit{value: amountIn}(_tokenId);
+            if (amountIn != 0)
+                IAdapter(adapter.addr).deposit{value: amountIn}(_tokenId);
         }
 
         // update user & token info

@@ -118,6 +118,8 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapter {
     ) external payable override onlyInvestor returns (uint256 amountOut) {
         UserAdapterInfo storage userInfo = userAdapterInfos[_tokenId];
 
+        if (_amount == 0) return 0;
+
         // validation of _amount parameter
         require(_amount <= userInfo.amount, "Not enough balance to withdraw");
 
