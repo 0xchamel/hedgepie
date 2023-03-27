@@ -20,7 +20,8 @@ abstract contract BaseAdapter is HedgepieAccessControlled {
     struct AdapterInfo {
         uint256 accTokenPerShare1; // Accumulated per share for first reward token
         uint256 accTokenPerShare2; // Accumulated per share for first reward token
-        uint256 totalStaked; // Total staked staking token
+        uint256 totalStaked; // Total staked staking token or shares in vault
+        uint256 totalInvested; // Total staked of lp token
     }
 
     uint256 public pid;
@@ -47,9 +48,6 @@ abstract contract BaseAdapter is HedgepieAccessControlled {
 
     // nft id => UserAdapterInfo
     mapping(uint256 => UserAdapterInfo) public userAdapterInfos;
-
-    // nft id => AdapterInfo
-    mapping(uint256 => AdapterInfo) public adapterInfos;
 
     constructor(
         address _hedgepieAuthority
