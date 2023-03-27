@@ -71,10 +71,11 @@ library HedgepieLibraryBsc {
         }
     }
 
-    function getMRewards(
-        uint256 _tokenId,
-        address _adapterAddr
-    ) public view returns (uint256 reward, uint256 reward1) {
+    function getMRewards(uint256 _tokenId, address _adapterAddr)
+        public
+        view
+        returns (uint256 reward, uint256 reward1)
+    {
         BaseAdapter.AdapterInfo memory adapterInfo = IAdapter(_adapterAddr)
             .mAdapter();
         BaseAdapter.UserAdapterInfo memory userInfo = IAdapter(_adapterAddr)

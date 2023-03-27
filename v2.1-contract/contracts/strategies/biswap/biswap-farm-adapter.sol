@@ -67,17 +67,18 @@ contract BiSwapFarmLPAdapterBsc is BaseAdapter {
 
         uint256 rewardAmt = IERC20(rewardToken).balanceOf(address(this));
 
+        // swap to staking token
         if (router == address(0)) {
             amountOut = HedgepieLibraryBsc.swapOnRouter(
                 msg.value,
                 address(this),
                 stakingToken,
-                swapRouter,
+                router,
                 wbnb
             );
         } else {
             amountOut = HedgepieLibraryBsc.getLP(
-                IYBNFT.Adapter(0, stakingToken, address(this)),
+                IYBNFT.AdapterParam(0, stakingToken, address(this)),
                 wbnb,
                 msg.value
             );
@@ -135,42 +136,43 @@ contract BiSwapFarmLPAdapterBsc is BaseAdapter {
         // validation of _amount parameter
         require(_amount <= userInfo.amount, "Not enough balance to withdraw");
 
+        bool isSame = stakingToken == rewardToken;
         amountOut = IERC20(stakingToken).balanceOf(address(this));
-        uint256 rewardAmt = IERC20(rewardToken).balanceOf(address(this));
+        uint256 rewardAmt = isSame
+            ? amountOut
+            : IERC20(rewardToken).balanceOf(address(this));
 
         // remove stakingToken
-        if (pid == 0) IStrategy(strategy).leaveStaking(userInfo.amount);
-        else IStrategy(strategy).withdraw(pid, userInfo.amount);
+        if (pid == 0) IStrategy(strategy).leaveStaking(_amount);
+        else IStrategy(strategy).withdraw(pid, _amount);
 
         unchecked {
-            if (rewardToken == stakingToken) {
-                
+            amountOut =
+                IERC20(stakingToken).balanceOf(address(this)) -
+                amountOut;
+
+            if (isSame) {
+                amountOut = amountOut > _amount ? _amount : amountOut;
+                rewardAmt = amountOut > _amount ? amountOut - _amount : 0;
+            } else {
+                rewardAmt =
+                    IERC20(rewardToken).balanceOf(address(this)) -
+                    rewardAmt;
+            }
+
+            require(_amount == amountOut, "Failed to withdraw");
+
+            // update accTokenPerShare if reward is generated
+            if (rewardAmt != 0) {
+                mAdapter.accTokenPerShare1 +=
+                    (rewardAmt * 1e12) /
+                    mAdapter.totalStaked;
             }
         }
 
-        rewardAmt0 = pid == 0
-            ? IERC20(rewardToken).balanceOf(address(this)) -
-                rewardAmt0 -
-                userInfo.amount
-            : IERC20(rewardToken).balanceOf(address(this)) - rewardAmt0;
-        amountOut = pid == 0
-            ? IERC20(stakingToken).balanceOf(address(this)) -
-                amountOut -
-                rewardAmt0
-            : IERC20(stakingToken).balanceOf(address(this)) - amountOut;
-
-        if (
-            rewardAmt0 != 0 &&
-            rewardToken != address(0) &&
-            mAdapter.totalStaked != 0
-        ) {
-            mAdapter.accTokenPerShare +=
-                (rewardAmt0 * 1e12) /
-                mAdapter.totalStaked;
-        }
-
+        // swap withdrawn staking tokens to bnb
         if (router == address(0)) {
-            amountOut = HedgepieLibraryBsc.swapforBnb(
+            amountOut = HedgepieLibraryBsc.swapForBnb(
                 amountOut,
                 address(this),
                 stakingToken,
@@ -179,76 +181,57 @@ contract BiSwapFarmLPAdapterBsc is BaseAdapter {
             );
         } else {
             amountOut = HedgepieLibraryBsc.withdrawLP(
-                IYBNFT.Adapter(0, stakingToken, address(this)),
+                IYBNFT.AdapterParam(0, stakingToken, address(this)),
                 wbnb,
                 amountOut
             );
         }
 
+        // get user's rewards
         (uint256 reward, ) = HedgepieLibraryBsc.getMRewards(
             _tokenId,
-            address(this),
-            _account
+            address(this)
         );
 
+        // swap reward to bnb
         uint256 rewardBnb;
         if (reward != 0) {
-            rewardBnb = HedgepieLibraryBsc.swapforBnb(
+            rewardBnb = HedgepieLibraryBsc.swapForBnb(
                 reward,
                 address(this),
                 rewardToken,
                 swapRouter,
                 wbnb
             );
-        }
 
-        address adapterInfoBnbAddr = IHedgepieInvestorBsc(investor)
-            .adapterInfo();
-        if (rewardBnb != 0) {
             amountOut += rewardBnb;
-            IHedgepieAdapterInfoBsc(adapterInfoBnbAddr).updateProfitInfo(
-                _tokenId,
-                rewardBnb,
-                true
-            );
         }
 
-        // Update adapterInfo contract
-        IHedgepieAdapterInfoBsc(adapterInfoBnbAddr).updateTVLInfo(
-            _tokenId,
-            userInfo.invested,
-            false
-        );
-        IHedgepieAdapterInfoBsc(adapterInfoBnbAddr).updateTradedInfo(
-            _tokenId,
-            userInfo.invested,
-            true
-        );
-        IHedgepieAdapterInfoBsc(adapterInfoBnbAddr).updateParticipantInfo(
-            _tokenId,
-            _account,
-            false
-        );
+        // update mAdapter & user Info
+        unchecked {
+            mAdapter.totalStaked -= _amount;
 
-        mAdapter.totalStaked -= userInfo.amount;
-        delete userAdapterInfos[_account][_tokenId];
+            userInfo.amount -= _amount;
+            userInfo.userShare1 = mAdapter.accTokenPerShare1;
+            userInfo.rewardDebt1 = 0;
+        }
 
         if (amountOut != 0) {
             bool success;
             if (rewardBnb != 0) {
                 rewardBnb =
                     (rewardBnb *
-                        IYBNFT(IHedgepieInvestorBsc(investor).ybnft())
-                            .performanceFee(_tokenId)) /
+                        IYBNFT(authority.hYBNFT()).performanceFee(_tokenId)) /
                     1e4;
-                (success, ) = payable(IHedgepieInvestorBsc(investor).treasury())
-                    .call{value: rewardBnb}("");
+                (success, ) = payable(
+                    IHedgepieInvestor(authority.hInvestor()).treasury()
+                ).call{value: rewardBnb}("");
                 require(success, "Failed to send bnb to Treasury");
             }
 
-            (success, ) = payable(_account).call{value: amountOut - rewardBnb}(
-                ""
-            );
+            (success, ) = payable(msg.sender).call{
+                value: amountOut - rewardBnb
+            }("");
             require(success, "Failed to send bnb");
         }
     }
@@ -256,101 +239,111 @@ contract BiSwapFarmLPAdapterBsc is BaseAdapter {
     /**
      * @notice Claim the pending reward
      * @param _tokenId YBNFT token id
-     * @param _account user wallet address
      */
-    function claim(uint256 _tokenId, address _account)
+    function claim(uint256 _tokenId)
         external
         payable
         override
         onlyInvestor
         returns (uint256 amountOut)
     {
-        UserAdapterInfo storage userInfo = userAdapterInfos[_account][_tokenId];
+        UserAdapterInfo storage userInfo = userAdapterInfos[_tokenId];
+
+        uint256 rewardAmt = IERC20(rewardToken).balanceOf(address(this));
 
         // claim rewards
-        uint256 rewardAmt0 = IERC20(rewardToken).balanceOf(address(this));
         if (pid == 0) IStrategy(strategy).leaveStaking(0);
         else IStrategy(strategy).withdraw(pid, 0);
-        rewardAmt0 = IERC20(rewardToken).balanceOf(address(this)) - rewardAmt0;
-        if (
-            rewardAmt0 != 0 &&
-            rewardToken != address(0) &&
-            mAdapter.totalStaked != 0
-        ) {
-            mAdapter.accTokenPerShare +=
-                (rewardAmt0 * 1e12) /
-                mAdapter.totalStaked;
+
+        unchecked {
+            rewardAmt =
+                IERC20(rewardToken).balanceOf(address(this)) -
+                rewardAmt;
+
+            if (
+                rewardAmt != 0 &&
+                rewardToken != address(0) &&
+                mAdapter.totalStaked != 0
+            ) {
+                mAdapter.accTokenPerShare1 +=
+                    (rewardAmt * 1e12) /
+                    mAdapter.totalStaked;
+            }
         }
 
+        // get user's rewards
         (uint256 reward, ) = HedgepieLibraryBsc.getMRewards(
             _tokenId,
-            address(this),
-            _account
+            address(this)
         );
 
-        userInfo.userShares = mAdapter.accTokenPerShare;
-        userInfo.rewardDebt = 0;
+        // update user info
+        unchecked {
+            userInfo.userShare1 = mAdapter.accTokenPerShare1;
+            userInfo.rewardDebt1 = 0;
+        }
 
-        if (reward != 0 && rewardToken != address(0)) {
-            amountOut = HedgepieLibraryBsc.swapforBnb(
+        if (reward != 0) {
+            amountOut = HedgepieLibraryBsc.swapForBnb(
                 reward,
                 address(this),
                 rewardToken,
                 swapRouter,
                 wbnb
             );
-        }
 
-        if (amountOut != 0) {
-            uint256 taxAmount = (amountOut *
-                IYBNFT(IHedgepieInvestorBsc(investor).ybnft()).performanceFee(
-                    _tokenId
-                )) / 1e4;
+            reward =
+                (amountOut *
+                    IYBNFT(authority.hYBNFT()).performanceFee(_tokenId)) /
+                1e4;
             (bool success, ) = payable(
-                IHedgepieInvestorBsc(investor).treasury()
-            ).call{value: taxAmount}("");
+                IHedgepieInvestor(authority.hInvestor()).treasury()
+            ).call{value: reward}("");
             require(success, "Failed to send bnb to Treasury");
 
-            (success, ) = payable(_account).call{value: amountOut - taxAmount}(
+            (success, ) = payable(msg.sender).call{value: amountOut - reward}(
                 ""
             );
             require(success, "Failed to send bnb");
-
-            IHedgepieAdapterInfoBsc(
-                IHedgepieInvestorBsc(investor).adapterInfo()
-            ).updateProfitInfo(_tokenId, amountOut, true);
         }
     }
 
     /**
      * @notice Return the pending reward by Bnb
      * @param _tokenId YBNFT token id
-     * @param _account user wallet address
      */
-    function pendingReward(uint256 _tokenId, address _account)
+    function pendingReward(uint256 _tokenId)
         external
         view
         override
         returns (uint256 reward, uint256 withdrawable)
     {
-        UserAdapterInfo memory userInfo = userAdapterInfos[_account][_tokenId];
+        UserAdapterInfo memory userInfo = userAdapterInfos[_tokenId];
 
-        uint256 updatedAccTokenPerShare = mAdapter.accTokenPerShare +
-            ((IStrategy(strategy).pendingBSW(pid, address(this)) * 1e12) /
-                mAdapter.totalStaked);
+        uint256 updatedAccTokenPerShare = mAdapter.accTokenPerShare1;
+        if (mAdapter.totalStaked != 0)
+            updatedAccTokenPerShare += ((IStrategy(strategy).pendingBSW(
+                pid,
+                address(this)
+            ) * 1e12) / mAdapter.totalStaked);
 
         uint256 tokenRewards = ((updatedAccTokenPerShare -
-            userInfo.userShares) * userInfo.amount) /
+            userInfo.userShare1) * userInfo.amount) /
             1e12 +
-            userInfo.rewardDebt;
+            userInfo.rewardDebt1;
 
         if (tokenRewards != 0) {
-            reward = rewardToken == wbnb
-                ? tokenRewards
-                : IPancakeRouter(swapRouter).getAmountsOut(
+            if (rewardToken == wbnb) reward = tokenRewards;
+            else {
+                address[] memory paths = IPathFinder(authority.pathFinder())
+                    .getPaths(swapRouter, rewardToken, wbnb);
+
+                reward = IPancakeRouter(swapRouter).getAmountsOut(
                     tokenRewards,
-                    getPaths(rewardToken, wbnb)
-                )[getPaths(rewardToken, wbnb).length - 1];
+                    paths
+                )[paths.length - 1];
+            }
+
             withdrawable = reward;
         }
     }

@@ -246,7 +246,7 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapter {
         userInfo.rewardDebt1 = 0;
 
         if (reward != 0 && rewardToken != address(0)) {
-            amountOut += HedgepieLibraryBsc.swapForBnb(
+            amountOut = HedgepieLibraryBsc.swapForBnb(
                 reward,
                 address(this),
                 rewardToken,
