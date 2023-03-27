@@ -317,17 +317,17 @@ contract HedgepieInvestor is ReentrancyGuard, HedgepieAccessControlled {
         // update profit info in YBNFT
         IYBNFT(authority.hYBNFT()).updateProfitInfo(_tokenId, pending, true);
 
-        if (userInfo.amount != 0) {
-            userInfo.rewardDebt +=
-                (userInfo.amount *
-                    (tokenInfo.accRewardShare - userInfo.userShare)) /
-                1e12;
-        }
-
         if (tokenInfo.totalStaked != 0 && pending != 0) {
             tokenInfo.accRewardShare +=
                 (pending * 1e12) /
                 tokenInfo.totalStaked;
+
+            if (userInfo.amount != 0) {
+                userInfo.rewardDebt +=
+                    (userInfo.amount *
+                        (tokenInfo.accRewardShare - userInfo.userShare)) /
+                    1e12;
+            }
 
             // update profit info in YBNFT
             IYBNFT(authority.hYBNFT()).updateProfitInfo(
