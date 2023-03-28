@@ -73,7 +73,7 @@ contract BiSwapFarmLPAdapterBsc is BaseAdapter {
                 msg.value,
                 address(this),
                 stakingToken,
-                router,
+                swapRouter,
                 wbnb
             );
         } else {
