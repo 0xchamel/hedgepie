@@ -64,7 +64,6 @@ contract AutoVaultAdapterBsc is BaseAdapter {
     function deposit(
         uint256 _tokenId
     ) external payable override onlyInvestor returns (uint256 amountOut) {
-        uint256 _amountIn = msg.value;
         UserAdapterInfo storage userInfo = userAdapterInfos[_tokenId];
 
         // get LP
@@ -85,10 +84,12 @@ contract AutoVaultAdapterBsc is BaseAdapter {
             pid,
             address(this)
         );
+        require(afterShare > beforeShare, "Failed to deposit");
 
         userInfo.amount += afterShare - beforeShare;
-        mAdapter.totalStaked += afterShare - beforeShare;
-        mAdapter.totalInvested += amountOut;
+        userInfo.invested +=
+            (amountOut * IVaultStrategy(vStrategy).entranceFeeFactor()) /
+            IVaultStrategy(vStrategy).entranceFeeFactorMax();
 
         return msg.value;
     }
@@ -104,6 +105,8 @@ contract AutoVaultAdapterBsc is BaseAdapter {
     ) external payable override onlyInvestor returns (uint256 amountOut) {
         UserAdapterInfo storage userInfo = userAdapterInfos[_tokenId];
 
+        if (_amount == 0) return 0;
+
         // withdraw from Vault
         uint256 vAmount = (_amount *
             IVaultStrategy(vStrategy).wantLockedTotal()) /
@@ -118,30 +121,57 @@ contract AutoVaultAdapterBsc is BaseAdapter {
             lpOut
         );
 
-        uint256 reward;
-        // if (amountOut > userInfo.invested)
-        //     reward = amountOut - userInfo.invested;
-
-        mAdapter.totalStaked -= _amount;
-        mAdapter.totalInvested -= lpOut;
         userInfo.amount -= _amount;
+        userInfo.invested -= lpOut;
 
         if (amountOut != 0) {
-            bool success;
-            if (reward != 0) {
-                reward =
-                    (reward *
-                        IYBNFT(authority.hYBNFT()).performanceFee(_tokenId)) /
-                    1e4;
-                (success, ) = payable(
-                    IHedgepieInvestor(authority.hInvestor()).treasury()
-                ).call{value: reward}("");
-                require(success, "Failed to send bnb to Treasury");
-            }
+            (bool success, ) = payable(msg.sender).call{value: amountOut}("");
+            require(success, "Failed to send bnb");
+        }
+    }
 
-            (success, ) = payable(msg.sender).call{value: amountOut - reward}(
-                ""
-            );
+    /**
+     * @notice Claim the pending reward
+     * @param _tokenId YBNFT token id
+     */
+    function claim(
+        uint256 _tokenId
+    ) external payable override onlyInvestor returns (uint256 amountOut) {
+        UserAdapterInfo storage userInfo = userAdapterInfos[_tokenId];
+
+        uint256 vAmount = (userInfo.amount *
+            IVaultStrategy(vStrategy).wantLockedTotal()) /
+            IVaultStrategy(vStrategy).sharesTotal();
+
+        if (vAmount <= userInfo.invested) return 0;
+        vAmount -= userInfo.invested;
+
+        uint256 lpOut = IERC20(stakingToken).balanceOf(address(this));
+        IStrategy(strategy).withdraw(pid, vAmount);
+        lpOut = IERC20(stakingToken).balanceOf(address(this)) - lpOut;
+
+        amountOut =
+            HedgepieLibraryBsc.withdrawLP(
+                IYBNFT.AdapterParam(0, stakingToken, address(this)),
+                wbnb,
+                lpOut
+            ) +
+            userInfo.rewardDebt1;
+
+        // update user info
+        userInfo.rewardDebt1 = 0;
+
+        if (amountOut != 0) {
+            uint256 taxAmount = (amountOut *
+                IYBNFT(authority.hYBNFT()).performanceFee(_tokenId)) / 1e4;
+            (bool success, ) = payable(
+                IHedgepieInvestor(authority.hInvestor()).treasury()
+            ).call{value: taxAmount}("");
+            require(success, "Failed to send bnb to Treasury");
+
+            (success, ) = payable(msg.sender).call{
+                value: amountOut - taxAmount
+            }("");
             require(success, "Failed to send bnb");
         }
     }
@@ -158,6 +188,9 @@ contract AutoVaultAdapterBsc is BaseAdapter {
         uint256 vAmount = (userInfo.amount *
             IVaultStrategy(vStrategy).wantLockedTotal()) /
             IVaultStrategy(vStrategy).sharesTotal();
+
+        if (vAmount <= userInfo.invested) return (0, 0);
+        vAmount -= userInfo.invested;
 
         address token0 = IPancakePair(stakingToken).token0();
         address token1 = IPancakePair(stakingToken).token1();
@@ -203,8 +236,7 @@ contract AutoVaultAdapterBsc is BaseAdapter {
                             .length - 1
                     ];
 
-        // if (reward <= userInfo.invested) return (0, 0);
-        // return (reward - userInfo.invested, 0);
+        return (reward, reward);
     }
 
     /**
@@ -214,7 +246,8 @@ contract AutoVaultAdapterBsc is BaseAdapter {
     function removeFunds(
         uint256 _tokenId
     ) external payable override onlyInvestor returns (uint256 amountOut) {
-        UserAdapterInfo memory userInfo = userAdapterInfos[_tokenId];
+        UserAdapterInfo storage userInfo = userAdapterInfos[_tokenId];
+        if (userInfo.amount == 0) return 0;
 
         // withdraw from Vault
         amountOut = IERC20(stakingToken).balanceOf(address(this));
@@ -223,6 +256,14 @@ contract AutoVaultAdapterBsc is BaseAdapter {
             IVaultStrategy(vStrategy).sharesTotal();
         IStrategy(strategy).withdraw(pid, vAmount);
         amountOut = IERC20(stakingToken).balanceOf(address(this)) - amountOut;
+
+        // calc reward
+        uint256 rewardPercent = 0;
+        if (amountOut > userInfo.invested) {
+            rewardPercent =
+                ((amountOut - userInfo.invested) * 1e12) /
+                userInfo.invested;
+        }
 
         // swap withdrawn lp to bnb
         if (router == address(0)) {
@@ -242,12 +283,14 @@ contract AutoVaultAdapterBsc is BaseAdapter {
         }
 
         // update invested information for token id
-        mAdapter.totalStaked -= userInfo.amount;
-        mAdapter.totalInvested -= amountOut;
+        uint256 reward = (amountOut * rewardPercent) / 1e12;
+        userInfo.amount = 0;
+        userInfo.invested = 0;
+        userInfo.rewardDebt1 += reward;
 
         // send to investor
         (bool success, ) = payable(authority.hInvestor()).call{
-            value: amountOut
+            value: amountOut - reward
         }("");
         require(success, "Failed to send bnb to investor");
     }
@@ -259,13 +302,15 @@ contract AutoVaultAdapterBsc is BaseAdapter {
     function updateFunds(
         uint256 _tokenId
     ) external payable override onlyInvestor returns (uint256 amountOut) {
-        uint256 _amountIn = msg.value;
+        if (msg.value == 0) return 0;
+
+        UserAdapterInfo storage userInfo = userAdapterInfos[_tokenId];
 
         // get LP
         amountOut = HedgepieLibraryBsc.getLP(
             IYBNFT.AdapterParam(0, stakingToken, address(this)),
             wbnb,
-            _amountIn
+            msg.value
         );
 
         // deposit
@@ -279,12 +324,14 @@ contract AutoVaultAdapterBsc is BaseAdapter {
             pid,
             address(this)
         );
+        require(afterShare > beforeShare, "Failed to update funds");
 
-        _amountIn = (_amountIn * HedgepieLibraryBsc.getBNBPrice()) / 1e18;
-        mAdapter.totalStaked += afterShare - beforeShare;
-        mAdapter.totalInvested += _amountIn;
+        userInfo.amount = afterShare - beforeShare;
+        userInfo.invested =
+            (amountOut * IVaultStrategy(vStrategy).entranceFeeFactor()) /
+            IVaultStrategy(vStrategy).entranceFeeFactorMax();
 
-        return _amountIn;
+        return msg.value;
     }
 
     receive() external payable {}

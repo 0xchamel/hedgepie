@@ -15,13 +15,13 @@ abstract contract BaseAdapter is HedgepieAccessControlled {
         uint256 userShare2; // Reward tokens' share
         uint256 rewardDebt1; // Reward Debt for reward tokens
         uint256 rewardDebt2; // Reward Debt for reward tokens
+        uint256 invested; // invested lp token amount
     }
 
     struct AdapterInfo {
         uint256 accTokenPerShare1; // Accumulated per share for first reward token
         uint256 accTokenPerShare2; // Accumulated per share for first reward token
-        uint256 totalStaked; // Total staked staking token or shares in vault
-        uint256 totalInvested; // Total staked of lp token
+        uint256 totalStaked; // Total staked staking token
     }
 
     uint256 public pid;
