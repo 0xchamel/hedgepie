@@ -15,6 +15,7 @@ abstract contract BaseAdapter is HedgepieAccessControlled {
         uint256 userShare2; // Reward tokens' share
         uint256 rewardDebt1; // Reward Debt for reward tokens
         uint256 rewardDebt2; // Reward Debt for reward tokens
+        uint256 invested; // invested lp token amount
     }
 
     struct AdapterInfo {
@@ -47,9 +48,6 @@ abstract contract BaseAdapter is HedgepieAccessControlled {
 
     // nft id => UserAdapterInfo
     mapping(uint256 => UserAdapterInfo) public userAdapterInfos;
-
-    // nft id => AdapterInfo
-    mapping(uint256 => AdapterInfo) public adapterInfos;
 
     constructor(
         address _hedgepieAuthority
