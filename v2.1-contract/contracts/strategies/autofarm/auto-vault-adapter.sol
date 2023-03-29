@@ -87,9 +87,7 @@ contract AutoVaultAdapterBsc is BaseAdapter {
         require(afterShare > beforeShare, "Failed to deposit");
 
         userInfo.amount += afterShare - beforeShare;
-        userInfo.invested +=
-            (amountOut * IVaultStrategy(vStrategy).entranceFeeFactor()) /
-            IVaultStrategy(vStrategy).entranceFeeFactorMax();
+        userInfo.invested += amountOut;
 
         return msg.value;
     }
@@ -121,9 +119,12 @@ contract AutoVaultAdapterBsc is BaseAdapter {
             lpOut
         );
 
+        // update userInfo
         userInfo.amount -= _amount;
-        userInfo.invested -= lpOut;
+        if (lpOut >= userInfo.invested) userInfo.invested = 0;
+        else userInfo.invested -= lpOut;
 
+        // send withdrawn bnb
         if (amountOut != 0) {
             (bool success, ) = payable(msg.sender).call{value: amountOut}("");
             require(success, "Failed to send bnb");
@@ -143,7 +144,31 @@ contract AutoVaultAdapterBsc is BaseAdapter {
             IVaultStrategy(vStrategy).wantLockedTotal()) /
             IVaultStrategy(vStrategy).sharesTotal();
 
-        if (vAmount <= userInfo.invested) return 0;
+        if (vAmount <= userInfo.invested) {
+            if (userInfo.rewardDebt1 == 0) return 0;
+
+            amountOut = userInfo.rewardDebt1;
+            userInfo.rewardDebt1 = 0;
+
+            // send reward in bnb
+            if (amountOut != 0) {
+                uint256 taxAmount = (amountOut *
+                    IYBNFT(authority.hYBNFT()).performanceFee(_tokenId)) / 1e4;
+                (bool success, ) = payable(
+                    IHedgepieInvestor(authority.hInvestor()).treasury()
+                ).call{value: taxAmount}("");
+                require(success, "Failed to send bnb to Treasury");
+
+                (success, ) = payable(msg.sender).call{
+                    value: amountOut - taxAmount
+                }("");
+                require(success, "Failed to send bnb");
+            }
+
+            return amountOut;
+        }
+
+        // if there's a reward from vault
         vAmount -= userInfo.invested;
 
         uint256 lpOut = IERC20(stakingToken).balanceOf(address(this));
@@ -161,6 +186,7 @@ contract AutoVaultAdapterBsc is BaseAdapter {
         // update user info
         userInfo.rewardDebt1 = 0;
 
+        // send reward in bnb
         if (amountOut != 0) {
             uint256 taxAmount = (amountOut *
                 IYBNFT(authority.hYBNFT()).performanceFee(_tokenId)) / 1e4;
@@ -189,7 +215,8 @@ contract AutoVaultAdapterBsc is BaseAdapter {
             IVaultStrategy(vStrategy).wantLockedTotal()) /
             IVaultStrategy(vStrategy).sharesTotal();
 
-        if (vAmount <= userInfo.invested) return (0, 0);
+        if (vAmount <= userInfo.invested)
+            return (userInfo.rewardDebt1, userInfo.rewardDebt1);
         vAmount -= userInfo.invested;
 
         address token0 = IPancakePair(stakingToken).token0();
@@ -236,7 +263,7 @@ contract AutoVaultAdapterBsc is BaseAdapter {
                             .length - 1
                     ];
 
-        return (reward, reward);
+        return (reward + userInfo.rewardDebt1, reward + userInfo.rewardDebt1);
     }
 
     /**
@@ -262,7 +289,7 @@ contract AutoVaultAdapterBsc is BaseAdapter {
         if (amountOut > userInfo.invested) {
             rewardPercent =
                 ((amountOut - userInfo.invested) * 1e12) /
-                userInfo.invested;
+                amountOut;
         }
 
         // swap withdrawn lp to bnb
@@ -282,7 +309,7 @@ contract AutoVaultAdapterBsc is BaseAdapter {
             );
         }
 
-        // update invested information for token id
+        // remove userInfo and stake pendingReward to rewardDebt1
         uint256 reward = (amountOut * rewardPercent) / 1e12;
         userInfo.amount = 0;
         userInfo.invested = 0;
@@ -327,9 +354,7 @@ contract AutoVaultAdapterBsc is BaseAdapter {
         require(afterShare > beforeShare, "Failed to update funds");
 
         userInfo.amount = afterShare - beforeShare;
-        userInfo.invested =
-            (amountOut * IVaultStrategy(vStrategy).entranceFeeFactor()) /
-            IVaultStrategy(vStrategy).entranceFeeFactorMax();
+        userInfo.invested = amountOut;
 
         return msg.value;
     }
