@@ -1,46 +1,34 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.4;
 
-import "../../interfaces/IVaultStrategy.sol";
-import "../../interfaces/IHedgepieInvestor.sol";
 import "../../libraries/HedgepieLibraryBsc.sol";
+import "../../interfaces/IHedgepieInvestor.sol";
 
 interface IStrategy {
-    function pendingAUTO(
-        uint256 pid,
-        address user
-    ) external view returns (uint256);
+    function deposit(uint256) external;
 
-    function userInfo(
-        uint256 pid,
-        address user
-    ) external view returns (uint256, uint256);
+    function withdraw(uint256) external;
 
-    function deposit(uint256 pid, uint256 shares) external;
+    function balance() external view returns (uint256);
 
-    function withdraw(uint256 pid, uint256 shares) external;
+    function totalSupply() external view returns (uint256);
+
+    function getPricePerFullShare() external view returns (uint256);
 }
 
-contract AutoVaultAdapterBsc is BaseAdapter {
-    // vStrategy address of vault
-    address public vStrategy;
-
+contract BeefyVaultAdapterBsc is BaseAdapter {
     /**
      * @notice Construct
-     * @param _pid pool id of strategy
      * @param _strategy  address of strategy
-     * @param _vStrategy  address of vault strategy
      * @param _stakingToken  address of staking token
-     * @param _router  address of DEX router
+     * @param _router  address of router for LP
      * @param _swapRouter  address of swap router
      * @param _wbnb  address of wbnb
      * @param _name  adatper name
      * @param _hedgepieAuthority HedgepieAuthority address
      */
     constructor(
-        uint256 _pid,
         address _strategy,
-        address _vStrategy,
         address _stakingToken,
         address _router,
         address _swapRouter,
@@ -48,10 +36,9 @@ contract AutoVaultAdapterBsc is BaseAdapter {
         string memory _name,
         address _hedgepieAuthority
     ) BaseAdapter(_hedgepieAuthority) {
-        pid = _pid;
         strategy = _strategy;
-        vStrategy = _vStrategy;
         stakingToken = _stakingToken;
+        repayToken = _strategy;
         router = _router;
         swapRouter = _swapRouter;
         wbnb = _wbnb;
@@ -59,7 +46,7 @@ contract AutoVaultAdapterBsc is BaseAdapter {
     }
 
     /**
-     * @notice Deposit with Bnb
+     * @notice Deposit with BNB
      * @param _tokenId YBNFT token id
      */
     function deposit(
@@ -67,37 +54,41 @@ contract AutoVaultAdapterBsc is BaseAdapter {
     ) external payable override onlyInvestor returns (uint256 amountOut) {
         UserAdapterInfo storage userInfo = userAdapterInfos[_tokenId];
 
-        // 1. get LP
-        amountOut = HedgepieLibraryBsc.getLP(
-            IYBNFT.AdapterParam(0, stakingToken, address(this)),
-            wbnb,
-            msg.value
-        );
+        // 1. get stakingToken
+        if (router == address(0)) {
+            amountOut = HedgepieLibraryBsc.swapOnRouter(
+                msg.value,
+                address(this),
+                stakingToken,
+                swapRouter,
+                wbnb
+            );
+        } else {
+            amountOut = HedgepieLibraryBsc.getLP(
+                IYBNFT.AdapterParam(0, stakingToken, address(this)),
+                wbnb,
+                msg.value
+            );
+        }
 
         // 2. deposit to vault
-        (uint256 beforeShare, ) = IStrategy(strategy).userInfo(
-            pid,
-            address(this)
-        );
+        uint256 repayAmt = IERC20(repayToken).balanceOf(address(this));
         IERC20(stakingToken).approve(strategy, amountOut);
-        IStrategy(strategy).deposit(pid, amountOut);
-        (uint256 afterShare, ) = IStrategy(strategy).userInfo(
-            pid,
-            address(this)
-        );
-        require(afterShare > beforeShare, "Failed to deposit");
+        IStrategy(strategy).deposit(amountOut);
+        repayAmt = IERC20(repayToken).balanceOf(address(this)) - repayAmt;
+        require(repayAmt != 0, "Failed to deposit");
 
         // 3. update user info
-        userInfo.amount += afterShare - beforeShare;
+        userInfo.amount += repayAmt;
         userInfo.invested += amountOut;
 
         return msg.value;
     }
 
     /**
-     * @notice Withdraw the deposited Bnb
+     * @notice Withdraw the deposited BNB
      * @param _tokenId YBNFT token id
-     * @param _amount amount of staking token to withdraw
+     * @param _amount amount of repayToken to withdraw
      */
     function withdraw(
         uint256 _tokenId,
@@ -107,20 +98,27 @@ contract AutoVaultAdapterBsc is BaseAdapter {
 
         if (_amount == 0) return 0;
 
-        // 1. withdraw from Vault
-        uint256 vAmount = (_amount *
-            IVaultStrategy(vStrategy).wantLockedTotal()) /
-            IVaultStrategy(vStrategy).sharesTotal();
+        // 1. withdraw from vault
         uint256 lpOut = IERC20(stakingToken).balanceOf(address(this));
-        IStrategy(strategy).withdraw(pid, vAmount);
+        IStrategy(strategy).withdraw(_amount);
         lpOut = IERC20(stakingToken).balanceOf(address(this)) - lpOut;
 
         // 2. swap withdrawn lp to bnb
-        amountOut = HedgepieLibraryBsc.withdrawLP(
-            IYBNFT.AdapterParam(0, stakingToken, address(this)),
-            wbnb,
-            lpOut
-        );
+        if (router == address(0)) {
+            amountOut = HedgepieLibraryBsc.swapForBnb(
+                lpOut,
+                address(this),
+                stakingToken,
+                swapRouter,
+                wbnb
+            );
+        } else {
+            amountOut = HedgepieLibraryBsc.withdrawLP(
+                IYBNFT.AdapterParam(0, stakingToken, address(this)),
+                wbnb,
+                lpOut
+            );
+        }
 
         // 3. update userInfo
         userInfo.amount -= _amount;
@@ -144,12 +142,14 @@ contract AutoVaultAdapterBsc is BaseAdapter {
         UserAdapterInfo storage userInfo = userAdapterInfos[_tokenId];
 
         // 1. check if reward is generated
-        uint256 vAmount = (userInfo.amount *
-            IVaultStrategy(vStrategy).wantLockedTotal()) /
-            IVaultStrategy(vStrategy).sharesTotal();
+        uint256 wantAmt = ((userInfo.amount *
+            IStrategy(strategy).getPricePerFullShare()) / 1e18);
+        uint256 wantShare = ((
+            wantAmt > userInfo.invested ? wantAmt - userInfo.invested : 0
+        ) * 1e18) / IStrategy(strategy).getPricePerFullShare();
 
         // 2. if reward is not generated
-        if (vAmount <= userInfo.invested) {
+        if (wantAmt <= userInfo.invested || wantShare == 0) {
             if (userInfo.rewardDebt1 == 0) return 0;
 
             amountOut = userInfo.rewardDebt1;
@@ -161,36 +161,38 @@ contract AutoVaultAdapterBsc is BaseAdapter {
         }
 
         // 3. withdraw reward from vault
-        vAmount -= userInfo.invested;
-        (uint256 beforeShare, ) = IStrategy(strategy).userInfo(
-            pid,
-            address(this)
-        );
         uint256 lpOut = IERC20(stakingToken).balanceOf(address(this));
-        IStrategy(strategy).withdraw(pid, vAmount);
+        IStrategy(strategy).withdraw(wantShare);
         lpOut = IERC20(stakingToken).balanceOf(address(this)) - lpOut;
-        (uint256 afterShare, ) = IStrategy(strategy).userInfo(
-            pid,
-            address(this)
-        );
+        require(lpOut != 0, "Failed to claim");
 
         // 4. swap reward to bnb
-        amountOut =
-            HedgepieLibraryBsc.withdrawLP(
-                IYBNFT.AdapterParam(0, stakingToken, address(this)),
-                wbnb,
-                lpOut
-            ) +
-            userInfo.rewardDebt1;
+        if (router == address(0)) {
+            amountOut =
+                HedgepieLibraryBsc.swapForBnb(
+                    lpOut,
+                    address(this),
+                    stakingToken,
+                    swapRouter,
+                    wbnb
+                ) +
+                userInfo.rewardDebt1;
+        } else {
+            amountOut =
+                HedgepieLibraryBsc.withdrawLP(
+                    IYBNFT.AdapterParam(0, stakingToken, address(this)),
+                    wbnb,
+                    lpOut
+                ) +
+                userInfo.rewardDebt1;
+        }
 
         // 5. update user info
-        userInfo.amount -= beforeShare - afterShare;
+        userInfo.amount -= wantShare;
         userInfo.rewardDebt1 = 0;
 
         // 6. send reward in bnb to investor
-        if (amountOut != 0) {
-            _sendToInvestor(amountOut, _tokenId);
-        }
+        if (amountOut != 0) _sendToInvestor(amountOut, _tokenId);
     }
 
     /**
@@ -202,58 +204,57 @@ contract AutoVaultAdapterBsc is BaseAdapter {
     ) external view override returns (uint256 reward, uint256) {
         UserAdapterInfo memory userInfo = userAdapterInfos[_tokenId];
 
-        uint256 vAmount = (userInfo.amount *
-            IVaultStrategy(vStrategy).wantLockedTotal()) /
-            IVaultStrategy(vStrategy).sharesTotal();
+        uint256 wantAmt = ((userInfo.amount *
+            IStrategy(strategy).getPricePerFullShare()) / 1e18);
 
-        if (vAmount <= userInfo.invested)
+        if (wantAmt <= userInfo.invested)
             return (userInfo.rewardDebt1, userInfo.rewardDebt1);
-        vAmount -= userInfo.invested;
 
-        address token0 = IPancakePair(stakingToken).token0();
-        address token1 = IPancakePair(stakingToken).token1();
-        (uint112 reserve0, uint112 reserve1, ) = IPancakePair(stakingToken)
-            .getReserves();
+        wantAmt -= userInfo.invested;
 
-        uint256 amount0 = (reserve0 * vAmount) /
-            IPancakePair(stakingToken).totalSupply();
-        uint256 amount1 = (reserve1 * vAmount) /
-            IPancakePair(stakingToken).totalSupply();
+        if (router == address(0)) {
+            address[] memory pathStake = IPathFinder(authority.pathFinder())
+                .getPaths(swapRouter, stakingToken, wbnb);
 
-        if (token0 == wbnb) reward += amount0;
-        else
-            reward += amount0 == 0
-                ? 0
-                : IPancakeRouter(swapRouter).getAmountsOut(
-                    amount0,
-                    IPathFinder(authority.pathFinder()).getPaths(
-                        swapRouter,
-                        token0,
-                        wbnb
-                    )
-                )[
-                        IPathFinder(authority.pathFinder())
-                            .getPaths(swapRouter, token0, wbnb)
-                            .length - 1
+            if (stakingToken != wbnb)
+                reward += wantAmt == 0
+                    ? 0
+                    : IPancakeRouter(swapRouter).getAmountsOut(
+                        wantAmt,
+                        pathStake
+                    )[pathStake.length - 1];
+        } else {
+            address token0 = IPancakePair(stakingToken).token0();
+            address token1 = IPancakePair(stakingToken).token1();
+            address[] memory path0 = IPathFinder(authority.pathFinder())
+                .getPaths(swapRouter, token0, wbnb);
+            address[] memory path1 = IPathFinder(authority.pathFinder())
+                .getPaths(swapRouter, token1, wbnb);
+
+            (uint112 reserve0, uint112 reserve1, ) = IPancakePair(stakingToken)
+                .getReserves();
+
+            uint256 amount0 = (reserve0 * wantAmt) /
+                IPancakePair(stakingToken).totalSupply();
+            uint256 amount1 = (reserve1 * wantAmt) /
+                IPancakePair(stakingToken).totalSupply();
+
+            if (token0 == wbnb) reward += amount0;
+            else
+                reward += amount0 == 0
+                    ? 0
+                    : IPancakeRouter(swapRouter).getAmountsOut(amount0, path0)[
+                        path0.length - 1
                     ];
 
-        if (token1 == wbnb) reward += amount1;
-        else
-            reward += amount1 == 0
-                ? 0
-                : IPancakeRouter(swapRouter).getAmountsOut(
-                    amount1,
-                    IPathFinder(authority.pathFinder()).getPaths(
-                        swapRouter,
-                        token1,
-                        wbnb
-                    )
-                )[
-                        IPathFinder(authority.pathFinder())
-                            .getPaths(swapRouter, token1, wbnb)
-                            .length - 1
+            if (token1 == wbnb) reward += amount1;
+            else
+                reward += amount1 == 0
+                    ? 0
+                    : IPancakeRouter(swapRouter).getAmountsOut(amount1, path1)[
+                        path1.length - 1
                     ];
-
+        }
         return (reward + userInfo.rewardDebt1, reward + userInfo.rewardDebt1);
     }
 
@@ -269,10 +270,7 @@ contract AutoVaultAdapterBsc is BaseAdapter {
 
         // 1. withdraw all from Vault
         amountOut = IERC20(stakingToken).balanceOf(address(this));
-        uint256 vAmount = (userInfo.amount *
-            IVaultStrategy(vStrategy).wantLockedTotal()) /
-            IVaultStrategy(vStrategy).sharesTotal();
-        IStrategy(strategy).withdraw(pid, vAmount);
+        IStrategy(strategy).withdraw(userInfo.amount);
         amountOut = IERC20(stakingToken).balanceOf(address(this)) - amountOut;
 
         // 2. calc reward
@@ -325,27 +323,31 @@ contract AutoVaultAdapterBsc is BaseAdapter {
         UserAdapterInfo storage userInfo = userAdapterInfos[_tokenId];
 
         // 1. get LP
-        amountOut = HedgepieLibraryBsc.getLP(
-            IYBNFT.AdapterParam(0, stakingToken, address(this)),
-            wbnb,
-            msg.value
-        );
+        if (router == address(0)) {
+            amountOut = HedgepieLibraryBsc.swapOnRouter(
+                msg.value,
+                address(this),
+                stakingToken,
+                swapRouter,
+                wbnb
+            );
+        } else {
+            amountOut = HedgepieLibraryBsc.getLP(
+                IYBNFT.AdapterParam(0, stakingToken, address(this)),
+                wbnb,
+                msg.value
+            );
+        }
 
         // 2. deposit to vault
-        (uint256 beforeShare, ) = IStrategy(strategy).userInfo(
-            pid,
-            address(this)
-        );
+        uint256 repayAmt = IERC20(repayToken).balanceOf(address(this));
         IERC20(stakingToken).approve(strategy, amountOut);
-        IStrategy(strategy).deposit(pid, amountOut);
-        (uint256 afterShare, ) = IStrategy(strategy).userInfo(
-            pid,
-            address(this)
-        );
-        require(afterShare > beforeShare, "Failed to update funds");
+        IStrategy(strategy).deposit(amountOut);
+        repayAmt = IERC20(repayToken).balanceOf(address(this)) - repayAmt;
+        require(repayAmt != 0, "Failed to update funds");
 
         // 3. update user info
-        userInfo.amount = afterShare - beforeShare;
+        userInfo.amount = repayAmt;
         userInfo.invested = amountOut;
 
         return msg.value;
