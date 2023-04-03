@@ -56,10 +56,16 @@ function encode(types, values) {
     return ethers.utils.defaultAbiCoder.encode(types, values);
 }
 
+const unlockAccount = async (address) => {
+    await hre.network.provider.send("hardhat_impersonateAccount", [address]);
+    return hre.ethers.provider.getSigner(address);
+};
+
 module.exports = {
     encode,
     setPath,
     forkETHNetwork,
     forkBNBNetwork,
     forkPolygonNetwork,
+    unlockAccount,
 };
