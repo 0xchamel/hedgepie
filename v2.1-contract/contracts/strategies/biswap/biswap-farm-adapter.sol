@@ -20,8 +20,6 @@ interface IStrategy {
 }
 
 contract BiSwapFarmLPAdapterBsc is BaseAdapter {
-    bool immutable isSame;
-
     /**
      * @notice Construct
      * @param _strategy  address of strategy
@@ -52,8 +50,6 @@ contract BiSwapFarmLPAdapterBsc is BaseAdapter {
         swapRouter = _swapRouter;
         wbnb = _wbnb;
         name = _name;
-
-        isSame = stakingToken == rewardToken;
     }
 
     /**
@@ -141,7 +137,7 @@ contract BiSwapFarmLPAdapterBsc is BaseAdapter {
         require(_amount <= userInfo.amount, "Not enough balance to withdraw");
 
         amountOut = IERC20(stakingToken).balanceOf(address(this));
-        uint256 rewardAmt = isSame
+        uint256 rewardAmt = pid == 0
             ? amountOut
             : IERC20(rewardToken).balanceOf(address(this));
 
@@ -154,9 +150,9 @@ contract BiSwapFarmLPAdapterBsc is BaseAdapter {
                 IERC20(stakingToken).balanceOf(address(this)) -
                 amountOut;
 
-            if (isSame) {
-                amountOut = amountOut > _amount ? _amount : amountOut;
-                rewardAmt = amountOut > _amount ? amountOut - _amount : 0;
+            if (pid == 0) {
+                rewardAmt = amountOut - _amount;
+                amountOut = _amount;
             } else {
                 rewardAmt =
                     IERC20(rewardToken).balanceOf(address(this)) -
@@ -265,7 +261,6 @@ contract BiSwapFarmLPAdapterBsc is BaseAdapter {
 
             if (
                 rewardAmt != 0 &&
-                rewardToken != address(0) &&
                 mAdapter.totalStaked != 0
             ) {
                 mAdapter.accTokenPerShare1 +=
@@ -378,13 +373,9 @@ contract BiSwapFarmLPAdapterBsc is BaseAdapter {
                 IERC20(stakingToken).balanceOf(address(this)) -
                 amountOut;
 
-            if (isSame) {
-                amountOut = amountOut > userInfo.amount
-                    ? userInfo.amount
-                    : amountOut;
-                rewardAmt = amountOut > userInfo.amount
-                    ? amountOut - userInfo.amount
-                    : 0;
+            if (pid == 0) {
+                rewardAmt = amountOut - userInfo.amount;
+                amountOut = userInfo.amount;
             } else {
                 rewardAmt =
                     IERC20(rewardToken).balanceOf(address(this)) -
