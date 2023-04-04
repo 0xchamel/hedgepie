@@ -96,9 +96,9 @@ contract BeltVaultAdapterBsc is BaseAdapter {
         uint256 _tokenId,
         uint256 _amount
     ) external payable override onlyInvestor returns (uint256 amountOut) {
-        UserAdapterInfo storage userInfo = userAdapterInfos[_tokenId];
-
         if (_amount == 0) return 0;
+
+        UserAdapterInfo storage userInfo = userAdapterInfos[_tokenId];
 
         bool isBNB = stakingToken == wbnb;
 
@@ -215,6 +215,7 @@ contract BeltVaultAdapterBsc is BaseAdapter {
     ) external view override returns (uint256 reward, uint256) {
         UserAdapterInfo memory userInfo = userAdapterInfos[_tokenId];
 
+        // 1. calc want amount
         uint256 wantAmt = ((userInfo.amount *
             IStrategy(strategy).getPricePerFullShare()) / 1e18);
 
@@ -222,6 +223,7 @@ contract BeltVaultAdapterBsc is BaseAdapter {
             return (userInfo.rewardDebt1, userInfo.rewardDebt1);
         wantAmt -= userInfo.invested;
 
+        // 2. calc reward
         if (stakingToken == wbnb) reward += wantAmt;
         else
             reward += wantAmt == 0

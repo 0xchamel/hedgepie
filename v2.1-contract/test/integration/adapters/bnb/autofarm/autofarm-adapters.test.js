@@ -1,7 +1,11 @@
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
-const { setPath, encode } = require("../../../../shared/utilities");
+const {
+    setPath,
+    encode,
+    checkPendingWithClaim,
+} = require("../../../../shared/utilities");
 const {
     setupHedgepie,
     setupBscAdapterWithLib,
@@ -19,36 +23,6 @@ async function doubleWantLockedTotal(address, slot, current) {
 }
 
 describe("AutoFarm Adapters Integration Test", function () {
-    const checkPendingWithClaim = async (
-        investor,
-        user,
-        tokenId,
-        performanceFee
-    ) => {
-        const userPending = await investor.pendingReward(tokenId, user.address);
-        expect(userPending.withdrawable).gt(0);
-
-        const estimatePending = BigNumber.from(userPending.withdrawable)
-            .mul(1e4 - performanceFee)
-            .div(1e4);
-
-        const beforeBNB = await ethers.provider.getBalance(user.address);
-
-        const claimTx = await investor.connect(user).claim(tokenId);
-        const claimTxResp = await claimTx.wait();
-        const gasAmt = BigNumber.from(claimTxResp.effectiveGasPrice).mul(
-            BigNumber.from(claimTxResp.gasUsed)
-        );
-
-        const afterBNB = await ethers.provider.getBalance(user.address);
-        const actualPending = BigNumber.from(afterBNB)
-            .add(gasAmt)
-            .sub(beforeBNB);
-
-        // actualPending in 2% range of estimatePending
-        expect(actualPending).gte(estimatePending.mul(95).div(1e2));
-    };
-
     before("Deploy contract", async function () {
         [
             this.governor,

@@ -94,9 +94,9 @@ contract BeefyVaultAdapterBsc is BaseAdapter {
         uint256 _tokenId,
         uint256 _amount
     ) external payable override onlyInvestor returns (uint256 amountOut) {
-        UserAdapterInfo storage userInfo = userAdapterInfos[_tokenId];
-
         if (_amount == 0) return 0;
+
+        UserAdapterInfo storage userInfo = userAdapterInfos[_tokenId];
 
         // 1. withdraw from vault
         uint256 lpOut = IERC20(stakingToken).balanceOf(address(this));
@@ -204,12 +204,14 @@ contract BeefyVaultAdapterBsc is BaseAdapter {
     ) external view override returns (uint256 reward, uint256) {
         UserAdapterInfo memory userInfo = userAdapterInfos[_tokenId];
 
+        // 1. calc want amount
         uint256 wantAmt = ((userInfo.amount *
             IStrategy(strategy).getPricePerFullShare()) / 1e18);
 
         if (wantAmt <= userInfo.invested)
             return (userInfo.rewardDebt1, userInfo.rewardDebt1);
 
+        // 2. calc reward
         wantAmt -= userInfo.invested;
 
         if (router == address(0)) {

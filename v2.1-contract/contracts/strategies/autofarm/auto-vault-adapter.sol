@@ -103,9 +103,9 @@ contract AutoVaultAdapterBsc is BaseAdapter {
         uint256 _tokenId,
         uint256 _amount
     ) external payable override onlyInvestor returns (uint256 amountOut) {
-        UserAdapterInfo storage userInfo = userAdapterInfos[_tokenId];
-
         if (_amount == 0) return 0;
+
+        UserAdapterInfo storage userInfo = userAdapterInfos[_tokenId];
 
         // 1. withdraw from Vault
         uint256 vAmount = (_amount *
@@ -202,12 +202,15 @@ contract AutoVaultAdapterBsc is BaseAdapter {
     ) external view override returns (uint256 reward, uint256) {
         UserAdapterInfo memory userInfo = userAdapterInfos[_tokenId];
 
+        // 1. calc want amount
         uint256 vAmount = (userInfo.amount *
             IVaultStrategy(vStrategy).wantLockedTotal()) /
             IVaultStrategy(vStrategy).sharesTotal();
 
         if (vAmount <= userInfo.invested)
             return (userInfo.rewardDebt1, userInfo.rewardDebt1);
+
+        // 2. calc reward
         vAmount -= userInfo.invested;
 
         address token0 = IPancakePair(stakingToken).token0();

@@ -5,10 +5,10 @@ import "../../libraries/HedgepieLibraryBsc.sol";
 import "../../interfaces/IHedgepieInvestor.sol";
 
 interface IStrategy {
-    function pendingBSW(uint256 _pid, address _user)
-        external
-        view
-        returns (uint256);
+    function pendingBSW(
+        uint256 _pid,
+        address _user
+    ) external view returns (uint256);
 
     function deposit(uint256 pid, uint256 amount) external;
 
@@ -56,18 +56,14 @@ contract BiSwapFarmLPAdapterBsc is BaseAdapter {
      * @notice Deposit with BNB
      * @param _tokenId YBNFT token id
      */
-    function deposit(uint256 _tokenId)
-        external
-        payable
-        override
-        onlyInvestor
-        returns (uint256 amountOut)
-    {
+    function deposit(
+        uint256 _tokenId
+    ) external payable override onlyInvestor returns (uint256 amountOut) {
         UserAdapterInfo storage userInfo = userAdapterInfos[_tokenId];
 
         uint256 rewardAmt = IERC20(rewardToken).balanceOf(address(this));
 
-        // swap to staking token
+        // 1. swap to staking token
         if (router == address(0)) {
             amountOut = HedgepieLibraryBsc.swapOnRouter(
                 msg.value,
@@ -84,23 +80,25 @@ contract BiSwapFarmLPAdapterBsc is BaseAdapter {
             );
         }
 
+        // 2. deposit staking token to strategy
         IERC20(stakingToken).approve(strategy, amountOut);
         if (pid == 0) IStrategy(strategy).enterStaking(amountOut);
         else IStrategy(strategy).deposit(pid, amountOut);
 
         unchecked {
+            // 3. check reward amount
             rewardAmt =
                 IERC20(rewardToken).balanceOf(address(this)) -
                 rewardAmt;
 
-            // update accTokenPerShare if reward is generated
+            // 4. update accTokenPerShare if reward is generated
             if (rewardAmt != 0 && mAdapter.totalStaked != 0) {
                 mAdapter.accTokenPerShare1 +=
                     (rewardAmt * 1e12) /
                     mAdapter.totalStaked;
             }
 
-            // update user's rewardDebt value when user staked several times
+            // 5. update user's rewardDebt value when user staked several times
             if (userInfo.amount != 0) {
                 userInfo.rewardDebt1 +=
                     (userInfo.amount *
@@ -108,7 +106,7 @@ contract BiSwapFarmLPAdapterBsc is BaseAdapter {
                     1e12;
             }
 
-            // update mAdapter & userInfo
+            // 6. update mAdapter & userInfo
             userInfo.amount += amountOut;
             userInfo.userShare1 = mAdapter.accTokenPerShare1;
             mAdapter.totalStaked += amountOut;
@@ -122,13 +120,10 @@ contract BiSwapFarmLPAdapterBsc is BaseAdapter {
      * @param _tokenId YBNFT token id
      * @param _amount amount of staking token to withdraw
      */
-    function withdraw(uint256 _tokenId, uint256 _amount)
-        external
-        payable
-        override
-        onlyInvestor
-        returns (uint256 amountOut)
-    {
+    function withdraw(
+        uint256 _tokenId,
+        uint256 _amount
+    ) external payable override onlyInvestor returns (uint256 amountOut) {
         if (_amount == 0) return 0;
 
         UserAdapterInfo storage userInfo = userAdapterInfos[_tokenId];
@@ -136,13 +131,13 @@ contract BiSwapFarmLPAdapterBsc is BaseAdapter {
         // validation of _amount parameter
         require(_amount <= userInfo.amount, "Not enough balance to withdraw");
 
+        // 1. calc reward after withdraw
         bool isSame = stakingToken == rewardToken;
         amountOut = IERC20(stakingToken).balanceOf(address(this));
         uint256 rewardAmt = isSame
             ? amountOut
             : IERC20(rewardToken).balanceOf(address(this));
 
-        // remove stakingToken
         if (pid == 0) IStrategy(strategy).leaveStaking(_amount);
         else IStrategy(strategy).withdraw(pid, _amount);
 
@@ -162,7 +157,7 @@ contract BiSwapFarmLPAdapterBsc is BaseAdapter {
 
             require(_amount == amountOut, "Failed to withdraw");
 
-            // update accTokenPerShare if reward is generated
+            // 2. update accTokenPerShare if reward is generated
             if (rewardAmt != 0) {
                 mAdapter.accTokenPerShare1 +=
                     (rewardAmt * 1e12) /
@@ -170,7 +165,7 @@ contract BiSwapFarmLPAdapterBsc is BaseAdapter {
             }
         }
 
-        // swap withdrawn staking tokens to bnb
+        // 3. swap withdrawn staking tokens to bnb
         if (router == address(0)) {
             amountOut = HedgepieLibraryBsc.swapForBnb(
                 amountOut,
@@ -187,13 +182,13 @@ contract BiSwapFarmLPAdapterBsc is BaseAdapter {
             );
         }
 
-        // get user's rewards
+        // 4. get user's rewards
         (uint256 reward, ) = HedgepieLibraryBsc.getMRewards(
             _tokenId,
             address(this)
         );
 
-        // swap reward to bnb
+        // 5. swap reward to bnb
         uint256 rewardBnb;
         if (reward != 0) {
             rewardBnb = HedgepieLibraryBsc.swapForBnb(
@@ -207,7 +202,7 @@ contract BiSwapFarmLPAdapterBsc is BaseAdapter {
             amountOut += rewardBnb;
         }
 
-        // update mAdapter & user Info
+        // 6. update mAdapter & user Info
         unchecked {
             mAdapter.totalStaked -= _amount;
 
@@ -216,6 +211,7 @@ contract BiSwapFarmLPAdapterBsc is BaseAdapter {
             userInfo.rewardDebt1 = 0;
         }
 
+        // 7. send to treasury and investor
         if (amountOut != 0) {
             bool success;
             if (rewardBnb != 0) {
@@ -240,18 +236,14 @@ contract BiSwapFarmLPAdapterBsc is BaseAdapter {
      * @notice Claim the pending reward
      * @param _tokenId YBNFT token id
      */
-    function claim(uint256 _tokenId)
-        external
-        payable
-        override
-        onlyInvestor
-        returns (uint256 amountOut)
-    {
+    function claim(
+        uint256 _tokenId
+    ) external payable override onlyInvestor returns (uint256 amountOut) {
         UserAdapterInfo storage userInfo = userAdapterInfos[_tokenId];
 
+        // 1. calc & claim rewards
         uint256 rewardAmt = IERC20(rewardToken).balanceOf(address(this));
 
-        // claim rewards
         if (pid == 0) IStrategy(strategy).leaveStaking(0);
         else IStrategy(strategy).withdraw(pid, 0);
 
@@ -260,6 +252,7 @@ contract BiSwapFarmLPAdapterBsc is BaseAdapter {
                 IERC20(rewardToken).balanceOf(address(this)) -
                 rewardAmt;
 
+            // 2. update mAdapter infor
             if (
                 rewardAmt != 0 &&
                 rewardToken != address(0) &&
@@ -271,19 +264,20 @@ contract BiSwapFarmLPAdapterBsc is BaseAdapter {
             }
         }
 
-        // get user's rewards
+        // 3. get user's rewards
         (uint256 reward, ) = HedgepieLibraryBsc.getMRewards(
             _tokenId,
             address(this)
         );
 
-        // update user info
+        // 4. update user info
         unchecked {
             userInfo.userShare1 = mAdapter.accTokenPerShare1;
             userInfo.rewardDebt1 = 0;
         }
 
         if (reward != 0) {
+            // 5. swap reward to bnb
             amountOut = HedgepieLibraryBsc.swapForBnb(
                 reward,
                 address(this),
@@ -292,19 +286,7 @@ contract BiSwapFarmLPAdapterBsc is BaseAdapter {
                 wbnb
             );
 
-            reward =
-                (amountOut *
-                    IYBNFT(authority.hYBNFT()).performanceFee(_tokenId)) /
-                1e4;
-            (bool success, ) = payable(
-                IHedgepieInvestor(authority.hInvestor()).treasury()
-            ).call{value: reward}("");
-            require(success, "Failed to send bnb to Treasury");
-
-            (success, ) = payable(msg.sender).call{value: amountOut - reward}(
-                ""
-            );
-            require(success, "Failed to send bnb");
+            _sendToInvestor(amountOut, _tokenId);
         }
     }
 
@@ -312,14 +294,12 @@ contract BiSwapFarmLPAdapterBsc is BaseAdapter {
      * @notice Return the pending reward by Bnb
      * @param _tokenId YBNFT token id
      */
-    function pendingReward(uint256 _tokenId)
-        external
-        view
-        override
-        returns (uint256 reward, uint256 withdrawable)
-    {
+    function pendingReward(
+        uint256 _tokenId
+    ) external view override returns (uint256 reward, uint256 withdrawable) {
         UserAdapterInfo memory userInfo = userAdapterInfos[_tokenId];
 
+        // 1. calc updatedAccTokenPerShare
         uint256 updatedAccTokenPerShare = mAdapter.accTokenPerShare1;
         if (mAdapter.totalStaked != 0)
             updatedAccTokenPerShare += ((IStrategy(strategy).pendingBSW(
@@ -327,11 +307,13 @@ contract BiSwapFarmLPAdapterBsc is BaseAdapter {
                 address(this)
             ) * 1e12) / mAdapter.totalStaked);
 
+        // 2. calc rewards from updatedAccTokenPerShare
         uint256 tokenRewards = ((updatedAccTokenPerShare -
             userInfo.userShare1) * userInfo.amount) /
             1e12 +
             userInfo.rewardDebt1;
 
+        // 3. calc pending reward in bnb
         if (tokenRewards != 0) {
             if (rewardToken == wbnb) reward = tokenRewards;
             else {
