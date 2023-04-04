@@ -49,6 +49,7 @@ contract YBNFT is ERC721, HedgepieAccessControlled {
     // tokenId => performanceFee
     mapping(uint256 => uint256) public performanceFee;
 
+    /// @dev events
     event Mint(address indexed minter, uint256 indexed tokenId);
     event AdapterInfoUpdated(
         uint256 indexed tokenId,

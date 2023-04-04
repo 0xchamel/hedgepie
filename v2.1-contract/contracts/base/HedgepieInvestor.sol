@@ -35,6 +35,7 @@ contract HedgepieInvestor is ReentrancyGuard, HedgepieAccessControlled {
     // treasury address
     address public treasury;
 
+    /// @dev events
     event Deposited(
         address indexed user,
         address nft,
@@ -83,10 +84,10 @@ contract HedgepieInvestor is ReentrancyGuard, HedgepieAccessControlled {
         UserInfo storage userInfo = userInfos[_tokenId][msg.sender];
         TokenInfo storage tokenInfo = tokenInfos[_tokenId];
 
-        // calc reward
+        // 1. claim reward from adapters
         _calcReward(_tokenId);
 
-        // deposit to adapters
+        // 2. deposit to adapters
         IYBNFT.AdapterParam[] memory adapterInfos = IYBNFT(authority.hYBNFT())
             .getTokenAdapterParams(_tokenId);
 
@@ -98,13 +99,13 @@ contract HedgepieInvestor is ReentrancyGuard, HedgepieAccessControlled {
                 IAdapter(adapter.addr).deposit{value: amountIn}(_tokenId);
         }
 
-        // update user & token info
+        // 3. update user & token info saved in investor
         uint256 investedUSDT = (msg.value * HedgepieLibraryBsc.getBNBPrice()) /
             1e18;
         userInfo.amount += investedUSDT;
         tokenInfo.totalStaked += investedUSDT;
 
-        // update token info in YBNFT
+        // 4. update token info in YBNFT
         IYBNFT(authority.hYBNFT()).updateTVLInfo(_tokenId, investedUSDT, true);
         IYBNFT(authority.hYBNFT()).updateTradedInfo(
             _tokenId,
@@ -117,6 +118,7 @@ contract HedgepieInvestor is ReentrancyGuard, HedgepieAccessControlled {
             true
         );
 
+        // 5. emit events
         emit Deposited(msg.sender, authority.hYBNFT(), _tokenId, msg.value);
     }
 
@@ -130,9 +132,10 @@ contract HedgepieInvestor is ReentrancyGuard, HedgepieAccessControlled {
         UserInfo memory userInfo = userInfos[_tokenId][msg.sender];
         TokenInfo storage tokenInfo = tokenInfos[_tokenId];
 
-        // calc reward
+        // 1. claim reward from adapters
         _calcReward(_tokenId);
 
+        // 2. withdraw funds from adapters
         IYBNFT.AdapterParam[] memory adapterInfos = IYBNFT(authority.hYBNFT())
             .getTokenAdapterParams(_tokenId);
 
@@ -152,13 +155,13 @@ contract HedgepieInvestor is ReentrancyGuard, HedgepieAccessControlled {
             "Failed to withdraw"
         );
 
-        // withdraw reward
+        // 3. withdraw reward from investor
         _withdrawReward(_tokenId);
 
-        // update token info
+        // 4. update token info
         tokenInfo.totalStaked -= userInfo.amount;
 
-        // update token info in YBNFT
+        // 5. update adapter info in YBNFT
         IYBNFT(authority.hYBNFT()).updateTVLInfo(
             _tokenId,
             userInfo.amount,
@@ -175,13 +178,15 @@ contract HedgepieInvestor is ReentrancyGuard, HedgepieAccessControlled {
             false
         );
 
-        // update user info
+        // 6. delete user info
         delete userInfos[_tokenId][msg.sender];
 
+        // 7. withdraw funds
         if (amountOut != 0) {
             (bool success, ) = payable(msg.sender).call{value: amountOut}("");
             require(success, "Failed to withdraw");
 
+            // 8. emit events
             emit Withdrawn(msg.sender, authority.hYBNFT(), _tokenId, amountOut);
         }
     }
@@ -195,6 +200,7 @@ contract HedgepieInvestor is ReentrancyGuard, HedgepieAccessControlled {
     ) public nonReentrant whenNotPaused onlyValidNFT(_tokenId) {
         TokenInfo storage tokenInfo = tokenInfos[_tokenId];
 
+        // 1. claim reward
         IYBNFT.AdapterParam[] memory adapterInfos = IYBNFT(authority.hYBNFT())
             .getTokenAdapterParams(_tokenId);
 
@@ -203,7 +209,7 @@ contract HedgepieInvestor is ReentrancyGuard, HedgepieAccessControlled {
             IAdapter(adapterInfos[i].addr).claim(_tokenId);
         pending = address(this).balance - pending;
 
-        // update profit info in YBNFT
+        // 2. update profit info in YBNFT
         IYBNFT(authority.hYBNFT()).updateProfitInfo(_tokenId, pending, true);
 
         if (pending != 0 && tokenInfo.totalStaked != 0)
@@ -211,6 +217,7 @@ contract HedgepieInvestor is ReentrancyGuard, HedgepieAccessControlled {
                 (pending * 1e12) /
                 tokenInfo.totalStaked;
 
+        // 3. withdraw reward from investor
         _withdrawReward(_tokenId);
     }
 
@@ -228,6 +235,7 @@ contract HedgepieInvestor is ReentrancyGuard, HedgepieAccessControlled {
 
         if (!IYBNFT(authority.hYBNFT()).exists(_tokenId)) return (0, 0);
 
+        // 1. get pending info from adapters
         IYBNFT.AdapterParam[] memory adapterInfos = IYBNFT(authority.hYBNFT())
             .getTokenAdapterParams(_tokenId);
 
@@ -239,6 +247,7 @@ contract HedgepieInvestor is ReentrancyGuard, HedgepieAccessControlled {
             withdrawable += _withdrawable;
         }
 
+        // 2. update accRewardShares
         uint256 updatedAccRewardShare1 = tokenInfo.accRewardShare;
         uint256 updatedAccRewardShare2 = tokenInfo.accRewardShare;
         if (tokenInfo.totalStaked != 0) {
@@ -303,20 +312,22 @@ contract HedgepieInvestor is ReentrancyGuard, HedgepieAccessControlled {
     }
 
     /**
-     * @notice calc reward
+     * @notice internal function for calc reward
      * @param _tokenId YBNFT token id
      */
     function _calcReward(uint256 _tokenId) internal {
         UserInfo storage userInfo = userInfos[_tokenId][msg.sender];
         TokenInfo storage tokenInfo = tokenInfos[_tokenId];
 
+        // 1. claim reward from adapters
         uint256 pending = address(this).balance;
         _claim(_tokenId);
         pending = address(this).balance - pending;
 
-        // update profit info in YBNFT
+        // 2. update profit info in YBNFT
         IYBNFT(authority.hYBNFT()).updateProfitInfo(_tokenId, pending, true);
 
+        // 3. update accRewardShare, rewardDebt values
         if (tokenInfo.totalStaked != 0 && pending != 0) {
             tokenInfo.accRewardShare +=
                 (pending * 1e12) /
@@ -336,40 +347,48 @@ contract HedgepieInvestor is ReentrancyGuard, HedgepieAccessControlled {
                 true
             );
         }
+
+        // 4. update userShare
         userInfo.userShare = tokenInfo.accRewardShare;
     }
 
     /**
-     * @notice withdraw reward
+     * @notice internal function for withdraw reward
      * @param _tokenId YBNFT token id
      */
     function _withdrawReward(uint256 _tokenId) internal {
         UserInfo storage userInfo = userInfos[_tokenId][msg.sender];
         TokenInfo memory tokenInfo = tokenInfos[_tokenId];
 
+        // 1. calc reward amount stored in investor
         uint256 rewardAmt = (userInfo.amount *
             (tokenInfo.accRewardShare - userInfo.userShare)) /
             1e12 +
             userInfo.rewardDebt;
+
+        // 2. update userInfo
         userInfo.rewardDebt = 0;
         userInfo.userShare = tokenInfo.accRewardShare;
 
+        // 3. withdraw rewards
         if (rewardAmt != 0) {
             (bool success, ) = payable(msg.sender).call{value: rewardAmt}("");
             require(success, "Failed to withdraw reward");
 
+            // 4. emit events
             emit Claimed(msg.sender, rewardAmt);
         }
     }
 
     /**
-     * @notice Claim internal
+     * @notice internal function for claim
      * @param _tokenId  YBNft token id
      */
     function _claim(uint256 _tokenId) internal {
         IYBNFT.AdapterParam[] memory adapterInfos = IYBNFT(authority.hYBNFT())
             .getTokenAdapterParams(_tokenId);
 
+        // claim rewards from adapters
         for (uint8 i; i < adapterInfos.length; i++)
             IAdapter(adapterInfos[i].addr).claim(_tokenId);
     }
