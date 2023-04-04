@@ -399,7 +399,7 @@ describe("Biswap Adapters Integration Test", function () {
                 Number(
                     ethers.utils.formatEther(afterBNB.sub(beforeBNB).toString())
                 )
-            ).to.be.gt(19);
+            ).to.be.gt(19.9);
 
             let bobInfo = await this.investor.userInfos(1, this.bob.address);
             expect(bobInfo.amount).to.eq(BigNumber.from(0));
@@ -488,12 +488,12 @@ describe("Biswap Adapters Integration Test", function () {
         it("test with token1 and token2 - updateAllocations", async function () {
             await this.investor.connect(this.user1).deposit(1, {
                 gasPrice: 21e9,
-                value: ethers.utils.parseEther("1"),
+                value: ethers.utils.parseEther("10"),
             });
 
             await this.investor.connect(this.user2).deposit(2, {
                 gasPrice: 21e9,
-                value: ethers.utils.parseEther("10"),
+                value: ethers.utils.parseEther("100"),
             });
 
             // wait 40 mins
@@ -507,8 +507,8 @@ describe("Biswap Adapters Integration Test", function () {
         it("test pendingReward, invested amount ratio after allocation change", async function () {
             // Check reward increase after updateAllocation
             const allocation = [2000, 8000];
-            let bTokenInfo1 = await this.adapter[0].userAdapterInfos(2);
-            let bTokenInfo2 = await this.adapter[1].userAdapterInfos(2);
+            const bTokenInfo1 = await this.adapter[0].userAdapterInfos(2);
+            const bTokenInfo2 = await this.adapter[1].userAdapterInfos(2);
             const bPending1 = await this.investor.pendingReward(
                 1,
                 this.user1.address
