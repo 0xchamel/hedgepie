@@ -250,6 +250,12 @@ contract YBNFT is ERC721, HedgepieAccessControlled {
         _emitEvent(_tokenId);
     }
 
+    /**
+     * @notice Update traded info
+     * @param _tokenId  YBNFT tokenID
+     * @param _value  updated traded info
+     * @param _adding bool to increase or decrease
+     */
     function updateTradedInfo(
         uint256 _tokenId,
         uint256 _value,
@@ -266,6 +272,12 @@ contract YBNFT is ERC721, HedgepieAccessControlled {
         _emitEvent(_tokenId);
     }
 
+    /**
+     * @notice Update profit info
+     * @param _tokenId  YBNFT tokenID
+     * @param _value  amount of profit
+     * @param _adding bool to increase or decrease
+     */
     function updateProfitInfo(
         uint256 _tokenId,
         uint256 _value,
@@ -282,6 +294,12 @@ contract YBNFT is ERC721, HedgepieAccessControlled {
         _emitEvent(_tokenId);
     }
 
+    /**
+     * @notice Update participant info
+     * @param _tokenId  YBNFT tokenID
+     * @param _account  address of account
+     * @param _adding  to remove or add
+     */
     function updateParticipantInfo(
         uint256 _tokenId,
         address _account,

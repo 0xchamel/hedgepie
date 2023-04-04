@@ -17,7 +17,10 @@ abstract contract HedgepieAccessControlled {
     IHedgepieAuthority public authority;
 
     /* ========== Constructor ========== */
-
+    /**
+     * @notice Constructor
+     * @param _authority address of authority
+     */
     constructor(IHedgepieAuthority _authority) {
         authority = _authority;
         emit AuthorityUpdated(_authority);
@@ -51,10 +54,14 @@ abstract contract HedgepieAccessControlled {
     }
 
     /* ========== GOV ONLY ========== */
-
-    function setAuthority(
-        IHedgepieAuthority _newAuthority
-    ) external onlyGovernor {
+    /**
+     * @notice Set new authority
+     * @param _newAuthority address of new authority
+     */
+    function setAuthority(IHedgepieAuthority _newAuthority)
+        external
+        onlyGovernor
+    {
         authority = _newAuthority;
         emit AuthorityUpdated(_newAuthority);
     }

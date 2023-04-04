@@ -1,4 +1,4 @@
-# RUBI Token V2 Hardhat Project
+# Hedgepie V2.1 Contracts
 
 ```shell
 npx hardhat accounts
@@ -9,7 +9,3 @@ npx hardhat node
 node scripts/sample-script.js
 npx hardhat help
 ```
-
-# Error
-
-In ApeswapAdapter constructor, vStrategy param is missing
