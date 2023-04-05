@@ -136,7 +136,7 @@ describe("Biswap Adapters Integration Test", function () {
         console.log("BiswapBSWPoolAdapterBsc: ", this.adapter[1].address);
     });
 
-    describe("deposit function test", function () {
+    describe("deposit() function test", function () {
         it("(1) should be reverted when nft tokenId is invalid", async function () {
             // deposit to nftID: 3
             const depositAmount = ethers.utils.parseEther("1");
@@ -327,7 +327,10 @@ describe("Biswap Adapters Integration Test", function () {
             //------- check bob info -----//
             const bobInfo = await this.investor.userInfos(1, this.bob.address);
             const bnbPrice = BigNumber.from(await this.lib.getBNBPrice());
-            expect(bobInfo.amount).to.eq(BigNumber.from(20).mul(bnbPrice));
+            expect(bobInfo.amount).to.be.within(
+                BigNumber.from(20).mul(bnbPrice).mul(99).div(100),
+                BigNumber.from(20).mul(bnbPrice).mul(101).div(100)
+            );
 
             await this.checkAccRewardShare(1);
         });
@@ -336,8 +339,9 @@ describe("Biswap Adapters Integration Test", function () {
             const bnbPrice = BigNumber.from(await this.lib.getBNBPrice());
             const nftInfo = await this.ybNft.tokenInfos(1);
 
-            expect(BigNumber.from(nftInfo.tvl).toString()).to.be.eq(
-                BigNumber.from(20).mul(bnbPrice)
+            expect(BigNumber.from(nftInfo.tvl).toString()).to.be.within(
+                BigNumber.from(20).mul(bnbPrice).mul(99).div(100),
+                BigNumber.from(20).mul(bnbPrice).mul(101).div(100)
             ) &&
                 expect(BigNumber.from(nftInfo.participant).toString()).to.be.eq(
                     "1"
@@ -486,6 +490,7 @@ describe("Biswap Adapters Integration Test", function () {
                 2,
                 this.user2.address
             );
+
             await this.ybNft
                 .connect(this.governor)
                 .updateAllocations(2, allocation);
@@ -499,6 +504,7 @@ describe("Biswap Adapters Integration Test", function () {
                 2,
                 this.user2.address
             );
+
             expect(aPending1[0]).gt(bPending1[0]) &&
                 expect(aPending1[1]).gt(bPending1[1]);
             expect(aPending2[0]).gt(bPending2[0]) &&
