@@ -8,9 +8,9 @@ abstract contract HedgepieAccessControlled {
 
     event AuthorityUpdated(IHedgepieAuthority indexed authority);
 
-    string UNAUTHORIZED = "UNAUTHORIZED"; // save gas
+    string private _unauthorized = "UNAUTHORIZED"; // save gas
 
-    string PAUSED = "PAUSED"; // save gas
+    string private _paused = "PAUSED"; // save gas
 
     /* ========== STATE VARIABLES ========== */
 
@@ -29,27 +29,27 @@ abstract contract HedgepieAccessControlled {
     /* ========== MODIFIERS ========== */
 
     modifier whenNotPaused() {
-        require(!authority.paused(), PAUSED);
+        require(!authority.paused(), _paused);
         _;
     }
 
     modifier onlyGovernor() {
-        require(msg.sender == authority.governor(), UNAUTHORIZED);
+        require(msg.sender == authority.governor(), _unauthorized);
         _;
     }
 
     modifier onlyPathManager() {
-        require(msg.sender == authority.pathManager(), UNAUTHORIZED);
+        require(msg.sender == authority.pathManager(), _unauthorized);
         _;
     }
 
     modifier onlyAdapterManager() {
-        require(msg.sender == authority.adapterManager(), UNAUTHORIZED);
+        require(msg.sender == authority.adapterManager(), _unauthorized);
         _;
     }
 
     modifier onlyInvestor() {
-        require(msg.sender == authority.hInvestor(), UNAUTHORIZED);
+        require(msg.sender == authority.hInvestor(), _unauthorized);
         _;
     }
 

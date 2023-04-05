@@ -14,9 +14,10 @@ import "../interfaces/IHedgepieAuthority.sol";
 import "../base/BaseAdapter.sol";
 
 library HedgepieLibraryBsc {
-    address constant WBNB = 0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c;
-    address constant USDT = 0x55d398326f99059fF775485246999027B3197955;
-    address constant ORACLE = 0xfbD61B037C325b959c0F6A7e69D8f37770C2c550;
+    address private constant _WBNB = 0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c;
+    address private constant _USDT = 0x55d398326f99059fF775485246999027B3197955;
+    address private constant _ORACLE =
+        0xfbD61B037C325b959c0F6A7e69D8f37770C2c550;
 
     /**
      * @notice Swap tokens
@@ -271,6 +272,6 @@ library HedgepieLibraryBsc {
      * @notice Get BNB Price from oracle
      */
     function getBNBPrice() public view returns (uint256) {
-        return IOffchainOracle(ORACLE).getRate(WBNB, USDT, false);
+        return IOffchainOracle(_ORACLE).getRate(_WBNB, _USDT, false);
     }
 }

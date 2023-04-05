@@ -125,4 +125,6 @@ abstract contract BaseAdapter is HedgepieAccessControlled {
         (success, ) = payable(msg.sender).call{value: _amount - taxAmount}("");
         require(success, "Failed to send bnb");
     }
+
+    receive() external payable {}
 }
