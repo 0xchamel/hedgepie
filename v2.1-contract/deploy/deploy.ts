@@ -2,155 +2,66 @@ import hre from "hardhat";
 import { Logger } from "tslog";
 import "@nomiclabs/hardhat-ethers";
 import { verify } from "../utils";
-import {
-    venusBUSDLendAdapterArgs,
-    pksGalStakeAdapterArgs,
-} from "../config/construct-arguments";
 
-const log: Logger = new Logger();
-const PKS_ROUTER = "0x10ED43C718714eb63d5aA57B78B54704E256024E";
-const WBNB = "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c";
-const BUSD = "0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56";
-const CAKE = "0x0e09fabb73bd3ade0a17ecc321fd13a19e81ce82";
-const GAL = "0xe4Cc45Bb5DBDA06dB6183E8bf016569f40497Aa5";
-
-const venusBUSDLendAdapterArgValues = Object.values(venusBUSDLendAdapterArgs);
-const pksGalStakeAdapterArgValues = Object.values(pksGalStakeAdapterArgs);
+const { setupBscAdapterWithLib } = require("../test/shared/setup");
 
 async function deploy() {
-    // deploy venusLendAdapter contract
-    const venusLendAdapter = await hre.ethers.getContractFactory(
-        "VenusLendAdapter"
+    const HedgepieAdapterList = await hre.ethers.getContractFactory(
+        "HedgepieAdapterList"
     );
-    const venusBUSDLendAdapterInstance = await venusLendAdapter.deploy(
-        venusBUSDLendAdapterArgs.strategy,
-        venusBUSDLendAdapterArgs.stakingToken,
-        venusBUSDLendAdapterArgs.repayToken,
-        venusBUSDLendAdapterArgs.name
+    const HedgepieAuthority = await hre.ethers.getContractFactory(
+        "HedgepieAuthority"
     );
-    await venusBUSDLendAdapterInstance.deployed();
-    const venusBUSDLendAdapterAddress = venusBUSDLendAdapterInstance.address;
-    log.info(
-        `VenusBusdLendAdapter contract was successfully deployed on network: ${hre.network.name}, address: ${venusBUSDLendAdapterAddress}`
+    const Lib = await hre.ethers.getContractFactory("HedgepieLibraryBsc");
+    const YBNFT = await hre.ethers.getContractFactory("YBNFT");
+    const PathFinder = await hre.ethers.getContractFactory("PathFinder");
+    // Deploy base contracts
+    const authority = await HedgepieAuthority.deploy(
+        "0xB34b18b191a2371359762429f9732F73af8ac211",
+        "0xB34b18b191a2371359762429f9732F73af8ac211",
+        "0xB34b18b191a2371359762429f9732F73af8ac211"
     );
+    await authority.deployed();
+    console.log("Authority: ", authority.address);
 
-    // deploy pancakeswap GAL stake contract
-    const pksGalStakeAdapter = await hre.ethers.getContractFactory(
-        "PancakeStakeAdapter"
-    );
-    const pksGalStakeAdapterInstance = await pksGalStakeAdapter.deploy(
-        pksGalStakeAdapterArgs.strategy,
-        pksGalStakeAdapterArgs.stakingToken,
-        pksGalStakeAdapterArgs.rewardToken,
-        pksGalStakeAdapterArgs.name
-    );
-    await pksGalStakeAdapterInstance.deployed();
-    const pksGalStakeAdapterAddress = pksGalStakeAdapterInstance.address;
-    log.info(
-        `PancakeGalStakeAdapter contract was successfully deployed on network: ${hre.network.name}, address: ${pksGalStakeAdapterAddress}`
-    );
+    const adapterList = await HedgepieAdapterList.deploy(authority.address);
+    await adapterList.deployed();
+    console.log("AdapterList: ", adapterList.address);
 
-    // deploy ybnft contract
-    const ybnft = await hre.ethers.getContractFactory("YBNFT");
-    const ybnftInstance = await ybnft.deploy();
-    await ybnftInstance.deployed();
-    const ybnftAddress = ybnftInstance.address;
-    log.info(
-        `YBNFT contract was successfully deployed on network: ${hre.network.name}, address: ${ybnftAddress}`
-    );
+    const ybnft = await YBNFT.deploy(authority.address);
+    await ybnft.deployed();
+    console.log("YBNFT: ", ybnft.address);
 
-    // deploy investor contract
-    const investor = await hre.ethers.getContractFactory("HedgepieInvestor");
-    const investorInstance = await investor.deploy(
-        ybnftAddress,
-        PKS_ROUTER,
-        WBNB
-    );
-    await investorInstance.deployed();
-    const investorAddress = investorInstance.address;
-    log.info(
-        `Investor contract was successfully deployed on network: ${hre.network.name}, address: ${investorAddress}`
-    );
+    const pathFinder = await PathFinder.deploy(authority.address);
+    await pathFinder.deployed();
+    console.log("PathFinder: ", pathFinder.address);
 
-    // deploy adapterManager contract
-    const adapterManager = await hre.ethers.getContractFactory(
-        "HedgepieAdapterManager"
-    );
-    const adapterManagerInstance = await adapterManager.deploy();
-    await adapterManagerInstance.deployed();
-    const adapterManagerAddress = adapterManagerInstance.address;
-    log.info(
-        `AdapterManager contract was successfully deployed on network: ${hre.network.name}, address: ${adapterManagerAddress}`
-    );
+    const lib = await Lib.deploy();
+    await lib.deployed();
+    console.log("LIB: ", lib.address);
 
-    // setting configuration
-    log.info(`Setting configuration...`);
-    adapterManagerInstance.addAdapter(pksGalStakeAdapterAddress);
-    adapterManagerInstance.addAdapter(venusBUSDLendAdapterAddress);
-    adapterManagerInstance.setInvestor(investorAddress);
-    investorInstance.setAdapterManager(adapterManagerAddress);
-    venusBUSDLendAdapterInstance.setInvestor(investorAddress);
-    pksGalStakeAdapterInstance.setInvestor(investorAddress);
+    const HedgepieInvestor = await hre.ethers.getContractFactory(
+        "HedgepieInvestor",
+        {
+            libraries: {
+                HedgepieLibraryBsc:
+                    "0x570aB366073bBA951Dc75788a991017cFe426c23",
+            },
+        }
+    );
+    const investor = await HedgepieInvestor.deploy("", "");
+    await investor.deployed();
+    console.log("Investor: ", investor.address);
 
-    return {
-        venusBUSDLendAdapter: venusBUSDLendAdapterAddress,
-        pksGalStakeAdapter: pksGalStakeAdapterAddress,
-        ybnft: ybnftAddress,
-        investor: investorAddress,
-        adapterManager: adapterManagerAddress,
-    };
+    // Set base address to Authority
+    await authority.setHInvestor(investor.address);
+    await authority.setHYBNFT(ybnft.address);
+    await authority.setHAdapterList(adapterList.address);
+    await authority.setPathFinder(pathFinder.address);
 }
 
 async function main() {
-    const {
-        venusBUSDLendAdapter,
-        pksGalStakeAdapter,
-        ybnft,
-        investor,
-        adapterManager,
-    } = await deploy();
-    // verify venus BUSD lend adapter contract
-    await verify({
-        contractName: "VenusLendAdapter",
-        address: venusBUSDLendAdapter,
-        constructorArguments: venusBUSDLendAdapterArgValues,
-        contractPath:
-            "contracts/adapters/venus/venus-lend-adapter.sol:VenusLendAdapter",
-    });
-
-    // verify pks GAL stake adapter contract
-    await verify({
-        contractName: "PancakeStakeAdapter",
-        address: pksGalStakeAdapter,
-        constructorArguments: pksGalStakeAdapterArgValues,
-        contractPath:
-            "contracts/adapters/pancakeswap/pancake-stake-adapter.sol:PancakeStakeAdapter",
-    });
-
-    // verify ybnft contract
-    await verify({
-        contractName: "YBNFT",
-        address: ybnft,
-        constructorArguments: [],
-        contractPath: "contracts/HedgepieYBNFT.sol:YBNFT",
-    });
-
-    // verify investor contract
-    await verify({
-        contractName: "HedgepieInvestor",
-        address: investor,
-        constructorArguments: [ybnft, PKS_ROUTER, WBNB],
-        contractPath: "contracts/HedgepieInvestor.sol:HedgepieInvestor",
-    });
-
-    // verify adapterManager contract
-    await verify({
-        contractName: "HedgepieAdapterManager",
-        address: adapterManager,
-        constructorArguments: [],
-        contractPath:
-            "contracts/HedgepieAdapterManager.sol:HedgepieAdapterManager",
-    });
+    await deploy();
 }
 
 main()

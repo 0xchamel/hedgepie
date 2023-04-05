@@ -13,7 +13,7 @@ const {
 
 const BigNumber = ethers.BigNumber;
 
-describe("PancakeSwap Adapters Integration Test", function () {
+describe("Belt Adapters Integration Test", function () {
     before("Deploy contract", async function () {
         [
             this.governor,
@@ -43,29 +43,34 @@ describe("PancakeSwap Adapters Integration Test", function () {
             this.treasury
         );
 
-        const wbnb = "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c";
         const cake = "0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82";
-        const strategy = "0xa5f8C5Dbd5F286960b9d90548680aE5ebFf07652"; // MasterChef v2 pks
-        const lpToken = "0x0eD7e52944161450477ee417DE9Cd3a859b14fD0"; // WBNB-CAKE LP
-        const pksRouter = "0x10ED43C718714eb63d5aA57B78B54704E256024E";
-        const poolID = 2;
+        const USDT = "0x55d398326f99059fF775485246999027B3197955";
+        const BUSD = "0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56";
+
+        const wbnb = "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c";
+        const stakingToken = BUSD; // BUSD
+        const strategy = "0x9171Bf7c050aC8B4cf7835e51F7b4841DFB2cCD0"; // beltBUSD
+        const swapRouter = "0x10ED43C718714eb63d5aA57B78B54704E256024E"; // pks rounter address
+        const name = "Belt::Vault::BUSD";
+
+        this.rewarder = "0x4ecca0a9649329628b77a7d213eacdd5b3431f73"; // bAutoBUSD
+        this.ctRewarder = await ethers.getContractAt("IERC20", this.rewarder);
         this.performanceFee = 500;
         this.accRewardShare = BigNumber.from(0);
 
-        // Deploy PancakeSwapFarmLPAdapterBsc contract
-        const PancakeSwapFarmLPAdapterBsc = await setupBscAdapterWithLib(
-            "PancakeSwapFarmLPAdapterBsc",
+        // Deploy BeltVaultAdapterBsc contract
+        const BeltVaultAdapter = await setupBscAdapterWithLib(
+            "BeltVaultAdapterBsc",
             this.lib
         );
         this.adapter = [0, 0];
-        this.adapter[0] = await PancakeSwapFarmLPAdapterBsc.deploy(
-            poolID, // pid
+        this.adapter[0] = await BeltVaultAdapter.deploy(
             strategy,
-            lpToken,
-            cake,
-            pksRouter,
+            stakingToken,
+            strategy,
+            swapRouter,
             wbnb,
-            "PancakeSwap::Farm::CAKE-WBNB",
+            name,
             this.authority.address
         );
         await this.adapter[0].deployed();
@@ -76,6 +81,7 @@ describe("PancakeSwap Adapters Integration Test", function () {
             this.lib
         );
 
+        this.bnbPrice = BigNumber.from(await this.lib.getBNBPrice());
         this.strategy = "0x08C9d626a2F0CC1ed9BD07eBEdeF8929F45B83d3";
         this.stakingToken = "0x0e09fabb73bd3ade0a17ecc321fd13a19e81ce82"; // CAKE
         this.rewardToken = "0x724A32dFFF9769A0a0e1F0515c0012d1fB14c3bd"; // SQUAD
@@ -89,17 +95,26 @@ describe("PancakeSwap Adapters Integration Test", function () {
             "PK::STAKE::SQUAD-ADAPTER",
             this.authority.address
         );
+
         await this.adapter[1].deployed();
 
         // register path to pathFinder contract
-        await setPath(this.pathFinder, this.pathManager, pksRouter, [
+        await setPath(this.pathFinder, this.pathManager, this.swapRouter, [
             wbnb,
             cake,
         ]);
-        await setPath(this.pathFinder, this.pathManager, pksRouter, [
+        await setPath(this.pathFinder, this.pathManager, this.swapRouter, [
             wbnb,
             cake,
             this.rewardToken,
+        ]);
+        await setPath(this.pathFinder, this.pathManager, swapRouter, [
+            wbnb,
+            USDT,
+        ]);
+        await setPath(this.pathFinder, this.pathManager, swapRouter, [
+            wbnb,
+            BUSD,
         ]);
 
         // add adapters to adapterList
@@ -111,7 +126,7 @@ describe("PancakeSwap Adapters Integration Test", function () {
         await mintNFT(
             this.ybNft,
             [this.adapter[0].address, this.adapter[1].address],
-            [lpToken, this.stakingToken],
+            [stakingToken, this.stakingToken],
             this.performanceFee
         );
 
@@ -133,7 +148,7 @@ describe("PancakeSwap Adapters Integration Test", function () {
         console.log("Authority: ", this.authority.address);
         console.log("AdapterList: ", this.adapterList.address);
         console.log("PathFinder: ", this.pathFinder.address);
-        console.log("PancakeSwapFarmLPAdapterBsc: ", this.adapter[0].address);
+        console.log("BeltVaultAdapterBsc: ", this.adapter[0].address);
         console.log("PancakeStakeAdapterBsc: ", this.adapter[1].address);
     });
 
@@ -178,12 +193,11 @@ describe("PancakeSwap Adapters Integration Test", function () {
                 1,
                 this.alice.address
             );
-            const bnbPrice = BigNumber.from(await this.lib.getBNBPrice());
-            expect(aliceInfo.amount).to.eq(BigNumber.from(10).mul(bnbPrice));
+            expect(aliceInfo.amount).to.gt(0);
         });
 
         it("(4) deposit should success for Bob", async function () {
-            // wait 40 mins
+            // wait 6 hrs
             for (let i = 0; i < 7200; i++) {
                 await ethers.provider.send("evm_mine", []);
             }
@@ -222,8 +236,7 @@ describe("PancakeSwap Adapters Integration Test", function () {
                 );
 
             const bobInfo = await this.investor.userInfos(1, this.bob.address);
-            const bnbPrice = BigNumber.from(await this.lib.getBNBPrice());
-            expect(bobInfo.amount).to.eq(BigNumber.from(20).mul(bnbPrice));
+            expect(bobInfo.amount).to.gt(0);
 
             const afterAdapterInfos = await this.investor.tokenInfos(1);
             expect(
@@ -236,11 +249,19 @@ describe("PancakeSwap Adapters Integration Test", function () {
         });
 
         it("(5) test TVL & participants", async function () {
-            const bnbPrice = BigNumber.from(await this.lib.getBNBPrice());
+            const aliceInfo = await this.investor.userInfos(
+                1,
+                this.alice.address
+            );
+            const bobInfo = await this.investor.userInfos(1, this.bob.address);
+
+            // const bnbPrice = BigNumber.from(await this.lib.getBNBPrice());
             const nftInfo = await this.ybNft.tokenInfos(1);
 
             expect(BigNumber.from(nftInfo.tvl).toString()).to.be.eq(
-                BigNumber.from(30).mul(bnbPrice)
+                BigNumber.from(aliceInfo.amount).add(
+                    BigNumber.from(bobInfo.amount)
+                )
             ) &&
                 expect(BigNumber.from(nftInfo.participant).toString()).to.be.eq(
                     "2"
@@ -327,18 +348,19 @@ describe("PancakeSwap Adapters Integration Test", function () {
 
             //------- check bob info -----//
             const bobInfo = await this.investor.userInfos(1, this.bob.address);
-            const bnbPrice = BigNumber.from(await this.lib.getBNBPrice());
-            expect(bobInfo.amount).to.eq(BigNumber.from(20).mul(bnbPrice));
+            // const bnbPrice = BigNumber.from(await this.lib.getBNBPrice());
+            expect(bobInfo.amount).to.gt(0);
 
             await this.checkAccRewardShare(1);
         });
 
         it("(3) test TVL & participants after Alice withdraw", async function () {
-            const bnbPrice = BigNumber.from(await this.lib.getBNBPrice());
+            // const bnbPrice = BigNumber.from(await this.lib.getBNBPrice());
             const nftInfo = await this.ybNft.tokenInfos(1);
+            const bobInfo = await this.investor.userInfos(1, this.bob.address);
 
             expect(BigNumber.from(nftInfo.tvl).toString()).to.be.eq(
-                BigNumber.from(20).mul(bnbPrice)
+                BigNumber.from(bobInfo.amount)
             ) &&
                 expect(BigNumber.from(nftInfo.participant).toString()).to.be.eq(
                     "1"
@@ -369,7 +391,7 @@ describe("PancakeSwap Adapters Integration Test", function () {
                 Number(
                     ethers.utils.formatEther(afterBNB.sub(beforeBNB).toString())
                 )
-            ).to.be.gt(19.9);
+            ).to.be.gt(19.8);
 
             let bobInfo = await this.investor.userInfos(1, this.bob.address);
             expect(bobInfo.amount).to.eq(BigNumber.from(0));
@@ -408,7 +430,7 @@ describe("PancakeSwap Adapters Integration Test", function () {
                 value: ethers.utils.parseEther("100"),
             });
 
-            // wait 40 mins
+            // wait 6 hrs
             for (let i = 0; i < 7200; i++) {
                 await ethers.provider.send("evm_mine", []);
             }
@@ -463,10 +485,10 @@ describe("PancakeSwap Adapters Integration Test", function () {
 
             await this.investor.connect(this.user2).deposit(2, {
                 gasPrice: 21e9,
-                value: ethers.utils.parseEther("100"),
+                value: ethers.utils.parseEther("20"),
             });
 
-            // wait 40 mins
+            // wait 6 hrs
             for (let i = 0; i < 7200; i++) {
                 await ethers.provider.send("evm_mine", []);
             }
@@ -500,10 +522,9 @@ describe("PancakeSwap Adapters Integration Test", function () {
                 2,
                 this.user2.address
             );
-            expect(aPending1[0]).gt(bPending1[0]) &&
-                expect(aPending1[1]).gt(bPending1[1]);
-            expect(aPending2[0]).gt(bPending2[0]) &&
-                expect(aPending2[1]).gt(bPending2[1]);
+
+            expect(aPending1[0]).gt(bPending1[0]);
+            expect(aPending2[0]).gt(bPending2[0]);
 
             // check invested amount
             const aTokenInfo1 = await this.adapter[0].userAdapterInfos(2);

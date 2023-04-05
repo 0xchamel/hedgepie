@@ -3,6 +3,8 @@ const { ethers } = require("hardhat");
 
 const {
     setPath,
+    encode,
+    unlockAccount,
     checkPendingWithClaim,
 } = require("../../../../shared/utilities");
 const {
@@ -13,7 +15,15 @@ const {
 
 const BigNumber = ethers.BigNumber;
 
-describe("PancakeSwap Adapters Integration Test", function () {
+async function doubleWantLockedTotal(address, slot, current) {
+    await network.provider.send("hardhat_setStorageAt", [
+        address,
+        slot,
+        encode(["uint256"], [BigNumber.from(current).mul(2).toString()]),
+    ]);
+}
+
+describe("Beefy Adapters Integration Test", function () {
     before("Deploy contract", async function () {
         [
             this.governor,
@@ -43,29 +53,36 @@ describe("PancakeSwap Adapters Integration Test", function () {
             this.treasury
         );
 
-        const wbnb = "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c";
         const cake = "0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82";
-        const strategy = "0xa5f8C5Dbd5F286960b9d90548680aE5ebFf07652"; // MasterChef v2 pks
-        const lpToken = "0x0eD7e52944161450477ee417DE9Cd3a859b14fD0"; // WBNB-CAKE LP
-        const pksRouter = "0x10ED43C718714eb63d5aA57B78B54704E256024E";
-        const poolID = 2;
+        const wbnb = "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c";
+        const stakingToken = "0xDA8ceb724A06819c0A5cDb4304ea0cB27F8304cF"; // Biswap USDT-BUSD LP
+        const strategy = "0x164fb78cAf2730eFD63380c2a645c32eBa1C52bc"; // Moo BiSwap USDT-BUSD
+        const router = "0x3a6d8cA21D1CF76F653A67577FA0D27453350dD8"; // Biswap router
+        const swapRouter = "0x10ED43C718714eb63d5aA57B78B54704E256024E"; // pks rounter address
+        const name = "Beefy::Vault::Biswap USDT-BUSD";
+        const USDT = "0x55d398326f99059fF775485246999027B3197955";
+        const BUSD = "0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56";
+        const rewarder = "0x612e072e433A8a08496Ee0714930b357426c12Ce";
+        this.rewarder = await unlockAccount(rewarder);
+        this.rewardReceiver = strategy;
+        this.lpToken = await ethers.getContractAt("IERC20", stakingToken);
+
         this.performanceFee = 500;
         this.accRewardShare = BigNumber.from(0);
 
-        // Deploy PancakeSwapFarmLPAdapterBsc contract
-        const PancakeSwapFarmLPAdapterBsc = await setupBscAdapterWithLib(
-            "PancakeSwapFarmLPAdapterBsc",
+        // Deploy BeefyVaultAdapterBsc contract
+        const BeefyVaultAdapter = await setupBscAdapterWithLib(
+            "BeefyVaultAdapterBsc",
             this.lib
         );
         this.adapter = [0, 0];
-        this.adapter[0] = await PancakeSwapFarmLPAdapterBsc.deploy(
-            poolID, // pid
+        this.adapter[0] = await BeefyVaultAdapter.deploy(
             strategy,
-            lpToken,
-            cake,
-            pksRouter,
+            stakingToken,
+            router,
+            swapRouter,
             wbnb,
-            "PancakeSwap::Farm::CAKE-WBNB",
+            name,
             this.authority.address
         );
         await this.adapter[0].deployed();
@@ -76,6 +93,7 @@ describe("PancakeSwap Adapters Integration Test", function () {
             this.lib
         );
 
+        this.bnbPrice = BigNumber.from(await this.lib.getBNBPrice());
         this.strategy = "0x08C9d626a2F0CC1ed9BD07eBEdeF8929F45B83d3";
         this.stakingToken = "0x0e09fabb73bd3ade0a17ecc321fd13a19e81ce82"; // CAKE
         this.rewardToken = "0x724A32dFFF9769A0a0e1F0515c0012d1fB14c3bd"; // SQUAD
@@ -89,17 +107,28 @@ describe("PancakeSwap Adapters Integration Test", function () {
             "PK::STAKE::SQUAD-ADAPTER",
             this.authority.address
         );
+
         await this.adapter[1].deployed();
 
         // register path to pathFinder contract
-        await setPath(this.pathFinder, this.pathManager, pksRouter, [
+        await setPath(this.pathFinder, this.pathManager, this.swapRouter, [
             wbnb,
             cake,
         ]);
-        await setPath(this.pathFinder, this.pathManager, pksRouter, [
+        await setPath(this.pathFinder, this.pathManager, this.swapRouter, [
             wbnb,
             cake,
             this.rewardToken,
+        ]);
+        await setPath(this.pathFinder, this.pathManager, router, [wbnb, USDT]);
+        await setPath(this.pathFinder, this.pathManager, router, [wbnb, BUSD]);
+        await setPath(this.pathFinder, this.pathManager, swapRouter, [
+            wbnb,
+            USDT,
+        ]);
+        await setPath(this.pathFinder, this.pathManager, swapRouter, [
+            wbnb,
+            BUSD,
         ]);
 
         // add adapters to adapterList
@@ -111,7 +140,7 @@ describe("PancakeSwap Adapters Integration Test", function () {
         await mintNFT(
             this.ybNft,
             [this.adapter[0].address, this.adapter[1].address],
-            [lpToken, this.stakingToken],
+            [stakingToken, this.stakingToken],
             this.performanceFee
         );
 
@@ -133,7 +162,7 @@ describe("PancakeSwap Adapters Integration Test", function () {
         console.log("Authority: ", this.authority.address);
         console.log("AdapterList: ", this.adapterList.address);
         console.log("PathFinder: ", this.pathFinder.address);
-        console.log("PancakeSwapFarmLPAdapterBsc: ", this.adapter[0].address);
+        console.log("BeefyVaultAdapterBsc: ", this.adapter[0].address);
         console.log("PancakeStakeAdapterBsc: ", this.adapter[1].address);
     });
 
@@ -178,12 +207,13 @@ describe("PancakeSwap Adapters Integration Test", function () {
                 1,
                 this.alice.address
             );
-            const bnbPrice = BigNumber.from(await this.lib.getBNBPrice());
-            expect(aliceInfo.amount).to.eq(BigNumber.from(10).mul(bnbPrice));
+            expect(aliceInfo.amount).to.eq(
+                BigNumber.from(10).mul(this.bnbPrice)
+            );
         });
 
         it("(4) deposit should success for Bob", async function () {
-            // wait 40 mins
+            // wait 6 hrs
             for (let i = 0; i < 7200; i++) {
                 await ethers.provider.send("evm_mine", []);
             }
@@ -222,8 +252,7 @@ describe("PancakeSwap Adapters Integration Test", function () {
                 );
 
             const bobInfo = await this.investor.userInfos(1, this.bob.address);
-            const bnbPrice = BigNumber.from(await this.lib.getBNBPrice());
-            expect(bobInfo.amount).to.eq(BigNumber.from(20).mul(bnbPrice));
+            expect(bobInfo.amount).to.gt(0);
 
             const afterAdapterInfos = await this.investor.tokenInfos(1);
             expect(
@@ -236,11 +265,19 @@ describe("PancakeSwap Adapters Integration Test", function () {
         });
 
         it("(5) test TVL & participants", async function () {
-            const bnbPrice = BigNumber.from(await this.lib.getBNBPrice());
+            const aliceInfo = await this.investor.userInfos(
+                1,
+                this.alice.address
+            );
+            const bobInfo = await this.investor.userInfos(1, this.bob.address);
+
+            // const bnbPrice = BigNumber.from(await this.lib.getBNBPrice());
             const nftInfo = await this.ybNft.tokenInfos(1);
 
             expect(BigNumber.from(nftInfo.tvl).toString()).to.be.eq(
-                BigNumber.from(30).mul(bnbPrice)
+                BigNumber.from(aliceInfo.amount).add(
+                    BigNumber.from(bobInfo.amount)
+                )
             ) &&
                 expect(BigNumber.from(nftInfo.participant).toString()).to.be.eq(
                     "2"
@@ -327,18 +364,19 @@ describe("PancakeSwap Adapters Integration Test", function () {
 
             //------- check bob info -----//
             const bobInfo = await this.investor.userInfos(1, this.bob.address);
-            const bnbPrice = BigNumber.from(await this.lib.getBNBPrice());
-            expect(bobInfo.amount).to.eq(BigNumber.from(20).mul(bnbPrice));
+            // const bnbPrice = BigNumber.from(await this.lib.getBNBPrice());
+            expect(bobInfo.amount).to.gt(0);
 
             await this.checkAccRewardShare(1);
         });
 
         it("(3) test TVL & participants after Alice withdraw", async function () {
-            const bnbPrice = BigNumber.from(await this.lib.getBNBPrice());
+            // const bnbPrice = BigNumber.from(await this.lib.getBNBPrice());
             const nftInfo = await this.ybNft.tokenInfos(1);
+            const bobInfo = await this.investor.userInfos(1, this.bob.address);
 
             expect(BigNumber.from(nftInfo.tvl).toString()).to.be.eq(
-                BigNumber.from(20).mul(bnbPrice)
+                BigNumber.from(bobInfo.amount)
             ) &&
                 expect(BigNumber.from(nftInfo.participant).toString()).to.be.eq(
                     "1"
@@ -348,6 +386,11 @@ describe("PancakeSwap Adapters Integration Test", function () {
         it("(4) should receive the BNB successfully after withdraw function for Bob", async function () {
             await ethers.provider.send("evm_increaseTime", [3600 * 24 * 30]);
             await ethers.provider.send("evm_mine", []);
+
+            // increase reward for beefy vault
+            await this.lpToken
+                .connect(this.rewarder)
+                .transfer(this.rewardReceiver, ethers.utils.parseEther("20"));
 
             // withdraw from nftId: 1
             const beforeBNB = await ethers.provider.getBalance(
@@ -408,7 +451,7 @@ describe("PancakeSwap Adapters Integration Test", function () {
                 value: ethers.utils.parseEther("100"),
             });
 
-            // wait 40 mins
+            // wait 6 hrs
             for (let i = 0; i < 7200; i++) {
                 await ethers.provider.send("evm_mine", []);
             }
@@ -463,15 +506,20 @@ describe("PancakeSwap Adapters Integration Test", function () {
 
             await this.investor.connect(this.user2).deposit(2, {
                 gasPrice: 21e9,
-                value: ethers.utils.parseEther("100"),
+                value: ethers.utils.parseEther("20"),
             });
 
-            // wait 40 mins
+            // wait 6 hrs
             for (let i = 0; i < 7200; i++) {
                 await ethers.provider.send("evm_mine", []);
             }
             await ethers.provider.send("evm_increaseTime", [3600 * 24]);
             await ethers.provider.send("evm_mine", []);
+
+            // increase reward for beefy vault
+            await this.lpToken
+                .connect(this.rewarder)
+                .transfer(this.rewardReceiver, ethers.utils.parseEther("20"));
         });
 
         it("test pendingReward, invested amount ratio after allocation change", async function () {
@@ -500,10 +548,9 @@ describe("PancakeSwap Adapters Integration Test", function () {
                 2,
                 this.user2.address
             );
-            expect(aPending1[0]).gt(bPending1[0]) &&
-                expect(aPending1[1]).gt(bPending1[1]);
-            expect(aPending2[0]).gt(bPending2[0]) &&
-                expect(aPending2[1]).gt(bPending2[1]);
+
+            expect(aPending1[0]).gt(bPending1[0]);
+            expect(aPending2[0]).gt(bPending2[0]);
 
             // check invested amount
             const aTokenInfo1 = await this.adapter[0].userAdapterInfos(2);

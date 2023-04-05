@@ -29,9 +29,9 @@ contract HedgepieAdapterList is HedgepieAccessControlled {
      * @notice Construct
      * @param _hedgepieAuthority HedgepieAuthority address
      */
-    constructor(
-        address _hedgepieAuthority
-    ) HedgepieAccessControlled(IHedgepieAuthority(_hedgepieAuthority)) {}
+    constructor(address _hedgepieAuthority)
+        HedgepieAccessControlled(IHedgepieAuthority(_hedgepieAuthority))
+    {}
 
     /// @dev modifier for active adapters
     modifier onlyActiveAdapter(address _adapter) {
@@ -50,9 +50,7 @@ contract HedgepieAdapterList is HedgepieAccessControlled {
      * @notice Get adapter infor
      * @param _adapterAddr address of adapter that need to get information
      */
-    function getAdapterInfo(
-        address _adapterAddr
-    )
+    function getAdapterInfo(address _adapterAddr)
         external
         view
         returns (
@@ -78,9 +76,12 @@ contract HedgepieAdapterList is HedgepieAccessControlled {
      * @notice Get strategy address of adapter contract
      * @param _adapter  adapter address
      */
-    function getAdapterStrat(
-        address _adapter
-    ) external view onlyActiveAdapter(_adapter) returns (address adapterStrat) {
+    function getAdapterStrat(address _adapter)
+        external
+        view
+        onlyActiveAdapter(_adapter)
+        returns (address adapterStrat)
+    {
         adapterStrat = IAdapter(_adapter).strategy();
     }
 
@@ -90,10 +91,11 @@ contract HedgepieAdapterList is HedgepieAccessControlled {
      * @param _adapters  array of adapter address
      */
     /// #if_succeeds {:msg "Adapter not set correctly"} adapterList.length == old(adapterInfo.length) + 1;
-    function addAdapters(
-        address[] memory _adapters
-    ) external onlyAdapterManager {
-        for (uint i = 0; i < _adapters.length; i++) {
+    function addAdapters(address[] memory _adapters)
+        external
+        onlyAdapterManager
+    {
+        for (uint256 i = 0; i < _adapters.length; i++) {
             require(!adapterExist[_adapters[i]], "Already added");
             require(_adapters[i] != address(0), "Invalid adapter address");
 
@@ -117,13 +119,13 @@ contract HedgepieAdapterList is HedgepieAccessControlled {
      * @param _status  array of adapter status
      */
     /// #if_succeeds {:msg "Status not updated"} adapterList[_adapterId].status == _status;
-    function setAdapters(
-        uint256[] memory _adapterId,
-        bool[] memory _status
-    ) external onlyAdapterManager {
+    function setAdapters(uint256[] memory _adapterId, bool[] memory _status)
+        external
+        onlyAdapterManager
+    {
         require(_adapterId.length == _status.length, "Invalid array length");
 
-        for (uint i = 0; i < _adapterId.length; i++) {
+        for (uint256 i = 0; i < _adapterId.length; i++) {
             require(
                 _adapterId[i] < adapterList.length,
                 "Invalid adapter address"

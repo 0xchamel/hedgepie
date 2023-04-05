@@ -18,6 +18,14 @@ library HedgepieLibraryBsc {
     address constant USDT = 0x55d398326f99059fF775485246999027B3197955;
     address constant ORACLE = 0xfbD61B037C325b959c0F6A7e69D8f37770C2c550;
 
+    /**
+     * @notice Swap tokens
+     * @param _amountIn  amount of inputToken
+     * @param _adapter  address of adapter
+     * @param _outToken  address of targetToken
+     * @param _router  address of swap router
+     * @param _wbnb  address of WBNB
+     */
     function swapOnRouter(
         uint256 _amountIn,
         address _adapter,
@@ -39,6 +47,14 @@ library HedgepieLibraryBsc {
         amountOut = afterBalance - beforeBalance;
     }
 
+    /**
+     * @notice Swap tokens and receive BNB
+     * @param _amountIn  amount of swap token
+     * @param _adapter  address of adapter
+     * @param _inToken  address of swap token
+     * @param _router  address of swap router
+     * @param _wbnb  address of WBNB
+     */
     function swapForBnb(
         uint256 _amountIn,
         address _adapter,
@@ -71,6 +87,11 @@ library HedgepieLibraryBsc {
         }
     }
 
+    /**
+     * @notice Get user's reward amount in adapter
+     * @param _tokenId  tokenID
+     * @param _adapterAddr  address of adapter
+     */
     function getMRewards(uint256 _tokenId, address _adapterAddr)
         public
         view
@@ -106,6 +127,12 @@ library HedgepieLibraryBsc {
         }
     }
 
+    /**
+     * @notice Get LP by add liquidity
+     * @param _adapter  AdapterInfo
+     * @param wbnb  address of WBNB
+     * @param _amountIn  amount of BNB
+     */
     function getLP(
         IYBNFT.AdapterParam memory _adapter,
         address wbnb,
@@ -171,6 +198,12 @@ library HedgepieLibraryBsc {
         }
     }
 
+    /**
+     * @notice Withdraw LP from pool
+     * @param _adapter  AdapterInfo
+     * @param wbnb  address of WBNB
+     * @param _amountIn  amount of LP
+     */
     function withdrawLP(
         IYBNFT.AdapterParam memory _adapter,
         address wbnb,
@@ -234,6 +267,9 @@ library HedgepieLibraryBsc {
         }
     }
 
+    /**
+     * @notice Get BNB Price from oracle
+     */
     function getBNBPrice() public view returns (uint256) {
         return IOffchainOracle(ORACLE).getRate(WBNB, USDT, false);
     }

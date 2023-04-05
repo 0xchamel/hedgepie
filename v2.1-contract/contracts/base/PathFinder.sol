@@ -12,12 +12,17 @@ contract PathFinder is HedgepieAccessControlled {
     mapping(address => mapping(address => mapping(address => address[])))
         public paths;
 
+    /// @dev events
+    event RouterAdded(address indexed router, bool value);
+    event RouterRemoved(address indexed router, bool value);
+
+    /**
+     * @notice Construct
+     * @param _hedgepieAuthority HedgepieAuthority address
+     */
     constructor(
         address _hedgepieAuthority
     ) HedgepieAccessControlled(IHedgepieAuthority(_hedgepieAuthority)) {}
-
-    event RouterAdded(address indexed router, bool value);
-    event RouterRemoved(address indexed router, bool value);
 
     /**
      * @notice Set paths from inToken to outToken

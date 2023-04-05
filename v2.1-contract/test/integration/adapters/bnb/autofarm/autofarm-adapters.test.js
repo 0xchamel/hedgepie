@@ -3,6 +3,7 @@ const { ethers } = require("hardhat");
 
 const {
     setPath,
+    encode,
     checkPendingWithClaim,
 } = require("../../../../shared/utilities");
 const {
@@ -13,7 +14,15 @@ const {
 
 const BigNumber = ethers.BigNumber;
 
-describe("PancakeSwap Adapters Integration Test", function () {
+async function doubleWantLockedTotal(address, slot, current) {
+    await network.provider.send("hardhat_setStorageAt", [
+        address,
+        slot,
+        encode(["uint256"], [BigNumber.from(current).mul(2).toString()]),
+    ]);
+}
+
+describe("AutoFarm Adapters Integration Test", function () {
     before("Deploy contract", async function () {
         [
             this.governor,
@@ -45,27 +54,34 @@ describe("PancakeSwap Adapters Integration Test", function () {
 
         const wbnb = "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c";
         const cake = "0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82";
-        const strategy = "0xa5f8C5Dbd5F286960b9d90548680aE5ebFf07652"; // MasterChef v2 pks
-        const lpToken = "0x0eD7e52944161450477ee417DE9Cd3a859b14fD0"; // WBNB-CAKE LP
-        const pksRouter = "0x10ED43C718714eb63d5aA57B78B54704E256024E";
-        const poolID = 2;
+        const busd = "0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56";
+        const strategy = "0x0895196562C7868C5Be92459FaE7f877ED450452"; // MasterChef
+        const vStrategy = "0xcFF7815e0e85a447b0C21C94D25434d1D0F718D1"; // vStrategy of vault
+        const stakingToken = "0x0ed7e52944161450477ee417de9cd3a859b14fd0"; // WBNB-Cake LP
+        const router = "0x10ED43C718714eb63d5aA57B78B54704E256024E"; // LP Router
+        const swapRouter = "0x10ED43C718714eb63d5aA57B78B54704E256024E"; // pks router address
+        const name = "AutoFarm::Vault::WBNB-CAKE";
+        const poolID = 619;
+
         this.performanceFee = 500;
         this.accRewardShare = BigNumber.from(0);
+        this.vStrategy = vStrategy;
 
-        // Deploy PancakeSwapFarmLPAdapterBsc contract
-        const PancakeSwapFarmLPAdapterBsc = await setupBscAdapterWithLib(
-            "PancakeSwapFarmLPAdapterBsc",
+        // Deploy AutoVaultAdapterBsc contract
+        const AutoFarmAdapter = await setupBscAdapterWithLib(
+            "AutoVaultAdapterBsc",
             this.lib
         );
         this.adapter = [0, 0];
-        this.adapter[0] = await PancakeSwapFarmLPAdapterBsc.deploy(
-            poolID, // pid
+        this.adapter[0] = await AutoFarmAdapter.deploy(
+            poolID,
             strategy,
-            lpToken,
-            cake,
-            pksRouter,
+            vStrategy,
+            stakingToken,
+            router,
+            swapRouter,
             wbnb,
-            "PancakeSwap::Farm::CAKE-WBNB",
+            name,
             this.authority.address
         );
         await this.adapter[0].deployed();
@@ -92,11 +108,11 @@ describe("PancakeSwap Adapters Integration Test", function () {
         await this.adapter[1].deployed();
 
         // register path to pathFinder contract
-        await setPath(this.pathFinder, this.pathManager, pksRouter, [
+        await setPath(this.pathFinder, this.pathManager, this.swapRouter, [
             wbnb,
             cake,
         ]);
-        await setPath(this.pathFinder, this.pathManager, pksRouter, [
+        await setPath(this.pathFinder, this.pathManager, this.swapRouter, [
             wbnb,
             cake,
             this.rewardToken,
@@ -111,7 +127,7 @@ describe("PancakeSwap Adapters Integration Test", function () {
         await mintNFT(
             this.ybNft,
             [this.adapter[0].address, this.adapter[1].address],
-            [lpToken, this.stakingToken],
+            [stakingToken, this.stakingToken],
             this.performanceFee
         );
 
@@ -126,6 +142,10 @@ describe("PancakeSwap Adapters Integration Test", function () {
                 await this.investor.tokenInfos(tokenId)
             ).accRewardShare;
         };
+        this.ctVStrategy = await ethers.getContractAt(
+            "IVaultStrategy",
+            vStrategy
+        );
 
         console.log("Lib: ", this.lib.address);
         console.log("YBNFT: ", this.ybNft.address);
@@ -133,7 +153,7 @@ describe("PancakeSwap Adapters Integration Test", function () {
         console.log("Authority: ", this.authority.address);
         console.log("AdapterList: ", this.adapterList.address);
         console.log("PathFinder: ", this.pathFinder.address);
-        console.log("PancakeSwapFarmLPAdapterBsc: ", this.adapter[0].address);
+        console.log("AutoVaultAdapterBsc: ", this.adapter[0].address);
         console.log("PancakeStakeAdapterBsc: ", this.adapter[1].address);
     });
 
@@ -183,7 +203,7 @@ describe("PancakeSwap Adapters Integration Test", function () {
         });
 
         it("(4) deposit should success for Bob", async function () {
-            // wait 40 mins
+            // wait 6 hrs
             for (let i = 0; i < 7200; i++) {
                 await ethers.provider.send("evm_mine", []);
             }
@@ -349,6 +369,13 @@ describe("PancakeSwap Adapters Integration Test", function () {
             await ethers.provider.send("evm_increaseTime", [3600 * 24 * 30]);
             await ethers.provider.send("evm_mine", []);
 
+            // double the staked token amount
+            await doubleWantLockedTotal(
+                this.vStrategy,
+                "0xe",
+                await this.ctVStrategy.wantLockedTotal()
+            );
+
             // withdraw from nftId: 1
             const beforeBNB = await ethers.provider.getBalance(
                 this.bob.address
@@ -369,7 +396,7 @@ describe("PancakeSwap Adapters Integration Test", function () {
                 Number(
                     ethers.utils.formatEther(afterBNB.sub(beforeBNB).toString())
                 )
-            ).to.be.gt(19.9);
+            ).to.be.gt(29);
 
             let bobInfo = await this.investor.userInfos(1, this.bob.address);
             expect(bobInfo.amount).to.eq(BigNumber.from(0));
@@ -408,7 +435,7 @@ describe("PancakeSwap Adapters Integration Test", function () {
                 value: ethers.utils.parseEther("100"),
             });
 
-            // wait 40 mins
+            // wait 6 hrs
             for (let i = 0; i < 7200; i++) {
                 await ethers.provider.send("evm_mine", []);
             }
@@ -463,15 +490,22 @@ describe("PancakeSwap Adapters Integration Test", function () {
 
             await this.investor.connect(this.user2).deposit(2, {
                 gasPrice: 21e9,
-                value: ethers.utils.parseEther("100"),
+                value: ethers.utils.parseEther("20"),
             });
 
-            // wait 40 mins
+            // wait 6 hrs
             for (let i = 0; i < 7200; i++) {
                 await ethers.provider.send("evm_mine", []);
             }
             await ethers.provider.send("evm_increaseTime", [3600 * 24]);
             await ethers.provider.send("evm_mine", []);
+
+            // double the staked token amount
+            await doubleWantLockedTotal(
+                this.vStrategy,
+                "0xe",
+                await this.ctVStrategy.wantLockedTotal()
+            );
         });
 
         it("test pendingReward, invested amount ratio after allocation change", async function () {
@@ -500,10 +534,9 @@ describe("PancakeSwap Adapters Integration Test", function () {
                 2,
                 this.user2.address
             );
-            expect(aPending1[0]).gt(bPending1[0]) &&
-                expect(aPending1[1]).gt(bPending1[1]);
-            expect(aPending2[0]).gt(bPending2[0]) &&
-                expect(aPending2[1]).gt(bPending2[1]);
+
+            expect(aPending1[0]).gt(bPending1[0].mul(98).div(100));
+            expect(aPending2[0]).gt(bPending2[0].mul(98).div(100));
 
             // check invested amount
             const aTokenInfo1 = await this.adapter[0].userAdapterInfos(2);
