@@ -479,6 +479,4 @@ contract BiSwapFarmLPAdapterBsc is BaseAdapter {
 
         return msg.value;
     }
-
-    receive() external payable {}
 }
