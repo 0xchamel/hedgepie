@@ -118,7 +118,7 @@ contract YBNFT is ERC721, HedgepieAccessControlled {
         uint256 _performanceFee,
         string memory _tokenURI
     ) external {
-        require(_performanceFee < 1e4, "Fee should be less than 10%");
+        require(_performanceFee < 1e3, "Fee should be less than 10%");
         require(
             _adapterTokens.length != 0 &&
                 _adapterTokens.length == _adapterAllocations.length &&
