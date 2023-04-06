@@ -571,4 +571,322 @@ describe("Belt Adapters Integration Test", function () {
             );
         });
     });
+
+    describe("deposit function test after editFund", function () {
+        it("(1) should be reverted when nft tokenId is invalid", async function () {
+            // deposit to nftID: 3
+            const depositAmount = ethers.utils.parseEther("1");
+            await expect(
+                this.investor.connect(this.alice).deposit(3, {
+                    gasPrice: 21e9,
+                    value: depositAmount,
+                })
+            ).to.be.revertedWith("Error: nft tokenId is invalid");
+        });
+
+        it("(2) should be reverted when amount is 0", async function () {
+            // deposit to nftID: 1
+            await expect(
+                this.investor.deposit(1, {
+                    gasPrice: 21e9,
+                })
+            ).to.be.revertedWith("Error: Insufficient BNB");
+        });
+
+        it("(3) deposit should success for Alice", async function () {
+            const depositAmount = ethers.utils.parseEther("10");
+            await expect(
+                this.investor.connect(this.alice).deposit(1, {
+                    gasPrice: 21e9,
+                    value: depositAmount,
+                })
+            )
+                .to.emit(this.investor, "Deposited")
+                .withArgs(
+                    this.alice.address,
+                    this.ybNft.address,
+                    1,
+                    depositAmount
+                );
+
+            const aliceInfo = await this.investor.userInfos(
+                1,
+                this.alice.address
+            );
+            expect(aliceInfo.amount).to.gt(0);
+        });
+
+        it("(4) deposit should success for Bob", async function () {
+            // wait 6 hrs
+            for (let i = 0; i < 7200; i++) {
+                await ethers.provider.send("evm_mine", []);
+            }
+            await ethers.provider.send("evm_increaseTime", [3600 * 24]);
+            await ethers.provider.send("evm_mine", []);
+
+            const beforeAdapterInfos = await this.investor.tokenInfos(1);
+            const depositAmount = ethers.utils.parseEther("10");
+
+            await expect(
+                this.investor.connect(this.bob).deposit(1, {
+                    gasPrice: 21e9,
+                    value: depositAmount,
+                })
+            )
+                .to.emit(this.investor, "Deposited")
+                .withArgs(
+                    this.bob.address,
+                    this.ybNft.address,
+                    1,
+                    depositAmount
+                );
+
+            await expect(
+                this.investor.connect(this.bob).deposit(1, {
+                    gasPrice: 21e9,
+                    value: depositAmount,
+                })
+            )
+                .to.emit(this.investor, "Deposited")
+                .withArgs(
+                    this.bob.address,
+                    this.ybNft.address,
+                    1,
+                    depositAmount
+                );
+
+            const bobInfo = await this.investor.userInfos(1, this.bob.address);
+            expect(bobInfo.amount).to.gt(0);
+
+            const afterAdapterInfos = await this.investor.tokenInfos(1);
+            expect(
+                BigNumber.from(afterAdapterInfos.totalStaked).gt(
+                    beforeAdapterInfos.totalStaked
+                )
+            ).to.eq(true);
+
+            await this.checkAccRewardShare(1);
+        });
+
+        it("(5) test TVL & participants", async function () {
+            const aliceInfo = await this.investor.userInfos(
+                1,
+                this.alice.address
+            );
+            const bobInfo = await this.investor.userInfos(1, this.bob.address);
+
+            // const bnbPrice = BigNumber.from(await this.lib.getBNBPrice());
+            const nftInfo = await this.ybNft.tokenInfos(1);
+
+            expect(BigNumber.from(nftInfo.tvl).toString()).to.be.eq(
+                BigNumber.from(aliceInfo.amount).add(
+                    BigNumber.from(bobInfo.amount)
+                )
+            ) &&
+                expect(BigNumber.from(nftInfo.participant).toString()).to.be.eq(
+                    "2"
+                );
+        });
+    });
+
+    describe("claim() function test after editFund", function () {
+        it("(1) check withdrawable and claim for alice", async function () {
+            // wait 1 day
+            for (let i = 0; i < 1800; i++) {
+                await ethers.provider.send("evm_mine", []);
+            }
+            await ethers.provider.send("evm_increaseTime", [3600 * 24]);
+            await ethers.provider.send("evm_mine", []);
+
+            await checkPendingWithClaim(
+                this.investor,
+                this.alice,
+                1,
+                this.performanceFee
+            );
+            await this.checkAccRewardShare(1);
+        });
+
+        it("(2) check withdrawable and claim for bob", async function () {
+            await checkPendingWithClaim(
+                this.investor,
+                this.bob,
+                1,
+                this.performanceFee
+            );
+        });
+    });
+
+    describe("withdrawBNB() function test after editFund", function () {
+        it("(1) revert when nft tokenId is invalid", async function () {
+            for (let i = 0; i < 10; i++) {
+                await ethers.provider.send("evm_mine", []);
+            }
+            await ethers.provider.send("evm_increaseTime", [3600 * 24]);
+            await ethers.provider.send("evm_mine", []);
+
+            // withdraw to nftID: 3
+            await expect(
+                this.investor
+                    .connect(this.governor)
+                    .withdraw(3, { gasPrice: 21e9 })
+            ).to.be.revertedWith("Error: nft tokenId is invalid");
+        });
+
+        it("(2) should receive the BNB successfully after withdraw function for Alice", async function () {
+            await ethers.provider.send("evm_increaseTime", [3600 * 24 * 30]);
+            await ethers.provider.send("evm_mine", []);
+
+            // withdraw from nftId: 1
+            const beforeBNB = await ethers.provider.getBalance(
+                this.alice.address
+            );
+            await expect(this.investor.connect(this.alice).withdraw(1)).to.emit(
+                this.investor,
+                "Withdrawn"
+            );
+            const afterBNB = await ethers.provider.getBalance(
+                this.alice.address
+            );
+            expect(
+                BigNumber.from(afterBNB).gt(BigNumber.from(beforeBNB))
+            ).to.eq(true);
+
+            // check withdrawn balance
+            expect(
+                Number(
+                    ethers.utils.formatEther(afterBNB.sub(beforeBNB).toString())
+                )
+            ).to.be.gt(9.9);
+
+            // check userInfo
+            let aliceInfo = await this.investor.userInfos(
+                1,
+                this.alice.address
+            );
+            expect(aliceInfo.amount).to.eq(BigNumber.from(0));
+
+            //------- check bob info -----//
+            const bobInfo = await this.investor.userInfos(1, this.bob.address);
+            // const bnbPrice = BigNumber.from(await this.lib.getBNBPrice());
+            expect(bobInfo.amount).to.gt(0);
+
+            await this.checkAccRewardShare(1);
+        });
+
+        it("(3) test TVL & participants after Alice withdraw", async function () {
+            // const bnbPrice = BigNumber.from(await this.lib.getBNBPrice());
+            const nftInfo = await this.ybNft.tokenInfos(1);
+            const bobInfo = await this.investor.userInfos(1, this.bob.address);
+
+            expect(BigNumber.from(nftInfo.tvl).toString()).to.be.eq(
+                BigNumber.from(bobInfo.amount)
+            ) &&
+                expect(BigNumber.from(nftInfo.participant).toString()).to.be.eq(
+                    "1"
+                );
+        });
+
+        it("(4) should receive the BNB successfully after withdraw function for Bob", async function () {
+            await ethers.provider.send("evm_increaseTime", [3600 * 24 * 30]);
+            await ethers.provider.send("evm_mine", []);
+
+            // withdraw from nftId: 1
+            const beforeBNB = await ethers.provider.getBalance(
+                this.bob.address
+            );
+
+            await expect(this.investor.connect(this.bob).withdraw(1)).to.emit(
+                this.investor,
+                "Withdrawn"
+            );
+
+            const afterBNB = await ethers.provider.getBalance(this.bob.address);
+            expect(
+                BigNumber.from(afterBNB).gt(BigNumber.from(beforeBNB))
+            ).to.eq(true);
+
+            // check withdrawn balance
+            expect(
+                Number(
+                    ethers.utils.formatEther(afterBNB.sub(beforeBNB).toString())
+                )
+            ).to.be.gt(19.8);
+
+            let bobInfo = await this.investor.userInfos(1, this.bob.address);
+            expect(bobInfo.amount).to.eq(BigNumber.from(0));
+
+            await this.checkAccRewardShare(1);
+        });
+
+        it("(5) test TVL & participants after Alice & Bob withdraw", async function () {
+            const nftInfo = await this.ybNft.tokenInfos(1);
+
+            expect(BigNumber.from(nftInfo.tvl).toString()).to.be.eq("0");
+            expect(BigNumber.from(nftInfo.participant).toString()).to.be.eq(
+                "0"
+            );
+        });
+    });
+
+    describe("pendingReward(), claim() function tests and protocol-fee test after editFund", function () {
+        it("check if pendingReward is zero for new users", async function () {
+            const pending = await this.investor.pendingReward(
+                1,
+                this.user1.address
+            );
+
+            expect(pending[0]).to.be.eq(0);
+            expect(pending[1]).to.be.eq(0);
+        });
+        it("test with token1 and token2", async function () {
+            await this.investor.connect(this.kyle).deposit(1, {
+                gasPrice: 21e9,
+                value: ethers.utils.parseEther("10"),
+            });
+
+            await this.investor.connect(this.jerry).deposit(2, {
+                gasPrice: 21e9,
+                value: ethers.utils.parseEther("100"),
+            });
+
+            // wait 6 hrs
+            for (let i = 0; i < 7200; i++) {
+                await ethers.provider.send("evm_mine", []);
+            }
+            await ethers.provider.send("evm_increaseTime", [3600 * 24]);
+            await ethers.provider.send("evm_mine", []);
+
+            // deposit from other user to update accTokenPerShare values
+            await this.investor.connect(this.alice).deposit(2, {
+                gasPrice: 21e9,
+                value: ethers.utils.parseEther("1"),
+            });
+
+            // check pending rewards
+            await checkPendingWithClaim(
+                this.investor,
+                this.kyle,
+                1,
+                this.performanceFee
+            );
+            await checkPendingWithClaim(
+                this.investor,
+                this.jerry,
+                2,
+                this.performanceFee
+            );
+
+            // Successfully withdraw
+            await expect(this.investor.connect(this.kyle).withdraw(1)).to.emit(
+                this.investor,
+                "Withdrawn"
+            );
+
+            await expect(this.investor.connect(this.jerry).withdraw(2)).to.emit(
+                this.investor,
+                "Withdrawn"
+            );
+        });
+    });
 });

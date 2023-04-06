@@ -10,7 +10,7 @@ const {
 
 const BigNumber = ethers.BigNumber;
 
-describe.only("Multiple Adapters Integration Test", function () {
+describe("Multiple Adapters Integration Test", function () {
     const checkPendingWithClaim = async (
         investor,
         user,
@@ -180,6 +180,23 @@ describe.only("Multiple Adapters Integration Test", function () {
         );
         await this.adapter[4].deployed();
 
+        // Deploy BeltVaultAdapterBsc contract
+        const beltStrategy = "0x9171Bf7c050aC8B4cf7835e51F7b4841DFB2cCD0"; // beltBUSD
+        const BeltVaultAdapter = await setupBscAdapterWithLib(
+            "BeltVaultAdapterBsc",
+            this.lib
+        );
+        this.adapter[5] = await BeltVaultAdapter.deploy(
+            beltStrategy,
+            busd,
+            beltStrategy,
+            pksRouter,
+            wbnb,
+            "Belt::Vault::BUSD",
+            this.authority.address
+        );
+        await this.adapter[5].deployed();
+
         // Deploy BeefyVaultAdapterBsc contract
         const beefyStrategy = "0x164fb78cAf2730eFD63380c2a645c32eBa1C52bc"; // Moo BiSwap USDT-BUSD
         const beefyStaking = "0xDA8ceb724A06819c0A5cDb4304ea0cB27F8304cF"; // Biswap USDT-BUSD LP
@@ -187,30 +204,13 @@ describe.only("Multiple Adapters Integration Test", function () {
             "BeefyVaultAdapterBsc",
             this.lib
         );
-        this.adapter[5] = await BeefyVaultAdapter.deploy(
+        this.adapter[6] = await BeefyVaultAdapter.deploy(
             beefyStrategy,
             beefyStaking,
             biswapRouter,
             pksRouter,
             wbnb,
             "Beefy::Vault::Biswap USDT-BUSD",
-            this.authority.address
-        );
-        await this.adapter[5].deployed();
-
-        // Deploy BeltVaultAdapterBsc contract
-        const beltStrategy = "0x9171Bf7c050aC8B4cf7835e51F7b4841DFB2cCD0"; // beltBUSD
-        const BeltVaultAdapter = await setupBscAdapterWithLib(
-            "BeltVaultAdapterBsc",
-            this.lib
-        );
-        this.adapter[6] = await BeltVaultAdapter.deploy(
-            beltStrategy,
-            busd,
-            beltStrategy,
-            pksRouter,
-            wbnb,
-            "Belt::Vault::BUSD",
             this.authority.address
         );
         await this.adapter[6].deployed();
@@ -265,15 +265,15 @@ describe.only("Multiple Adapters Integration Test", function () {
 
         // mint ybnft
         await this.ybNft.mint(
-            [1500, 1500, 1500, 1500, 1500, 1500, 1000],
+            [1500, 1500, 1500, 1500, 1500, 2500, 0],
             [
                 pksLpToken,
                 cake,
                 biswapLpToken,
                 bsw,
                 autofarmStaking,
-                beefyStaking,
                 busd,
+                beefyStaking,
             ],
             [
                 this.adapter[0].address,
@@ -289,15 +289,15 @@ describe.only("Multiple Adapters Integration Test", function () {
         );
 
         await this.ybNft.mint(
-            [1000, 1500, 1500, 1500, 1500, 1500, 1500],
+            [1000, 1500, 1500, 1500, 1500, 3000, 0],
             [
                 pksLpToken,
                 cake,
                 biswapLpToken,
                 bsw,
                 autofarmStaking,
-                beefyStaking,
                 busd,
+                beefyStaking,
             ],
             [
                 this.adapter[0].address,
@@ -335,8 +335,8 @@ describe.only("Multiple Adapters Integration Test", function () {
         console.log("BiswapLPFarmAdapterBsc: ", this.adapter[2].address);
         console.log("BiswapBSWAdapterBsc: ", this.adapter[3].address);
         console.log("AutofarmVaultAdapterBsc: ", this.adapter[4].address);
-        console.log("BeefyVaultAdapterBsc: ", this.adapter[5].address);
-        console.log("BeltVaultAdapterBsc: ", this.adapter[6].address);
+        console.log("BeltVaultAdapterBsc: ", this.adapter[5].address);
+        console.log("BeefyVaultAdapterBsc: ", this.adapter[6].address);
     });
 
     describe("deposit() function test", function () {
@@ -603,7 +603,7 @@ describe.only("Multiple Adapters Integration Test", function () {
         it("test possibility to set zero percent", async function () {
             await this.ybNft
                 .connect(this.governor)
-                .updateAllocations(1, [0, 0, 0, 0, 0, 0, 10000]);
+                .updateAllocations(1, [0, 0, 0, 0, 0, 10000, 0]);
         });
 
         it("test with token1 and token2 - updateAllocations", async function () {
@@ -627,7 +627,7 @@ describe.only("Multiple Adapters Integration Test", function () {
 
         it("test pendingReward, invested amount ratio after allocation change", async function () {
             // Check reward increase after updateAllocation
-            const allocation = [1000, 1000, 1000, 1000, 1000, 1000, 4000];
+            const allocation = [5000, 1000, 1000, 1000, 1000, 1000, 0];
             const bTokenInfo1 = await this.adapter[0].userAdapterInfos(2);
             const bTokenInfo2 = await this.adapter[1].userAdapterInfos(2);
             const bPending1 = await this.investor.pendingReward(
