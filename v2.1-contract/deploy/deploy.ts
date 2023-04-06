@@ -1,9 +1,5 @@
 import hre from "hardhat";
-import { Logger } from "tslog";
 import "@nomiclabs/hardhat-ethers";
-import { verify } from "../utils";
-
-const { setupBscAdapterWithLib } = require("../test/shared/setup");
 
 async function deploy() {
     const HedgepieAdapterList = await hre.ethers.getContractFactory(
@@ -15,6 +11,7 @@ async function deploy() {
     const Lib = await hre.ethers.getContractFactory("HedgepieLibraryBsc");
     const YBNFT = await hre.ethers.getContractFactory("YBNFT");
     const PathFinder = await hre.ethers.getContractFactory("PathFinder");
+
     // Deploy base contracts
     const authority = await HedgepieAuthority.deploy(
         "0xB34b18b191a2371359762429f9732F73af8ac211",
