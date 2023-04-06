@@ -2,10 +2,10 @@
 pragma solidity ^0.8.4;
 
 interface IPancakeRouter {
-    function getAmountsIn(uint256 amountOut, address[] memory path)
-        external
-        view
-        returns (uint256[] memory amounts);
+    function getAmountsIn(
+        uint256 amountOut,
+        address[] memory path
+    ) external view returns (uint256[] memory amounts);
 
     function swapExactTokensForTokens(
         uint256 amountIn,
@@ -39,13 +39,7 @@ interface IPancakeRouter {
         uint256 amountBMin,
         address to,
         uint256 deadline
-    )
-        external
-        returns (
-            uint256 amountA,
-            uint256 amountB,
-            uint256 liquidity
-        );
+    ) external returns (uint256 amountA, uint256 amountB, uint256 liquidity);
 
     function addLiquidityETH(
         address token,
@@ -57,11 +51,7 @@ interface IPancakeRouter {
     )
         external
         payable
-        returns (
-            uint256 amountToken,
-            uint256 amountETH,
-            uint256 liquidity
-        );
+        returns (uint256 amountToken, uint256 amountETH, uint256 liquidity);
 
     function removeLiquidity(
         address tokenA,
@@ -82,8 +72,8 @@ interface IPancakeRouter {
         uint256 deadline
     ) external returns (uint256 amountToken, uint256 amountETH);
 
-    function getAmountsOut(uint256 amountIn, address[] memory path)
-        external
-        view
-        returns (uint256[] memory amounts);
+    function getAmountsOut(
+        uint256 amountIn,
+        address[] memory path
+    ) external view returns (uint256[] memory amounts);
 }

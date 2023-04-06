@@ -5,10 +5,10 @@ import "../../libraries/HedgepieLibraryBsc.sol";
 import "../../interfaces/IHedgepieInvestor.sol";
 
 interface IStrategy {
-    function pendingBSW(uint256 _pid, address _user)
-        external
-        view
-        returns (uint256);
+    function pendingBSW(
+        uint256 _pid,
+        address _user
+    ) external view returns (uint256);
 
     function deposit(uint256 pid, uint256 amount) external;
 
@@ -56,13 +56,9 @@ contract BiSwapFarmLPAdapterBsc is BaseAdapter {
      * @notice Deposit with BNB
      * @param _tokenId YBNFT token id
      */
-    function deposit(uint256 _tokenId)
-        external
-        payable
-        override
-        onlyInvestor
-        returns (uint256 amountOut)
-    {
+    function deposit(
+        uint256 _tokenId
+    ) external payable override onlyInvestor returns (uint256 amountOut) {
         UserAdapterInfo storage userInfo = userAdapterInfos[_tokenId];
 
         uint256 rewardAmt = IERC20(rewardToken).balanceOf(address(this));
@@ -124,13 +120,10 @@ contract BiSwapFarmLPAdapterBsc is BaseAdapter {
      * @param _tokenId YBNFT token id
      * @param _amount amount of staking token to withdraw
      */
-    function withdraw(uint256 _tokenId, uint256 _amount)
-        external
-        payable
-        override
-        onlyInvestor
-        returns (uint256 amountOut)
-    {
+    function withdraw(
+        uint256 _tokenId,
+        uint256 _amount
+    ) external payable override onlyInvestor returns (uint256 amountOut) {
         if (_amount == 0) return 0;
 
         UserAdapterInfo storage userInfo = userAdapterInfos[_tokenId];
@@ -241,13 +234,9 @@ contract BiSwapFarmLPAdapterBsc is BaseAdapter {
      * @notice Claim the pending reward
      * @param _tokenId YBNFT token id
      */
-    function claim(uint256 _tokenId)
-        external
-        payable
-        override
-        onlyInvestor
-        returns (uint256 amountOut)
-    {
+    function claim(
+        uint256 _tokenId
+    ) external payable override onlyInvestor returns (uint256 amountOut) {
         UserAdapterInfo storage userInfo = userAdapterInfos[_tokenId];
 
         // 1. calc & claim rewards
@@ -297,12 +286,9 @@ contract BiSwapFarmLPAdapterBsc is BaseAdapter {
      * @notice Return the pending reward by Bnb
      * @param _tokenId YBNFT token id
      */
-    function pendingReward(uint256 _tokenId)
-        external
-        view
-        override
-        returns (uint256 reward, uint256 withdrawable)
-    {
+    function pendingReward(
+        uint256 _tokenId
+    ) external view override returns (uint256 reward, uint256 withdrawable) {
         UserAdapterInfo memory userInfo = userAdapterInfos[_tokenId];
 
         // 1. calc updatedAccTokenPerShare
@@ -340,13 +326,9 @@ contract BiSwapFarmLPAdapterBsc is BaseAdapter {
      * @notice Remove funds
      * @param _tokenId YBNFT token id
      */
-    function removeFunds(uint256 _tokenId)
-        external
-        payable
-        override
-        onlyInvestor
-        returns (uint256 amountOut)
-    {
+    function removeFunds(
+        uint256 _tokenId
+    ) external payable override onlyInvestor returns (uint256 amountOut) {
         UserAdapterInfo storage userInfo = userAdapterInfos[_tokenId];
         if (userInfo.amount == 0) return 0;
 
@@ -423,13 +405,9 @@ contract BiSwapFarmLPAdapterBsc is BaseAdapter {
      * @notice Update funds
      * @param _tokenId YBNFT token id
      */
-    function updateFunds(uint256 _tokenId)
-        external
-        payable
-        override
-        onlyInvestor
-        returns (uint256 amountOut)
-    {
+    function updateFunds(
+        uint256 _tokenId
+    ) external payable override onlyInvestor returns (uint256 amountOut) {
         if (msg.value == 0) return 0;
 
         UserAdapterInfo storage userInfo = userAdapterInfos[_tokenId];

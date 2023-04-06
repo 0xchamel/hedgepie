@@ -175,10 +175,7 @@ contract YBNFT is ERC721, HedgepieAccessControlled {
         uint256 _tokenId,
         uint256 _performanceFee
     ) external {
-        require(
-            _performanceFee < 1e4,
-            "Fee should be under 10%"
-        );
+        require(_performanceFee < 1e4, "Fee should be under 10%");
         require(msg.sender == ownerOf(_tokenId), "Invalid NFT Owner");
 
         performanceFee[_tokenId] = _performanceFee;
@@ -336,10 +333,7 @@ contract YBNFT is ERC721, HedgepieAccessControlled {
         uint256 _tokenId,
         string memory _tokenURI
     ) internal virtual {
-        require(
-            _exists(_tokenId),
-            "Nonexistent token"
-        );
+        require(_exists(_tokenId), "Nonexistent token");
         _tokenURIs[_tokenId] = _tokenURI;
     }
 
