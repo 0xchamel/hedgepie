@@ -265,8 +265,7 @@ describe.only("Multiple Adapters Integration Test", function () {
 
         // mint ybnft
         await this.ybNft.mint(
-            // [1500, 1500, 1500, 1500, 1500, 2500, 0],
-            [0, 0, 0, 1e4, 0, 0, 0],
+            [1500, 1500, 1500, 1500, 1500, 2500, 0],
             [
                 pksLpToken,
                 cake,
@@ -290,8 +289,7 @@ describe.only("Multiple Adapters Integration Test", function () {
         );
 
         await this.ybNft.mint(
-            // [1000, 1500, 1500, 1500, 1500, 3000, 0],
-            [0, 0, 0, 1e4, 0, 0, 0],
+            [1000, 1500, 1500, 1500, 1500, 3000, 0],
             [
                 pksLpToken,
                 cake,
@@ -629,7 +627,7 @@ describe.only("Multiple Adapters Integration Test", function () {
 
         it("test pendingReward, invested amount ratio after allocation change", async function () {
             // Check reward increase after updateAllocation
-            const allocation = [5000, 1000, 1000, 1000, 1000, 1000, 0];
+            const allocation = [2000, 1000, 1000, 2000, 2000, 2000, 0];
             const bTokenInfo1 = await this.adapter[0].userAdapterInfos(2);
             const bTokenInfo2 = await this.adapter[1].userAdapterInfos(2);
             const bPending1 = await this.investor.pendingReward(
@@ -640,9 +638,6 @@ describe.only("Multiple Adapters Integration Test", function () {
                 2,
                 this.user2.address
             );
-            for (let ii = 0; ii < 6; ii++) {
-                console.log(await this.adapter[ii].pendingReward(2), "Index: " + ii)
-            }
             await this.ybNft
                 .connect(this.governor)
                 .updateAllocations(2, allocation);
@@ -658,9 +653,6 @@ describe.only("Multiple Adapters Integration Test", function () {
             );
             expect(aPending1[0]).gte(bPending1[0]) &&
                 expect(aPending1[1]).gte(bPending1[1]);
-            for (let ii = 0; ii < 6; ii++) {
-                console.log(await this.adapter[ii].pendingReward(2), "Index: " + ii)
-            }
             expect(aPending2[0]).gte(bPending2[0]) &&
                 expect(aPending2[1]).gte(bPending2[1]);
 
