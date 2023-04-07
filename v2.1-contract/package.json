@@ -8,6 +8,7 @@
         "test": "npx hardhat test --network hardhat",
         "code:size": "npx hardhat size-contracts",
         "deploy:network": "npx hardhat run deploy/deploy.ts --network",
+        "deploy-adapter:network": "npx hardhat run deploy/deploy_adapter.ts --network",
         "verify:network": "npx hardhat verify --network",
         "prettier": "prettier --write 'contracts/**/*.sol'",
         "eslint:test": "eslint test",
