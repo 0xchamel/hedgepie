@@ -10,7 +10,7 @@ const {
 
 const BigNumber = ethers.BigNumber;
 
-describe.only("Multiple Adapters Integration Test", function () {
+describe("Multiple Adapters Integration Test", function () {
     const checkPendingWithClaim = async (
         investor,
         user,

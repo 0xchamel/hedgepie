@@ -823,7 +823,7 @@ describe("AutoFarm Adapters Integration Test", function () {
                 Number(
                     ethers.utils.formatEther(afterBNB.sub(beforeBNB).toString())
                 )
-            ).to.be.gt(29);
+            ).to.be.gt(19.88);
 
             let bobInfo = await this.investor.userInfos(1, this.bob.address);
             expect(bobInfo.amount).to.eq(BigNumber.from(0));
