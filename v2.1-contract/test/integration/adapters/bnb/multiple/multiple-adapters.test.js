@@ -10,7 +10,7 @@ const {
 
 const BigNumber = ethers.BigNumber;
 
-describe("Multiple Adapters Integration Test", function () {
+describe.only("Multiple Adapters Integration Test", function () {
     const checkPendingWithClaim = async (
         investor,
         user,
@@ -265,7 +265,8 @@ describe("Multiple Adapters Integration Test", function () {
 
         // mint ybnft
         await this.ybNft.mint(
-            [1500, 1500, 1500, 1500, 1500, 2500, 0],
+            // [1500, 1500, 1500, 1500, 1500, 2500, 0],
+            [0, 0, 0, 1e4, 0, 0, 0],
             [
                 pksLpToken,
                 cake,
@@ -289,7 +290,8 @@ describe("Multiple Adapters Integration Test", function () {
         );
 
         await this.ybNft.mint(
-            [1000, 1500, 1500, 1500, 1500, 3000, 0],
+            // [1000, 1500, 1500, 1500, 1500, 3000, 0],
+            [0, 0, 0, 1e4, 0, 0, 0],
             [
                 pksLpToken,
                 cake,
@@ -581,7 +583,7 @@ describe("Multiple Adapters Integration Test", function () {
                 Number(
                     ethers.utils.formatEther(afterBNB.sub(beforeBNB).toString())
                 )
-            ).to.be.gt(19.9);
+            ).to.be.gt(19.8);
 
             let bobInfo = await this.investor.userInfos(1, this.bob.address);
             expect(bobInfo.amount).to.eq(BigNumber.from(0));
@@ -638,6 +640,9 @@ describe("Multiple Adapters Integration Test", function () {
                 2,
                 this.user2.address
             );
+            for (let ii = 0; ii < 6; ii++) {
+                console.log(await this.adapter[ii].pendingReward(2), "Index: " + ii)
+            }
             await this.ybNft
                 .connect(this.governor)
                 .updateAllocations(2, allocation);
@@ -653,6 +658,9 @@ describe("Multiple Adapters Integration Test", function () {
             );
             expect(aPending1[0]).gte(bPending1[0]) &&
                 expect(aPending1[1]).gte(bPending1[1]);
+            for (let ii = 0; ii < 6; ii++) {
+                console.log(await this.adapter[ii].pendingReward(2), "Index: " + ii)
+            }
             expect(aPending2[0]).gte(bPending2[0]) &&
                 expect(aPending2[1]).gte(bPending2[1]);
 

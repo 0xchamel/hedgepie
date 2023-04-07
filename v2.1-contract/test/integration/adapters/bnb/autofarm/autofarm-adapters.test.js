@@ -22,7 +22,7 @@ async function doubleWantLockedTotal(address, slot, current) {
     ]);
 }
 
-describe.only("AutoFarm Adapters Integration Test", function () {
+describe("AutoFarm Adapters Integration Test", function () {
     before("Deploy contract", async function () {
         [
             this.governor,
