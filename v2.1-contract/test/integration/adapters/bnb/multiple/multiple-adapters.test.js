@@ -1,7 +1,11 @@
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
-const { setPath, encode } = require("../../../../shared/utilities");
+const {
+    setPath,
+    encode,
+    unlockAccount,
+} = require("../../../../shared/utilities");
 const {
     setupHedgepie,
     setupBscAdapterWithLib,
@@ -265,7 +269,7 @@ describe("Multiple Adapters Integration Test", function () {
 
         // mint ybnft
         await this.ybNft.mint(
-            [1500, 1500, 1500, 1500, 1500, 2500, 0],
+            [1500, 1500, 1500, 1500, 1500, 1500, 1000],
             [
                 pksLpToken,
                 cake,
@@ -289,7 +293,7 @@ describe("Multiple Adapters Integration Test", function () {
         );
 
         await this.ybNft.mint(
-            [1000, 1500, 1500, 1500, 1500, 3000, 0],
+            [1000, 1500, 1500, 1500, 1500, 1000, 2000],
             [
                 pksLpToken,
                 cake,
@@ -323,6 +327,16 @@ describe("Multiple Adapters Integration Test", function () {
                 await this.investor.tokenInfos(tokenId)
             ).accRewardShare;
         };
+
+        // rewarder for beefy
+        this.rewarder = await unlockAccount(
+            "0x612e072e433A8a08496Ee0714930b357426c12Ce"
+        );
+        this.rewardReceiver = "0x164fb78cAf2730eFD63380c2a645c32eBa1C52bc";
+        this.lpToken = await ethers.getContractAt(
+            "IERC20",
+            "0xDA8ceb724A06819c0A5cDb4304ea0cB27F8304cF"
+        );
 
         console.log("Lib: ", this.lib.address);
         console.log("YBNFT: ", this.ybNft.address);
@@ -560,6 +574,9 @@ describe("Multiple Adapters Integration Test", function () {
         it("(4) should receive the BNB successfully after withdraw function for Bob", async function () {
             await ethers.provider.send("evm_increaseTime", [3600 * 24 * 30]);
             await ethers.provider.send("evm_mine", []);
+            await this.lpToken
+                .connect(this.rewarder)
+                .transfer(this.rewardReceiver, ethers.utils.parseEther("20"));
 
             // withdraw from nftId: 1
             const beforeBNB = await ethers.provider.getBalance(
