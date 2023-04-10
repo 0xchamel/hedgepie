@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.4;
 
-import "../../interfaces/IVaultStrategy.sol";
-import "../../interfaces/IHedgepieInvestor.sol";
 import "../../libraries/HedgepieLibraryBsc.sol";
 
 interface IStrategy {
@@ -22,6 +20,8 @@ interface IStrategy {
 }
 
 contract BeltVaultAdapterBsc is BaseAdapter {
+    using SafeERC20 for IERC20;
+
     /**
      * @notice Construct
      * @param _strategy  address of strategy
@@ -73,7 +73,8 @@ contract BeltVaultAdapterBsc is BaseAdapter {
         if (stakingToken == wbnb) {
             IStrategy(strategy).deposit{value: msg.value}(0);
         } else {
-            IERC20(stakingToken).approve(strategy, amountOut);
+            IERC20(stakingToken).safeApprove(strategy, 0);
+            IERC20(stakingToken).safeApprove(strategy, amountOut);
             IStrategy(strategy).deposit(amountOut, 0);
         }
         repayAmt = IERC20(repayToken).balanceOf(address(this)) - repayAmt;
@@ -331,7 +332,8 @@ contract BeltVaultAdapterBsc is BaseAdapter {
         if (stakingToken == wbnb) {
             IStrategy(strategy).deposit{value: msg.value}(0);
         } else {
-            IERC20(stakingToken).approve(strategy, amountOut);
+            IERC20(stakingToken).safeApprove(strategy, 0);
+            IERC20(stakingToken).safeApprove(strategy, amountOut);
             IStrategy(strategy).deposit(amountOut, 0);
         }
         repayAmt = IERC20(repayToken).balanceOf(address(this)) - repayAmt;

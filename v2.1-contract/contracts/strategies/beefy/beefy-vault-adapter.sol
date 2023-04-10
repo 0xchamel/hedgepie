@@ -2,7 +2,6 @@
 pragma solidity ^0.8.4;
 
 import "../../libraries/HedgepieLibraryBsc.sol";
-import "../../interfaces/IHedgepieInvestor.sol";
 
 interface IStrategy {
     function deposit(uint256) external;
@@ -17,6 +16,8 @@ interface IStrategy {
 }
 
 contract BeefyVaultAdapterBsc is BaseAdapter {
+    using SafeERC20 for IERC20;
+    
     /**
      * @notice Construct
      * @param _strategy  address of strategy
@@ -73,7 +74,8 @@ contract BeefyVaultAdapterBsc is BaseAdapter {
 
         // 2. deposit to vault
         uint256 repayAmt = IERC20(repayToken).balanceOf(address(this));
-        IERC20(stakingToken).approve(strategy, amountOut);
+        IERC20(stakingToken).safeApprove(strategy, 0);
+        IERC20(stakingToken).safeApprove(strategy, amountOut);
         IStrategy(strategy).deposit(amountOut);
         repayAmt = IERC20(repayToken).balanceOf(address(this)) - repayAmt;
         require(repayAmt != 0, "Failed to deposit");
@@ -343,7 +345,8 @@ contract BeefyVaultAdapterBsc is BaseAdapter {
 
         // 2. deposit to vault
         uint256 repayAmt = IERC20(repayToken).balanceOf(address(this));
-        IERC20(stakingToken).approve(strategy, amountOut);
+        IERC20(stakingToken).safeApprove(strategy, 0);
+        IERC20(stakingToken).safeApprove(strategy, amountOut);
         IStrategy(strategy).deposit(amountOut);
         repayAmt = IERC20(repayToken).balanceOf(address(this)) - repayAmt;
         require(repayAmt != 0, "Failed to update funds");

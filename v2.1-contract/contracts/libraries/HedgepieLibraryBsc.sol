@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.4;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "../interfaces/IYBNFT.sol";
 import "../interfaces/IAdapter.sol";
@@ -14,6 +14,8 @@ import "../interfaces/IHedgepieAuthority.sol";
 import "../base/BaseAdapter.sol";
 
 library HedgepieLibraryBsc {
+    using SafeERC20 for IERC20;
+
     address private constant _WBNB = 0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c;
     address private constant _USDT = 0x55d398326f99059fF775485246999027B3197955;
     address private constant _ORACLE =
@@ -72,7 +74,8 @@ library HedgepieLibraryBsc {
             ).getPaths(_router, _inToken, _wbnb);
             uint256 beforeBalance = address(this).balance;
 
-            IERC20(_inToken).approve(_router, _amountIn);
+            IERC20(_inToken).safeApprove(_router, 0);
+            IERC20(_inToken).safeApprove(_router, _amountIn);
 
             IPancakeRouter(_router)
                 .swapExactTokensForETHSupportingFeeOnTransferTokens(
@@ -157,7 +160,8 @@ library HedgepieLibraryBsc {
                 _router,
                 wbnb
             );
-            IERC20(tokens[0]).approve(_router, tokenAmount[0]);
+            IERC20(tokens[0]).safeApprove(_router, 0);
+            IERC20(tokens[0]).safeApprove(_router, tokenAmount[0]);
         }
 
         if (tokens[1] != wbnb) {
@@ -168,7 +172,8 @@ library HedgepieLibraryBsc {
                 _router,
                 wbnb
             );
-            IERC20(tokens[1]).approve(_router, tokenAmount[1]);
+            IERC20(tokens[1]).safeApprove(_router, 0);
+            IERC20(tokens[1]).safeApprove(_router, tokenAmount[1]);
         }
 
         if (tokenAmount[0] != 0 && tokenAmount[1] != 0) {
@@ -216,7 +221,8 @@ library HedgepieLibraryBsc {
         address _router = IAdapter(_adapter.addr).router();
         address swapRouter = IAdapter(_adapter.addr).swapRouter();
 
-        IERC20(_adapter.token).approve(_router, _amountIn);
+        IERC20(_adapter.token).safeApprove(_router, 0);
+        IERC20(_adapter.token).safeApprove(_router, _amountIn);
 
         if (tokens[0] == wbnb || tokens[1] == wbnb) {
             address tokenAddr = tokens[0] == wbnb ? tokens[1] : tokens[0];

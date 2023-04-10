@@ -2,7 +2,6 @@
 pragma solidity ^0.8.4;
 
 import "../../libraries/HedgepieLibraryBsc.sol";
-import "../../interfaces/IHedgepieInvestor.sol";
 
 interface IStrategy {
     function pendingReward(address _user) external view returns (uint256);
@@ -13,6 +12,8 @@ interface IStrategy {
 }
 
 contract PancakeStakeAdapterBsc is BaseAdapter {
+    using SafeERC20 for IERC20;
+
     /**
      * @notice Construct
      * @param _strategy  address of strategy
@@ -69,7 +70,8 @@ contract PancakeStakeAdapterBsc is BaseAdapter {
 
         // calc reward amount
         uint256 rewardAmt0 = IERC20(rewardToken).balanceOf(address(this));
-        IERC20(stakingToken).approve(strategy, amountOut);
+        IERC20(stakingToken).safeApprove(strategy, 0);
+        IERC20(stakingToken).safeApprove(strategy, amountOut);
         IStrategy(strategy).deposit(amountOut);
         rewardAmt0 = IERC20(rewardToken).balanceOf(address(this)) - rewardAmt0;
 
@@ -380,7 +382,8 @@ contract PancakeStakeAdapterBsc is BaseAdapter {
 
         // 2. get reward amount after deposit
         uint256 rewardAmt0 = IERC20(rewardToken).balanceOf(address(this));
-        IERC20(stakingToken).approve(strategy, amountOut);
+        IERC20(stakingToken).safeApprove(strategy, 0);
+        IERC20(stakingToken).safeApprove(strategy, amountOut);
         IStrategy(strategy).deposit(amountOut);
         rewardAmt0 = IERC20(rewardToken).balanceOf(address(this)) - rewardAmt0;
 
