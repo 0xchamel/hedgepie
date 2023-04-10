@@ -23,6 +23,7 @@ async function forkBNBNetwork() {
             {
                 forking: {
                     jsonRpcUrl: "https://rpc.ankr.com/bsc",
+                    blockNumber: 25710942,
                 },
             },
         ],

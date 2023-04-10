@@ -4,6 +4,7 @@ const { ethers } = require("hardhat");
 const {
     setPath,
     checkPendingWithClaim,
+    forkBNBNetwork,
 } = require("../../../../shared/utilities");
 const {
     setupHedgepie,
@@ -15,6 +16,8 @@ const BigNumber = ethers.BigNumber;
 
 describe("Biswap Adapters Integration Test", function () {
     before("Deploy contract", async function () {
+        await forkBNBNetwork();
+
         [
             this.governor,
             this.pathManager,

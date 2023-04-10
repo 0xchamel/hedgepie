@@ -5,6 +5,7 @@ const {
     setPath,
     encode,
     unlockAccount,
+    forkBNBNetwork,
 } = require("../../../../shared/utilities");
 const {
     setupHedgepie,
@@ -46,6 +47,8 @@ describe("Multiple Adapters Integration Test", function () {
     };
 
     before("Deploy contract", async function () {
+        await forkBNBNetwork();
+
         [
             this.governor,
             this.pathManager,
