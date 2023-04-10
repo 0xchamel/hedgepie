@@ -106,46 +106,44 @@ contract YBNFT is ERC721, HedgepieAccessControlled {
 
     /**
      * @notice Mint nft with adapter infos
-     * @param _adapterAllocations  allocation of adapters
-     * @param _adapterTokens  token of adapters
-     * @param _adapterAddrs  address of adapters
+     * @param _adapterParams  parameters of allocation
+     * @param _performanceFee  performance fee
+     * @param _tokenURI  token URI
      */
     /// #if_succeeds {:msg "Mint failed"} adapterInfo[_tokenIdPointer._value].length == _adapterAllocations.length;
     function mint(
-        uint256[] calldata _adapterAllocations,
-        address[] calldata _adapterTokens,
-        address[] calldata _adapterAddrs,
+        AdapterParam[] memory _adapterParams,
         uint256 _performanceFee,
         string memory _tokenURI
     ) external {
         require(_performanceFee < 1e3, "Fee should be less than 10%");
-        require(
-            _adapterTokens.length != 0 &&
-                _adapterTokens.length == _adapterAllocations.length &&
-                _adapterTokens.length == _adapterAddrs.length,
-            "Mismatched adapters"
-        );
-        require(_checkPercent(_adapterAllocations), "Incorrect allocation");
+        require(_adapterParams.length != 0, "Mismatched adapters");
         require(
             address(authority.hAdapterList()) != address(0),
             "AdaterList not set"
         );
 
-        for (uint256 i = 0; i < _adapterAddrs.length; i++) {
+        uint sum = 0;
+        for (uint i = 0; i < _adapterParams.length; i++) {
+            sum += _adapterParams[i].allocation;
+        }
+        require(sum == 1e4, "Incorrect allocation");
+
+        for (uint256 i = 0; i < _adapterParams.length; i++) {
             (
                 address adapterAddr,
                 ,
                 address stakingToken,
                 bool status
             ) = IHedgepieAdapterList(authority.hAdapterList()).getAdapterInfo(
-                    _adapterAddrs[i]
+                    _adapterParams[i].addr
                 );
             require(
-                _adapterAddrs[i] == adapterAddr,
+                _adapterParams[i].addr == adapterAddr,
                 "Adapter address mismatch"
             );
             require(
-                _adapterTokens[i] == stakingToken,
+                _adapterParams[i].token == stakingToken,
                 "Staking token address mismatch"
             );
             require(status, "Adapter is inactive");
@@ -156,12 +154,7 @@ contract YBNFT is ERC721, HedgepieAccessControlled {
 
         _safeMint(msg.sender, _tokenIdPointer._value);
         _setTokenURI(_tokenIdPointer._value, _tokenURI);
-        _setAdapterInfo(
-            _tokenIdPointer._value,
-            _adapterAllocations,
-            _adapterTokens,
-            _adapterAddrs
-        );
+        _setAdapterInfo(_tokenIdPointer._value, _adapterParams);
 
         emit Mint(msg.sender, _tokenIdPointer._value);
     }
@@ -339,22 +332,19 @@ contract YBNFT is ERC721, HedgepieAccessControlled {
 
     /**
      * @notice Set adapter infos of nft from token id
-     * @param _adapterAllocations  allocation of adapters
-     * @param _adapterTokens  adapter token
-     * @param _adapterAddrs  address of adapters
+     * @param _tokenId  token id
+     * @param _adapterParams  adapter parameters
      */
     function _setAdapterInfo(
         uint256 _tokenId,
-        uint256[] calldata _adapterAllocations,
-        address[] calldata _adapterTokens,
-        address[] calldata _adapterAddrs
+        AdapterParam[] memory _adapterParams
     ) internal {
-        for (uint256 i = 0; i < _adapterTokens.length; i++) {
+        for (uint256 i = 0; i < _adapterParams.length; i++) {
             adapterParams[_tokenId].push(
                 AdapterParam({
-                    allocation: _adapterAllocations[i],
-                    token: _adapterTokens[i],
-                    addr: _adapterAddrs[i]
+                    allocation: _adapterParams[i].allocation,
+                    token: _adapterParams[i].token,
+                    addr: _adapterParams[i].addr
                 })
             );
         }
@@ -376,7 +366,7 @@ contract YBNFT is ERC721, HedgepieAccessControlled {
             totalAlloc = totalAlloc + _adapterAllocations[i];
         }
 
-        return totalAlloc <= 1e4;
+        return totalAlloc == 1e4;
     }
 
     /**

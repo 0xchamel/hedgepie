@@ -272,48 +272,28 @@ describe("Multiple Adapters Integration Test", function () {
 
         // mint ybnft
         await this.ybNft.mint(
-            [1500, 1500, 1500, 1500, 1500, 1500, 1000],
             [
-                pksLpToken,
-                cake,
-                biswapLpToken,
-                bsw,
-                autofarmStaking,
-                busd,
-                beefyStaking,
-            ],
-            [
-                this.adapter[0].address,
-                this.adapter[1].address,
-                this.adapter[2].address,
-                this.adapter[3].address,
-                this.adapter[4].address,
-                this.adapter[5].address,
-                this.adapter[6].address,
+                [1500, pksLpToken, this.adapter[0].address],
+                [1500, cake, this.adapter[1].address],
+                [1500, biswapLpToken, this.adapter[2].address],
+                [1500, bsw, this.adapter[3].address],
+                [1500, autofarmStaking, this.adapter[4].address],
+                [1500, busd, this.adapter[5].address],
+                [1000, beefyStaking, this.adapter[6].address],
             ],
             this.performanceFee,
             "test tokenURI1"
         );
 
         await this.ybNft.mint(
-            [1000, 1500, 1500, 1500, 1500, 1000, 2000],
             [
-                pksLpToken,
-                cake,
-                biswapLpToken,
-                bsw,
-                autofarmStaking,
-                busd,
-                beefyStaking,
-            ],
-            [
-                this.adapter[0].address,
-                this.adapter[1].address,
-                this.adapter[2].address,
-                this.adapter[3].address,
-                this.adapter[4].address,
-                this.adapter[5].address,
-                this.adapter[6].address,
+                [1000, pksLpToken, this.adapter[0].address],
+                [1500, cake, this.adapter[1].address],
+                [1500, biswapLpToken, this.adapter[2].address],
+                [1500, bsw, this.adapter[3].address],
+                [1500, autofarmStaking, this.adapter[4].address],
+                [1000, busd, this.adapter[5].address],
+                [2000, beefyStaking, this.adapter[6].address],
             ],
             this.performanceFee,
             "test tokenURI2"
