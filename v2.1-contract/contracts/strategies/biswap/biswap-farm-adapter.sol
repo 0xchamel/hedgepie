@@ -2,7 +2,6 @@
 pragma solidity ^0.8.4;
 
 import "../../libraries/HedgepieLibraryBsc.sol";
-import "../../interfaces/IHedgepieInvestor.sol";
 
 interface IStrategy {
     function pendingBSW(
@@ -20,6 +19,8 @@ interface IStrategy {
 }
 
 contract BiSwapFarmLPAdapterBsc is BaseAdapter {
+    using SafeERC20 for IERC20;
+
     /**
      * @notice Construct
      * @param _strategy  address of strategy
@@ -81,7 +82,8 @@ contract BiSwapFarmLPAdapterBsc is BaseAdapter {
         }
 
         // 2. deposit staking token to strategy
-        IERC20(stakingToken).approve(strategy, amountOut);
+        IERC20(stakingToken).safeApprove(strategy, 0);
+        IERC20(stakingToken).safeApprove(strategy, amountOut);
         if (pid == 0) IStrategy(strategy).enterStaking(amountOut);
         else IStrategy(strategy).deposit(pid, amountOut);
 
@@ -432,7 +434,8 @@ contract BiSwapFarmLPAdapterBsc is BaseAdapter {
         }
 
         // 2. get reward amount after deposit
-        IERC20(stakingToken).approve(strategy, amountOut);
+        IERC20(stakingToken).safeApprove(strategy, 0);
+        IERC20(stakingToken).safeApprove(strategy, amountOut);
         if (pid == 0) IStrategy(strategy).enterStaking(amountOut);
         else IStrategy(strategy).deposit(pid, amountOut);
 

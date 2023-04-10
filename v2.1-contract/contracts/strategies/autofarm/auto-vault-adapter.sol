@@ -2,7 +2,6 @@
 pragma solidity ^0.8.4;
 
 import "../../interfaces/IVaultStrategy.sol";
-import "../../interfaces/IHedgepieInvestor.sol";
 import "../../libraries/HedgepieLibraryBsc.sol";
 
 interface IStrategy {
@@ -22,8 +21,10 @@ interface IStrategy {
 }
 
 contract AutoVaultAdapterBsc is BaseAdapter {
+    using SafeERC20 for IERC20;
+
     // vStrategy address of vault
-    address public vStrategy;
+    address public immutable vStrategy;
 
     /**
      * @notice Construct
@@ -79,7 +80,8 @@ contract AutoVaultAdapterBsc is BaseAdapter {
             pid,
             address(this)
         );
-        IERC20(stakingToken).approve(strategy, amountOut);
+        IERC20(stakingToken).safeApprove(strategy, 0);
+        IERC20(stakingToken).safeApprove(strategy, amountOut);
         IStrategy(strategy).deposit(pid, amountOut);
         (uint256 afterShare, ) = IStrategy(strategy).userInfo(
             pid,
@@ -339,7 +341,8 @@ contract AutoVaultAdapterBsc is BaseAdapter {
             pid,
             address(this)
         );
-        IERC20(stakingToken).approve(strategy, amountOut);
+        IERC20(stakingToken).safeApprove(strategy, 0);
+        IERC20(stakingToken).safeApprove(strategy, amountOut);
         IStrategy(strategy).deposit(pid, amountOut);
         (uint256 afterShare, ) = IStrategy(strategy).userInfo(
             pid,
