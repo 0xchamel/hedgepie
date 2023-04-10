@@ -6,6 +6,7 @@ const {
     encode,
     unlockAccount,
     checkPendingWithClaim,
+    forkBNBNetwork,
 } = require("../../../../shared/utilities");
 const {
     setupHedgepie,
@@ -17,6 +18,8 @@ const BigNumber = ethers.BigNumber;
 
 describe("Beefy Adapters Integration Test", function () {
     before("Deploy contract", async function () {
+        await forkBNBNetwork();
+
         [
             this.governor,
             this.pathManager,

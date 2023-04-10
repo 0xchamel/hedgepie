@@ -57,22 +57,15 @@ async function setupHedgepie(governor, pathManager, adapterManager, treasury) {
 
 async function mintNFT(ybnft, adapters, stakingTokens, performanceFee) {
     // Mint NFTs
-    await ybnft.mint(
-        new Array(adapters.length).fill(10000 / adapters.length),
-        stakingTokens,
-        adapters,
-        performanceFee,
-        "test tokenURI1"
-    );
+    let params = [];
+    for (let i = 0; i < adapters.length; i++) {
+        params.push([10000 / adapters.length, stakingTokens[i], adapters[i]]);
+    }
+
+    await ybnft.mint(params, performanceFee, "test tokenURI1");
 
     // tokenID: 2
-    await ybnft.mint(
-        new Array(adapters.length).fill(10000 / adapters.length),
-        stakingTokens,
-        adapters,
-        performanceFee,
-        "test tokenURI1"
-    );
+    await ybnft.mint(params, performanceFee, "test tokenURI1");
 }
 
 async function setupBscAdapterWithLib(adapterName, lib) {

@@ -5,6 +5,7 @@ const {
     setPath,
     encode,
     checkPendingWithClaim,
+    forkBNBNetwork,
 } = require("../../../../shared/utilities");
 const {
     setupHedgepie,
@@ -24,6 +25,8 @@ async function doubleWantLockedTotal(address, slot, current) {
 
 describe("AutoFarm Adapters Integration Test", function () {
     before("Deploy contract", async function () {
+        await forkBNBNetwork();
+
         [
             this.governor,
             this.pathManager,
