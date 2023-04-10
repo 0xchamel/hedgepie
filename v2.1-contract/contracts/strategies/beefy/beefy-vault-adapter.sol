@@ -17,7 +17,7 @@ interface IStrategy {
 
 contract BeefyVaultAdapterBsc is BaseAdapter {
     using SafeERC20 for IERC20;
-    
+
     /**
      * @notice Construct
      * @param _strategy  address of strategy
