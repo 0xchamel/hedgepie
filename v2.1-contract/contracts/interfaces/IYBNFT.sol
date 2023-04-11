@@ -8,6 +8,13 @@ interface IYBNFT {
         address addr;
     }
 
+    struct UpdateInfo {
+        uint256 tokenId;
+        uint256 value;
+        address account;
+        bool flag;
+    }
+
     function getCurrentTokenId() external view returns (uint256);
 
     function performanceFee(uint256 tokenId) external view returns (uint256);
@@ -26,27 +33,11 @@ interface IYBNFT {
         string memory
     ) external;
 
-    function updateTVLInfo(
-        uint256 _tokenId,
-        uint256 _value,
-        bool _adding
-    ) external;
-
-    function updateTradedInfo(
-        uint256 _tokenId,
-        uint256 _value,
-        bool _adding
-    ) external;
-
     function updateProfitInfo(
         uint256 _tokenId,
         uint256 _value,
         bool _adding
     ) external;
 
-    function updateParticipantInfo(
-        uint256 _tokenId,
-        address _account,
-        bool _adding
-    ) external;
+    function updateInfo(UpdateInfo memory _param) external;
 }

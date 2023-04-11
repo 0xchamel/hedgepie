@@ -106,16 +106,8 @@ contract HedgepieInvestor is ReentrancyGuard, HedgepieAccessControlled {
         tokenInfo.totalStaked += investedUSDT;
 
         // 4. update token info in YBNFT
-        IYBNFT(authority.hYBNFT()).updateTVLInfo(_tokenId, investedUSDT, true);
-        IYBNFT(authority.hYBNFT()).updateTradedInfo(
-            _tokenId,
-            investedUSDT,
-            true
-        );
-        IYBNFT(authority.hYBNFT()).updateParticipantInfo(
-            _tokenId,
-            msg.sender,
-            true
+        IYBNFT(authority.hYBNFT()).updateInfo(
+            IYBNFT.UpdateInfo(_tokenId, investedUSDT, msg.sender, true)
         );
 
         // 5. emit events
@@ -162,20 +154,8 @@ contract HedgepieInvestor is ReentrancyGuard, HedgepieAccessControlled {
         tokenInfo.totalStaked -= userInfo.amount;
 
         // 5. update adapter info in YBNFT
-        IYBNFT(authority.hYBNFT()).updateTVLInfo(
-            _tokenId,
-            userInfo.amount,
-            false
-        );
-        IYBNFT(authority.hYBNFT()).updateTradedInfo(
-            _tokenId,
-            userInfo.amount,
-            true
-        );
-        IYBNFT(authority.hYBNFT()).updateParticipantInfo(
-            _tokenId,
-            msg.sender,
-            false
+        IYBNFT(authority.hYBNFT()).updateInfo(
+            IYBNFT.UpdateInfo(_tokenId, userInfo.amount, msg.sender, false)
         );
 
         // 6. delete user info
