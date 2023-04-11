@@ -227,40 +227,37 @@ contract YBNFT is ERC721, HedgepieAccessControlled {
     /// Manager Functions ///
     /////////////////////////
 
-    function updateTVLInfo(
-        uint256 _tokenId,
-        uint256 _value,
-        bool _adding
-    ) external onlyInvestor {
-        TokenInfo memory tokenInfo = tokenInfos[_tokenId];
-        if (_adding) tokenInfo.tvl += _value;
-        else
-            tokenInfo.tvl = tokenInfo.tvl < _value ? 0 : tokenInfo.tvl - _value;
-
-        tokenInfos[_tokenId] = tokenInfo;
-        _emitEvent(_tokenId);
-    }
-
     /**
-     * @notice Update traded info
-     * @param _tokenId  YBNFT tokenID
-     * @param _value  updated traded info
-     * @param _adding bool to increase or decrease
+     * @notice Update TVL, Profit, Participants info
+     * @param param  update info param
      */
-    function updateTradedInfo(
-        uint256 _tokenId,
-        uint256 _value,
-        bool _adding
-    ) external onlyInvestor {
-        TokenInfo memory tokenInfo = tokenInfos[_tokenId];
-        if (_adding) tokenInfo.traded += _value;
-        else
-            tokenInfo.traded = tokenInfo.traded < _value
-                ? 0
-                : tokenInfo.traded - _value;
+    function updateInfo(IYBNFT.UpdateInfo memory param) external onlyInvestor {
+        TokenInfo storage tokenInfo = tokenInfos[param.tokenId];
 
-        tokenInfos[_tokenId] = tokenInfo;
-        _emitEvent(_tokenId);
+        unchecked {
+            // 1. update tvl info
+            if (param.flag) tokenInfo.tvl += param.value;
+            else
+                tokenInfo.tvl = tokenInfo.tvl < param.value
+                    ? 0
+                    : tokenInfo.tvl - param.value;
+
+            // 2. update traded info
+            tokenInfo.traded += param.value;
+
+            // 3. update participant info
+            bool isExisted = participants[param.tokenId][param.account];
+
+            if (param.flag && !isExisted) {
+                tokenInfo.participant++;
+                participants[param.tokenId][param.account] = true;
+            } else if (!param.flag && isExisted) {
+                tokenInfo.participant--;
+                participants[param.tokenId][param.account] = false;
+            }
+        }
+
+        _emitEvent(param.tokenId);
     }
 
     /**
@@ -283,34 +280,6 @@ contract YBNFT is ERC721, HedgepieAccessControlled {
 
         tokenInfos[_tokenId] = tokenInfo;
         _emitEvent(_tokenId);
-    }
-
-    /**
-     * @notice Update participant info
-     * @param _tokenId  YBNFT tokenID
-     * @param _account  address of account
-     * @param _adding  to remove or add
-     */
-    function updateParticipantInfo(
-        uint256 _tokenId,
-        address _account,
-        bool _adding
-    ) external onlyInvestor {
-        bool isExisted = participants[_tokenId][_account];
-
-        TokenInfo memory tokenInfo = tokenInfos[_tokenId];
-        if (_adding && !isExisted) {
-            tokenInfo.participant++;
-            participants[_tokenId][_account] = true;
-        } else if (!_adding && isExisted) {
-            tokenInfo.participant--;
-            participants[_tokenId][_account] = false;
-        }
-
-        if (_adding != isExisted) {
-            tokenInfos[_tokenId] = tokenInfo;
-            _emitEvent(_tokenId);
-        }
     }
 
     /////////////////////////
