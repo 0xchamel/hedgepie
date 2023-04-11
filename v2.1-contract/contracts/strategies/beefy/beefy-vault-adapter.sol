@@ -66,8 +66,9 @@ contract BeefyVaultAdapterBsc is BaseAdapter {
             );
         } else {
             amountOut = HedgepieLibraryBsc.getLP(
-                IYBNFT.AdapterParam(0, stakingToken, address(this)),
+                IYBNFT.AdapterParam(0, address(this)),
                 wbnb,
+                stakingToken,
                 msg.value
             );
         }
@@ -116,8 +117,9 @@ contract BeefyVaultAdapterBsc is BaseAdapter {
             );
         } else {
             amountOut = HedgepieLibraryBsc.withdrawLP(
-                IYBNFT.AdapterParam(0, stakingToken, address(this)),
+                IYBNFT.AdapterParam(0, address(this)),
                 wbnb,
+                stakingToken,
                 lpOut
             );
         }
@@ -182,8 +184,9 @@ contract BeefyVaultAdapterBsc is BaseAdapter {
         } else {
             amountOut =
                 HedgepieLibraryBsc.withdrawLP(
-                    IYBNFT.AdapterParam(0, stakingToken, address(this)),
+                    IYBNFT.AdapterParam(0, address(this)),
                     wbnb,
+                    stakingToken,
                     lpOut
                 ) +
                 userInfo.rewardDebt1;
@@ -296,8 +299,9 @@ contract BeefyVaultAdapterBsc is BaseAdapter {
             );
         } else {
             amountOut = HedgepieLibraryBsc.withdrawLP(
-                IYBNFT.AdapterParam(0, stakingToken, address(this)),
+                IYBNFT.AdapterParam(0, address(this)),
                 wbnb,
+                stakingToken,
                 amountOut
             );
         }
@@ -337,8 +341,9 @@ contract BeefyVaultAdapterBsc is BaseAdapter {
             );
         } else {
             amountOut = HedgepieLibraryBsc.getLP(
-                IYBNFT.AdapterParam(0, stakingToken, address(this)),
+                IYBNFT.AdapterParam(0, address(this)),
                 wbnb,
+                stakingToken,
                 msg.value
             );
         }

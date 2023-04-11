@@ -62,8 +62,9 @@ contract PancakeStakeAdapterBsc is BaseAdapter {
             );
         } else {
             amountOut = HedgepieLibraryBsc.getLP(
-                IYBNFT.AdapterParam(0, stakingToken, address(this)),
+                IYBNFT.AdapterParam(0, address(this)),
                 wbnb,
+                stakingToken,
                 _amountIn
             );
         }
@@ -148,8 +149,9 @@ contract PancakeStakeAdapterBsc is BaseAdapter {
             );
         } else {
             amountOut = HedgepieLibraryBsc.withdrawLP(
-                IYBNFT.AdapterParam(0, stakingToken, address(this)),
+                IYBNFT.AdapterParam(0, address(this)),
                 wbnb,
+                stakingToken,
                 amountOut
             );
         }
@@ -334,8 +336,9 @@ contract PancakeStakeAdapterBsc is BaseAdapter {
             );
         } else {
             amountOut = HedgepieLibraryBsc.withdrawLP(
-                IYBNFT.AdapterParam(0, stakingToken, address(this)),
+                IYBNFT.AdapterParam(0, address(this)),
                 wbnb,
+                stakingToken,
                 amountOut
             );
         }
@@ -374,8 +377,9 @@ contract PancakeStakeAdapterBsc is BaseAdapter {
             );
         } else {
             amountOut = HedgepieLibraryBsc.getLP(
-                IYBNFT.AdapterParam(0, stakingToken, address(this)),
+                IYBNFT.AdapterParam(0, address(this)),
                 wbnb,
+                stakingToken,
                 msg.value
             );
         }

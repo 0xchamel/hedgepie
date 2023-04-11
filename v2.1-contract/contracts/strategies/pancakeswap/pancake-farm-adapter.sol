@@ -68,8 +68,9 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapter {
             );
         } else {
             amountOut = HedgepieLibraryBsc.getLP(
-                IYBNFT.AdapterParam(0, stakingToken, address(this)),
+                IYBNFT.AdapterParam(0, address(this)),
                 wbnb,
+                stakingToken,
                 msg.value
             );
         }
@@ -150,8 +151,9 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapter {
             );
         } else {
             amountOut = HedgepieLibraryBsc.withdrawLP(
-                IYBNFT.AdapterParam(0, stakingToken, address(this)),
+                IYBNFT.AdapterParam(0, address(this)),
                 wbnb,
+                stakingToken,
                 amountOut
             );
         }
@@ -337,8 +339,9 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapter {
             );
         } else {
             amountOut = HedgepieLibraryBsc.withdrawLP(
-                IYBNFT.AdapterParam(0, stakingToken, address(this)),
+                IYBNFT.AdapterParam(0, address(this)),
                 wbnb,
+                stakingToken,
                 amountOut
             );
         }
@@ -377,8 +380,9 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapter {
             );
         } else {
             amountOut = HedgepieLibraryBsc.getLP(
-                IYBNFT.AdapterParam(0, stakingToken, address(this)),
+                IYBNFT.AdapterParam(0, address(this)),
                 wbnb,
+                stakingToken,
                 msg.value
             );
         }
