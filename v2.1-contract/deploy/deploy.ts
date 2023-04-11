@@ -1,5 +1,8 @@
 import hre from "hardhat";
 import "@nomiclabs/hardhat-ethers";
+import fs from "fs";
+import * as path from "path";
+
 import { verify } from "../utils";
 
 async function deploy() {
@@ -16,8 +19,8 @@ async function deploy() {
     // Deploy base contracts
     const authority = await HedgepieAuthority.deploy(
         process.env.GOVERNOR || "",
-        process.env.GOVERNOR || "",
-        process.env.GOVERNOR || ""
+        process.env.PATH_MANAGER || "",
+        process.env.ADAPTER_MANAGER || ""
     );
     await authority.deployed();
     console.log("Authority: ", authority.address);
@@ -47,7 +50,7 @@ async function deploy() {
         }
     );
     const investor = await HedgepieInvestor.deploy(
-        process.env.GOVERNOR || "",
+        process.env.TREASURY || "",
         authority.address
     );
     await investor.deployed();
@@ -59,14 +62,24 @@ async function deploy() {
     await authority.setHAdapterList(adapterList.address);
     await authority.setPathFinder(pathFinder.address);
 
+    // update config file
+    const configPath = path.join(__dirname, "../config", "contracts.json");
+    fs.writeFileSync(
+        configPath,
+        JSON.stringify({
+            lib: lib.address,
+            authority: authority.address,
+        })
+    );
+
     // verify base contracts
     await verify({
         contractName: "HedgepieAuthority",
         address: authority.address,
         constructorArguments: [
             process.env.GOVERNOR || "",
-            process.env.GOVERNOR || "",
-            process.env.GOVERNOR || "",
+            process.env.PATH_MANAGER || "",
+            process.env.ADAPTER_MANAGER || "",
         ],
         contractPath: "contracts/base/HedgepieAuthority.sol:HedgepieAuthority",
     });
@@ -92,7 +105,7 @@ async function deploy() {
     await verify({
         contractName: "HedgepieInvestor",
         address: investor.address,
-        constructorArguments: [process.env.GOVERNOR || "", authority.address],
+        constructorArguments: [process.env.TREASURY || "", authority.address],
         contractPath: "contracts/base/HedgepieInvestor.sol:HedgepieInvestor",
     });
     await verify({

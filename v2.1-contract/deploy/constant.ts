@@ -1,6 +1,8 @@
-export const lib = { address: process.env.LIB };
+import contracts from "../config/contracts.json";
 
-export const authority = process.env.AUTHORITY;
+export const lib = { address: (contracts as any).lib };
+
+export const authority = (contracts as any)?.authority;
 
 export const adapters = {
     autofarm: [
