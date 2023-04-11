@@ -236,7 +236,7 @@ contract YBNFT is ERC721, HedgepieAccessControlled {
 
         unchecked {
             // 1. update tvl info
-            if (param.isPlus) tokenInfo.tvl += param.value;
+            if (param.isDeposit) tokenInfo.tvl += param.value;
             else
                 tokenInfo.tvl = tokenInfo.tvl < param.value
                     ? 0
@@ -248,10 +248,10 @@ contract YBNFT is ERC721, HedgepieAccessControlled {
             // 3. update participant info
             bool isExisted = participants[param.tokenId][param.account];
 
-            if (param.isPlus && !isExisted) {
+            if (param.isDeposit && !isExisted) {
                 tokenInfo.participant++;
                 participants[param.tokenId][param.account] = true;
-            } else if (!param.isPlus && isExisted) {
+            } else if (!param.isDeposit && isExisted) {
                 tokenInfo.participant--;
                 participants[param.tokenId][param.account] = false;
             }
