@@ -175,8 +175,8 @@ contract YBNFT is ERC721, HedgepieAccessControlled {
             "Invalid allocation length"
         );
         require(msg.sender == ownerOf(_tokenId), "Invalid NFT Owner");
-        require(_checkPercent(_adapterParams), "Incorrect adapter allocation");
 
+        _checkPercent(_adapterParams);
         _setAdapterInfo(_tokenId, _adapterParams);
 
         // update funds flow
@@ -345,15 +345,13 @@ contract YBNFT is ERC721, HedgepieAccessControlled {
      * @notice Check if total percent of adapters is valid
      * @param _adapterParams  parameters of adapters
      */
-    function _checkPercent(
-        AdapterParam[] memory _adapterParams
-    ) internal pure returns (bool) {
+    function _checkPercent(AdapterParam[] memory _adapterParams) internal pure {
         uint256 totalAlloc;
         for (uint256 i; i < _adapterParams.length; i++) {
             totalAlloc = totalAlloc + _adapterParams[i].allocation;
         }
 
-        return totalAlloc == 1e4;
+        require(totalAlloc == 1e4, "Incorrect adapter allocation");
     }
 
     /**
