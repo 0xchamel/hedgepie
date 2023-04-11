@@ -1,7 +1,5 @@
-import hre from "hardhat";
-import { Logger } from "tslog";
 import "@nomiclabs/hardhat-ethers";
-import { deployUsingFactory } from "../utils";
+import { deployUsingFactory, verify } from "../utils";
 import { lib, adapterNames, adapters } from "./constant";
 
 const { setupBscAdapterWithLib } = require("../test/shared/setup");
@@ -14,7 +12,7 @@ async function deploy(name: string) {
 
     const Adapter = await setupBscAdapterWithLib(adapterNames[name], lib);
     for (let i = 0; i < adapters[name].length; i++) {
-        await deployUsingFactory(Adapter, adapters[name][i]);
+        await deployUsingFactory(Adapter, adapters[name][i], name);
     }
 }
 
