@@ -12,7 +12,7 @@ interface IYBNFT {
         uint256 tokenId; // YBNFT tokenID
         uint256 value; // traded amount
         address account; // user address
-        bool isDeposit; // flag for increase or decrease
+        bool isDeposit; // deposit or withdraw
     }
 
     function getCurrentTokenId() external view returns (uint256);
