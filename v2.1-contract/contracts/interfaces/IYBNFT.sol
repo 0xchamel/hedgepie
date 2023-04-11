@@ -9,10 +9,10 @@ interface IYBNFT {
     }
 
     struct UpdateInfo {
-        uint256 tokenId;
-        uint256 value;
-        address account;
-        bool flag;
+        uint256 tokenId; // YBNFT tokenID
+        uint256 value; // traded amount
+        address account; // user address
+        bool isPlus; // flag for increase or decrease
     }
 
     function getCurrentTokenId() external view returns (uint256);
