@@ -1,5 +1,6 @@
 import hre from "hardhat";
 import "@nomiclabs/hardhat-ethers";
+import { verify } from "../utils";
 
 async function deploy() {
     const HedgepieAdapterList = await hre.ethers.getContractFactory(
@@ -14,9 +15,9 @@ async function deploy() {
 
     // Deploy base contracts
     const authority = await HedgepieAuthority.deploy(
-        "0xB34b18b191a2371359762429f9732F73af8ac211",
-        "0xB34b18b191a2371359762429f9732F73af8ac211",
-        "0xB34b18b191a2371359762429f9732F73af8ac211"
+        process.env.GOVERNOR || "",
+        process.env.GOVERNOR || "",
+        process.env.GOVERNOR || ""
     );
     await authority.deployed();
     console.log("Authority: ", authority.address);
@@ -41,12 +42,14 @@ async function deploy() {
         "HedgepieInvestor",
         {
             libraries: {
-                HedgepieLibraryBsc:
-                    "0x570aB366073bBA951Dc75788a991017cFe426c23",
+                HedgepieLibraryBsc: lib.address,
             },
         }
     );
-    const investor = await HedgepieInvestor.deploy("", "");
+    const investor = await HedgepieInvestor.deploy(
+        process.env.GOVERNOR || "",
+        authority.address
+    );
     await investor.deployed();
     console.log("Investor: ", investor.address);
 
@@ -55,6 +58,50 @@ async function deploy() {
     await authority.setHYBNFT(ybnft.address);
     await authority.setHAdapterList(adapterList.address);
     await authority.setPathFinder(pathFinder.address);
+
+    // verify base contracts
+    await verify({
+        contractName: "HedgepieAuthority",
+        address: authority.address,
+        constructorArguments: [
+            process.env.GOVERNOR || "",
+            process.env.GOVERNOR || "",
+            process.env.GOVERNOR || "",
+        ],
+        contractPath: "contracts/base/HedgepieAuthority.sol:HedgepieAuthority",
+    });
+    await verify({
+        contractName: "HedgepieAdapterList",
+        address: adapterList.address,
+        constructorArguments: [authority.address],
+        contractPath:
+            "contracts/base/HedgepieAdapterList.sol:HedgepieAdapterList",
+    });
+    await verify({
+        contractName: "YBNFT",
+        address: ybnft.address,
+        constructorArguments: [authority.address],
+        contractPath: "contracts/base/HedgepieYBNFT.sol:YBNFT",
+    });
+    await verify({
+        contractName: "PathFinder",
+        address: pathFinder.address,
+        constructorArguments: [authority.address],
+        contractPath: "contracts/base/PathFinder.sol:PathFinder",
+    });
+    await verify({
+        contractName: "HedgepieInvestor",
+        address: investor.address,
+        constructorArguments: [process.env.GOVERNOR || "", authority.address],
+        contractPath: "contracts/base/HedgepieInvestor.sol:HedgepieInvestor",
+    });
+    await verify({
+        contractName: "HedgepieLibraryBsc",
+        address: lib.address,
+        constructorArguments: [],
+        contractPath:
+            "contracts/libraries/HedgepieLibraryBsc.sol:HedgepieLibraryBsc",
+    });
 }
 
 async function main() {

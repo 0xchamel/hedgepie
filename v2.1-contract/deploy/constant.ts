@@ -1,6 +1,6 @@
-export const lib = { address: "0x570aB366073bBA951Dc75788a991017cFe426c23" };
+export const lib = { address: process.env.LIB };
 
-export const authority = "0x36241e24cACa77e939c869ECDA044C78De23176D";
+export const authority = process.env.AUTHORITY;
 
 export const adapters = {
     autofarm: [
@@ -246,4 +246,16 @@ export const adapterNames = {
     belt: "BeltVaultAdapterBsc",
     pksFarm: "PancakeSwapFarmLPAdapterBsc",
     pksStake: "PancakeStakeAdapterBsc",
+};
+
+export const adapterPaths = {
+    autofarm:
+        "contracts/strategies/autofarm/auto-vault-adapter.sol:AutoVaultAdapterBsc",
+    biswap: "contracts/strategies/biswap/biswap-farm-adapter.sol:BiSwapFarmLPAdapterBsc",
+    beefy: "contracts/strategies/beefy/beefy-vault-adapter.sol:BeefyVaultAdapterBsc",
+    belt: "contracts/strategies/belt/belt-vault-adapter.sol:BeltVaultAdapterBsc",
+    pksFarm:
+        "contracts/strategies/pancakeswap/pancake-farm-adapter.sol:PancakeSwapFarmLPAdapterBsc",
+    pksStake:
+        "contracts/strategies/pancakeswap/pancake-stake-adapter.sol:PancakeStakeAdapterBsc",
 };
