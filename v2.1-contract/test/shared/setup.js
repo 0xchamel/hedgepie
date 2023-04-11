@@ -55,11 +55,11 @@ async function setupHedgepie(governor, pathManager, adapterManager, treasury) {
     return [investor, authority, ybnft, adapterList, pathFinder, lib];
 }
 
-async function mintNFT(ybnft, adapters, stakingTokens, performanceFee) {
+async function mintNFT(ybnft, adapters, performanceFee) {
     // Mint NFTs
     let params = [];
     for (let i = 0; i < adapters.length; i++) {
-        params.push([10000 / adapters.length, stakingTokens[i], adapters[i]]);
+        params.push([10000 / adapters.length, adapters[i]]);
     }
 
     await ybnft.mint(params, performanceFee, "test tokenURI1");

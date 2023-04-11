@@ -17,7 +17,6 @@ contract YBNFT is ERC721, HedgepieAccessControlled {
 
     struct AdapterParam {
         uint256 allocation;
-        address token;
         address addr;
     }
 
@@ -106,7 +105,7 @@ contract YBNFT is ERC721, HedgepieAccessControlled {
 
     /**
      * @notice Mint nft with adapter infos
-     * @param _adapterParams  parameters of allocation
+     * @param _adapterParams  parameters of adapters
      * @param _performanceFee  performance fee
      * @param _tokenURI  token URI
      */
@@ -123,28 +122,15 @@ contract YBNFT is ERC721, HedgepieAccessControlled {
             "AdaterList not set"
         );
 
-        uint sum = 0;
-        for (uint i = 0; i < _adapterParams.length; i++) {
-            sum += _adapterParams[i].allocation;
-        }
-        require(sum == 1e4, "Incorrect allocation");
+        _checkPercent(_adapterParams);
 
-        for (uint256 i = 0; i < _adapterParams.length; i++) {
-            (
-                address adapterAddr,
-                ,
-                address stakingToken,
-                bool status
-            ) = IHedgepieAdapterList(authority.hAdapterList()).getAdapterInfo(
-                    _adapterParams[i].addr
-                );
+        for (uint256 i; i < _adapterParams.length; i++) {
+            (address adapterAddr, , , bool status) = IHedgepieAdapterList(
+                authority.hAdapterList()
+            ).getAdapterInfo(_adapterParams[i].addr);
             require(
                 _adapterParams[i].addr == adapterAddr,
                 "Adapter address mismatch"
-            );
-            require(
-                _adapterParams[i].token == stakingToken,
-                "Staking token address mismatch"
             );
             require(status, "Adapter is inactive");
         }
@@ -172,35 +158,28 @@ contract YBNFT is ERC721, HedgepieAccessControlled {
         require(msg.sender == ownerOf(_tokenId), "Invalid NFT Owner");
 
         performanceFee[_tokenId] = _performanceFee;
-        adapterDate[_tokenId].modified = uint128(block.timestamp);
+        _setModifiedDate(_tokenId);
     }
 
     /**
      * @notice Update allocation of adapters
      * @param _tokenId  tokenId of NFT
-     * @param _adapterAllocations  array of adapter allocation
+     * @param _adapterParams  parameters of adapters
      */
     function updateAllocations(
         uint256 _tokenId,
-        uint256[] calldata _adapterAllocations
+        AdapterParam[] memory _adapterParams
     ) external {
         require(
-            _adapterAllocations.length == adapterParams[_tokenId].length,
+            _adapterParams.length == adapterParams[_tokenId].length,
             "Invalid allocation length"
         );
         require(msg.sender == ownerOf(_tokenId), "Invalid NFT Owner");
-        require(
-            _checkPercent(_adapterAllocations),
-            "Incorrect adapter allocation"
-        );
+        require(_checkPercent(_adapterParams), "Incorrect adapter allocation");
 
-        for (uint256 i; i < adapterParams[_tokenId].length; i++) {
-            adapterParams[_tokenId][i].allocation = _adapterAllocations[i];
-        }
+        _setAdapterInfo(_tokenId, _adapterParams);
 
-        adapterDate[_tokenId].modified = uint128(block.timestamp);
-
-        // update funds
+        // update funds flow
         require(
             authority.hInvestor() != address(0),
             "Invalid investor address"
@@ -220,7 +199,7 @@ contract YBNFT is ERC721, HedgepieAccessControlled {
         require(msg.sender == ownerOf(_tokenId), "Invalid NFT Owner");
 
         _setTokenURI(_tokenId, _tokenURI);
-        adapterDate[_tokenId].modified = uint128(block.timestamp);
+        _setModifiedDate(_tokenId);
     }
 
     /////////////////////////
@@ -339,34 +318,50 @@ contract YBNFT is ERC721, HedgepieAccessControlled {
         uint256 _tokenId,
         AdapterParam[] memory _adapterParams
     ) internal {
-        for (uint256 i = 0; i < _adapterParams.length; i++) {
-            adapterParams[_tokenId].push(
-                AdapterParam({
-                    allocation: _adapterParams[i].allocation,
-                    token: _adapterParams[i].token,
-                    addr: _adapterParams[i].addr
-                })
-            );
+        bool isExist = adapterParams[_tokenId].length != 0;
+        if (!isExist) {
+            for (uint256 i = 0; i < _adapterParams.length; i++) {
+                adapterParams[_tokenId].push(
+                    AdapterParam({
+                        allocation: _adapterParams[i].allocation,
+                        addr: _adapterParams[i].addr
+                    })
+                );
+            }
+            adapterDate[_tokenId] = AdapterDate({
+                created: uint128(block.timestamp),
+                modified: uint128(block.timestamp)
+            });
+        } else {
+            for (uint256 i = 0; i < _adapterParams.length; i++)
+                adapterParams[_tokenId][i].allocation = _adapterParams[i]
+                    .allocation;
+
+            _setModifiedDate(_tokenId);
         }
-        adapterDate[_tokenId] = AdapterDate({
-            created: uint128(block.timestamp),
-            modified: uint128(block.timestamp)
-        });
     }
 
     /**
      * @notice Check if total percent of adapters is valid
-     * @param _adapterAllocations  allocation of adapters
+     * @param _adapterParams  parameters of adapters
      */
     function _checkPercent(
-        uint256[] calldata _adapterAllocations
+        AdapterParam[] memory _adapterParams
     ) internal pure returns (bool) {
         uint256 totalAlloc;
-        for (uint256 i; i < _adapterAllocations.length; i++) {
-            totalAlloc = totalAlloc + _adapterAllocations[i];
+        for (uint256 i; i < _adapterParams.length; i++) {
+            totalAlloc = totalAlloc + _adapterParams[i].allocation;
         }
 
         return totalAlloc == 1e4;
+    }
+
+    /**
+     * @notice Set Modified date for adapter
+     * @param _tokenId  token id
+     */
+    function _setModifiedDate(uint256 _tokenId) internal {
+        adapterDate[_tokenId].modified = uint128(block.timestamp);
     }
 
     /**

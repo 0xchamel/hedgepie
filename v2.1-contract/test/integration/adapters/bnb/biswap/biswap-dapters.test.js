@@ -113,7 +113,6 @@ describe("Biswap Adapters Integration Test", function () {
         await mintNFT(
             this.ybNft,
             [this.adapter[0].address, this.adapter[1].address],
-            [lpToken, bsw],
             this.performanceFee
         );
 
@@ -456,9 +455,10 @@ describe("Biswap Adapters Integration Test", function () {
 
     describe("Edit fund flow", function () {
         it("test possibility to set zero percent", async function () {
-            await this.ybNft
-                .connect(this.governor)
-                .updateAllocations(1, [0, 10000]);
+            await this.ybNft.connect(this.governor).updateAllocations(1, [
+                [0, this.adapter[0].address],
+                [10000, this.adapter[1].address],
+            ]);
         });
 
         it("test with token1 and token2 - updateAllocations", async function () {
@@ -482,7 +482,10 @@ describe("Biswap Adapters Integration Test", function () {
 
         it("test pendingReward, invested amount ratio after allocation change", async function () {
             // Check reward increase after updateAllocation
-            const allocation = [2000, 8000];
+            const allocation = [
+                [2000, this.adapter[0].address],
+                [8000, this.adapter[1].address],
+            ];
             const bTokenInfo1 = await this.adapter[0].userAdapterInfos(2);
             const bTokenInfo2 = await this.adapter[1].userAdapterInfos(2);
             const bPending1 = await this.investor.pendingReward(
@@ -518,13 +521,13 @@ describe("Biswap Adapters Integration Test", function () {
             const aTokenInfo2 = await this.adapter[1].userAdapterInfos(2);
             expect(BigNumber.from(bTokenInfo1.amount).div(50)).to.be.gt(
                 BigNumber.from(aTokenInfo1.amount)
-                    .div(allocation[0])
+                    .div(allocation[0][0])
                     .mul(95)
                     .div(100)
             );
             expect(BigNumber.from(bTokenInfo2.amount).div(50)).to.be.gt(
                 BigNumber.from(aTokenInfo2.amount)
-                    .div(allocation[1])
+                    .div(allocation[1][0])
                     .mul(95)
                     .div(100)
             );

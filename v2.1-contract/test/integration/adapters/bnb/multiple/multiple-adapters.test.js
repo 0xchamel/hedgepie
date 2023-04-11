@@ -3,14 +3,12 @@ const { ethers } = require("hardhat");
 
 const {
     setPath,
-    encode,
     unlockAccount,
     forkBNBNetwork,
 } = require("../../../../shared/utilities");
 const {
     setupHedgepie,
     setupBscAdapterWithLib,
-    mintNFT,
 } = require("../../../../shared/setup");
 
 const BigNumber = ethers.BigNumber;
@@ -273,13 +271,13 @@ describe("Multiple Adapters Integration Test", function () {
         // mint ybnft
         await this.ybNft.mint(
             [
-                [1500, pksLpToken, this.adapter[0].address],
-                [1500, cake, this.adapter[1].address],
-                [1500, biswapLpToken, this.adapter[2].address],
-                [1500, bsw, this.adapter[3].address],
-                [1500, autofarmStaking, this.adapter[4].address],
-                [1500, busd, this.adapter[5].address],
-                [1000, beefyStaking, this.adapter[6].address],
+                [1500, this.adapter[0].address],
+                [1500, this.adapter[1].address],
+                [1500, this.adapter[2].address],
+                [1500, this.adapter[3].address],
+                [1500, this.adapter[4].address],
+                [1500, this.adapter[5].address],
+                [1000, this.adapter[6].address],
             ],
             this.performanceFee,
             "test tokenURI1"
@@ -287,13 +285,13 @@ describe("Multiple Adapters Integration Test", function () {
 
         await this.ybNft.mint(
             [
-                [1000, pksLpToken, this.adapter[0].address],
-                [1500, cake, this.adapter[1].address],
-                [1500, biswapLpToken, this.adapter[2].address],
-                [1500, bsw, this.adapter[3].address],
-                [1500, autofarmStaking, this.adapter[4].address],
-                [1000, busd, this.adapter[5].address],
-                [2000, beefyStaking, this.adapter[6].address],
+                [1000, this.adapter[0].address],
+                [1500, this.adapter[1].address],
+                [1500, this.adapter[2].address],
+                [1500, this.adapter[3].address],
+                [1500, this.adapter[4].address],
+                [1000, this.adapter[5].address],
+                [2000, this.adapter[6].address],
             ],
             this.performanceFee,
             "test tokenURI2"
@@ -601,9 +599,15 @@ describe("Multiple Adapters Integration Test", function () {
 
     describe("Edit fund flow", function () {
         it("test possibility to set zero percent", async function () {
-            await this.ybNft
-                .connect(this.governor)
-                .updateAllocations(1, [0, 0, 0, 0, 0, 10000, 0]);
+            await this.ybNft.connect(this.governor).updateAllocations(1, [
+                [0, this.adapter[0].address],
+                [0, this.adapter[1].address],
+                [0, this.adapter[2].address],
+                [0, this.adapter[3].address],
+                [0, this.adapter[4].address],
+                [10000, this.adapter[5].address],
+                [0, this.adapter[6].address],
+            ]);
         });
 
         it("test with token1 and token2 - updateAllocations", async function () {
@@ -627,7 +631,15 @@ describe("Multiple Adapters Integration Test", function () {
 
         it("test pendingReward, invested amount ratio after allocation change", async function () {
             // Check reward increase after updateAllocation
-            const allocation = [2000, 1000, 1000, 2000, 2000, 2000, 0];
+            const allocation = [
+                [2000, this.adapter[0].address],
+                [1000, this.adapter[1].address],
+                [1000, this.adapter[2].address],
+                [2000, this.adapter[3].address],
+                [2000, this.adapter[4].address],
+                [2000, this.adapter[5].address],
+                [0, this.adapter[6].address],
+            ];
             const bTokenInfo1 = await this.adapter[0].userAdapterInfos(2);
             const bTokenInfo2 = await this.adapter[1].userAdapterInfos(2);
             const bPending1 = await this.investor.pendingReward(
@@ -661,13 +673,13 @@ describe("Multiple Adapters Integration Test", function () {
             const aTokenInfo2 = await this.adapter[1].userAdapterInfos(2);
             expect(BigNumber.from(bTokenInfo1.amount).div(50)).to.be.gt(
                 BigNumber.from(aTokenInfo1.amount)
-                    .div(allocation[0])
+                    .div(allocation[0][0])
                     .mul(95)
                     .div(100)
             );
             expect(BigNumber.from(bTokenInfo2.amount).div(50)).to.be.gt(
                 BigNumber.from(aTokenInfo2.amount)
-                    .div(allocation[1])
+                    .div(allocation[1][0])
                     .mul(95)
                     .div(100)
             );

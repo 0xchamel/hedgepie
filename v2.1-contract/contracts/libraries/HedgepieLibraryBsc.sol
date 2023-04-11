@@ -133,17 +133,19 @@ library HedgepieLibraryBsc {
     /**
      * @notice Get LP by add liquidity
      * @param _adapter  AdapterInfo
+     * @param _stakingToken  address of staking token
      * @param wbnb  address of WBNB
      * @param _amountIn  amount of BNB
      */
     function getLP(
         IYBNFT.AdapterParam memory _adapter,
         address wbnb,
+        address _stakingToken,
         uint256 _amountIn
     ) public returns (uint256 amountOut) {
         address[2] memory tokens;
-        tokens[0] = IPancakePair(_adapter.token).token0();
-        tokens[1] = IPancakePair(_adapter.token).token1();
+        tokens[0] = IPancakePair(_stakingToken).token0();
+        tokens[1] = IPancakePair(_stakingToken).token1();
         address _router = IAdapter(_adapter.addr).router();
 
         uint256[2] memory tokenAmount;
@@ -206,23 +208,25 @@ library HedgepieLibraryBsc {
     /**
      * @notice Withdraw LP from pool
      * @param _adapter  AdapterInfo
+     * @param _stakingToken  address of staking token
      * @param wbnb  address of WBNB
      * @param _amountIn  amount of LP
      */
     function withdrawLP(
         IYBNFT.AdapterParam memory _adapter,
         address wbnb,
+        address _stakingToken,
         uint256 _amountIn
     ) public returns (uint256 amountOut) {
         address[2] memory tokens;
-        tokens[0] = IPancakePair(_adapter.token).token0();
-        tokens[1] = IPancakePair(_adapter.token).token1();
+        tokens[0] = IPancakePair(_stakingToken).token0();
+        tokens[1] = IPancakePair(_stakingToken).token1();
 
         address _router = IAdapter(_adapter.addr).router();
         address swapRouter = IAdapter(_adapter.addr).swapRouter();
 
-        IERC20(_adapter.token).safeApprove(_router, 0);
-        IERC20(_adapter.token).safeApprove(_router, _amountIn);
+        IERC20(_stakingToken).safeApprove(_router, 0);
+        IERC20(_stakingToken).safeApprove(_router, _amountIn);
 
         if (tokens[0] == wbnb || tokens[1] == wbnb) {
             address tokenAddr = tokens[0] == wbnb ? tokens[1] : tokens[0];
