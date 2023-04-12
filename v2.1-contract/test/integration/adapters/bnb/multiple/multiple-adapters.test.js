@@ -5,6 +5,7 @@ const {
     setPath,
     unlockAccount,
     forkBNBNetwork,
+    checkPendingWithClaim,
 } = require("../../../../shared/utilities");
 const {
     setupHedgepie,
@@ -14,36 +15,6 @@ const {
 const BigNumber = ethers.BigNumber;
 
 describe("Multiple Adapters Integration Test", function () {
-    const checkPendingWithClaim = async (
-        investor,
-        user,
-        tokenId,
-        performanceFee
-    ) => {
-        const userPending = await investor.pendingReward(tokenId, user.address);
-        expect(userPending.withdrawable).gt(0);
-
-        const estimatePending = BigNumber.from(userPending.withdrawable)
-            .mul(1e4 - performanceFee)
-            .div(1e4);
-
-        const beforeBNB = await ethers.provider.getBalance(user.address);
-
-        const claimTx = await investor.connect(user).claim(tokenId);
-        const claimTxResp = await claimTx.wait();
-        const gasAmt = BigNumber.from(claimTxResp.effectiveGasPrice).mul(
-            BigNumber.from(claimTxResp.gasUsed)
-        );
-
-        const afterBNB = await ethers.provider.getBalance(user.address);
-        const actualPending = BigNumber.from(afterBNB)
-            .add(gasAmt)
-            .sub(beforeBNB);
-
-        // actualPending in 2% range of estimatePending
-        expect(actualPending).gte(estimatePending.mul(98).div(1e2));
-    };
-
     before("Deploy contract", async function () {
         await forkBNBNetwork();
 
@@ -376,6 +347,10 @@ describe("Multiple Adapters Integration Test", function () {
                 this.alice.address
             );
             expect(aliceInfo.amount).to.gt(0);
+
+            // check profit
+            const profitInfo = (await this.ybNft.tokenInfos(1)).profit;
+            expect(profitInfo).to.be.eq(0);
         });
 
         it("(4) deposit should success for Bob", async function () {
@@ -388,6 +363,7 @@ describe("Multiple Adapters Integration Test", function () {
 
             const beforeAdapterInfos = await this.investor.tokenInfos(1);
             const depositAmount = ethers.utils.parseEther("10");
+            const beforeProfit = (await this.ybNft.tokenInfos(1)).profit;
 
             await expect(
                 this.investor.connect(this.bob).deposit(1, {
@@ -428,6 +404,17 @@ describe("Multiple Adapters Integration Test", function () {
             ).to.eq(true);
 
             await this.checkAccRewardShare(1);
+
+            // check profit
+            const afterProfit = (await this.ybNft.tokenInfos(1)).profit;
+            const alicePending = await this.investor.pendingReward(
+                1,
+                this.alice.address
+            );
+            expect(afterProfit.sub(beforeProfit)).to.be.within(
+                alicePending.withdrawable.mul(95).div(100),
+                alicePending.withdrawable.mul(105).div(100)
+            );
         });
 
         it("(5) test TVL & participants", async function () {
@@ -453,6 +440,8 @@ describe("Multiple Adapters Integration Test", function () {
 
     describe("claim() function test", function () {
         it("(1) check withdrawable and claim for alice", async function () {
+            const beforeProfit = (await this.ybNft.tokenInfos(1)).profit;
+
             // wait 1 day
             for (let i = 0; i < 1800; i++) {
                 await ethers.provider.send("evm_mine", []);
@@ -467,15 +456,29 @@ describe("Multiple Adapters Integration Test", function () {
                 this.performanceFee
             );
             await this.checkAccRewardShare(1);
+
+            // check profit
+            const afterProfit = (await this.ybNft.tokenInfos(1)).profit;
+            expect(afterProfit).to.be.gt(beforeProfit);
+
+            const bobPending = (
+                await this.investor.pendingReward(1, this.bob.address)
+            ).withdrawable;
+            expect(afterProfit.sub(beforeProfit)).to.be.gt(bobPending);
         });
 
         it("(2) check withdrawable and claim for bob", async function () {
+            const beforeProfit = (await this.ybNft.tokenInfos(1)).profit;
+
             await checkPendingWithClaim(
                 this.investor,
                 this.bob,
                 1,
                 this.performanceFee
             );
+
+            const afterProfit = (await this.ybNft.tokenInfos(1)).profit;
+            expect(afterProfit).to.be.gt(beforeProfit);
         });
     });
 
@@ -500,6 +503,7 @@ describe("Multiple Adapters Integration Test", function () {
             await ethers.provider.send("evm_mine", []);
 
             // withdraw from nftId: 1
+            const beforeProfit = (await this.ybNft.tokenInfos(1)).profit;
             const beforeBNB = await ethers.provider.getBalance(
                 this.alice.address
             );
@@ -537,6 +541,13 @@ describe("Multiple Adapters Integration Test", function () {
             );
 
             await this.checkAccRewardShare(1);
+
+            // check profit
+            const afterProfit = (await this.ybNft.tokenInfos(1)).profit;
+            const bobPending = (
+                await this.investor.pendingReward(1, this.bob.address)
+            ).withdrawable;
+            expect(afterProfit.sub(beforeProfit)).to.be.gt(bobPending);
         });
 
         it("(3) test TVL & participants after Alice withdraw", async function () {
@@ -560,6 +571,7 @@ describe("Multiple Adapters Integration Test", function () {
                 .transfer(this.rewardReceiver, ethers.utils.parseEther("20"));
 
             // withdraw from nftId: 1
+            const beforeProfit = (await this.ybNft.tokenInfos(1)).profit;
             const beforeBNB = await ethers.provider.getBalance(
                 this.bob.address
             );
@@ -585,6 +597,9 @@ describe("Multiple Adapters Integration Test", function () {
             expect(bobInfo.amount).to.eq(BigNumber.from(0));
 
             await this.checkAccRewardShare(1);
+
+            const afterProfit = (await this.ybNft.tokenInfos(1)).profit;
+            expect(afterProfit).to.be.gt(beforeProfit);
         });
 
         it("(5) test TVL & participants after Alice & Bob withdraw", async function () {
@@ -736,6 +751,10 @@ describe("Multiple Adapters Integration Test", function () {
                 this.alice.address
             );
             expect(aliceInfo.amount).to.gt(0);
+
+            // check profit
+            const profitInfo = (await this.ybNft.tokenInfos(1)).profit;
+            expect(profitInfo).to.be.gt(0);
         });
 
         it("(2) deposit should success for Bob", async function () {
@@ -748,6 +767,7 @@ describe("Multiple Adapters Integration Test", function () {
 
             const beforeAdapterInfos = await this.investor.tokenInfos(1);
             const depositAmount = ethers.utils.parseEther("10");
+            const beforeProfit = (await this.ybNft.tokenInfos(1)).profit;
 
             await expect(
                 this.investor.connect(this.bob).deposit(1, {
@@ -788,6 +808,17 @@ describe("Multiple Adapters Integration Test", function () {
             ).to.eq(true);
 
             await this.checkAccRewardShare(1);
+
+            // check profit
+            const afterProfit = (await this.ybNft.tokenInfos(1)).profit;
+            const alicePending = await this.investor.pendingReward(
+                1,
+                this.alice.address
+            );
+            expect(afterProfit.sub(beforeProfit)).to.be.within(
+                alicePending.withdrawable.mul(99).div(100),
+                alicePending.withdrawable.mul(101).div(100)
+            );
         });
 
         it("(3) test TVL & participants", async function () {
@@ -813,6 +844,8 @@ describe("Multiple Adapters Integration Test", function () {
 
     describe("claim() function test after editFund", function () {
         it("(1) check withdrawable and claim for alice", async function () {
+            const beforeProfit = (await this.ybNft.tokenInfos(1)).profit;
+
             // wait 1 day
             for (let i = 0; i < 1800; i++) {
                 await ethers.provider.send("evm_mine", []);
@@ -827,15 +860,29 @@ describe("Multiple Adapters Integration Test", function () {
                 this.performanceFee
             );
             await this.checkAccRewardShare(1);
+
+            // check profit
+            const afterProfit = (await this.ybNft.tokenInfos(1)).profit;
+            expect(afterProfit).to.be.gt(beforeProfit);
+
+            const bobPending = (
+                await this.investor.pendingReward(1, this.bob.address)
+            ).withdrawable;
+            expect(afterProfit.sub(beforeProfit)).to.be.gt(bobPending);
         });
 
         it("(2) check withdrawable and claim for bob", async function () {
+            const beforeProfit = (await this.ybNft.tokenInfos(1)).profit;
+
             await checkPendingWithClaim(
                 this.investor,
                 this.bob,
                 1,
                 this.performanceFee
             );
+
+            const afterProfit = (await this.ybNft.tokenInfos(1)).profit;
+            expect(afterProfit).to.be.gt(beforeProfit);
         });
     });
 
@@ -845,6 +892,7 @@ describe("Multiple Adapters Integration Test", function () {
             await ethers.provider.send("evm_mine", []);
 
             // withdraw from nftId: 1
+            const beforeProfit = (await this.ybNft.tokenInfos(1)).profit;
             const beforeBNB = await ethers.provider.getBalance(
                 this.alice.address
             );
@@ -880,6 +928,13 @@ describe("Multiple Adapters Integration Test", function () {
                 BigNumber.from(20).mul(bnbPrice).mul(99).div(100),
                 BigNumber.from(20).mul(bnbPrice).mul(101).div(100)
             );
+
+            // check profit
+            const afterProfit = (await this.ybNft.tokenInfos(1)).profit;
+            const bobPending = (
+                await this.investor.pendingReward(1, this.bob.address)
+            ).withdrawable;
+            expect(afterProfit.sub(beforeProfit)).to.be.gt(bobPending);
         });
 
         it("(2) test TVL & participants after Alice withdraw", async function () {
@@ -900,6 +955,7 @@ describe("Multiple Adapters Integration Test", function () {
             await ethers.provider.send("evm_mine", []);
 
             // withdraw from nftId: 1
+            const beforeProfit = (await this.ybNft.tokenInfos(1)).profit;
             const beforeBNB = await ethers.provider.getBalance(
                 this.bob.address
             );
@@ -919,10 +975,13 @@ describe("Multiple Adapters Integration Test", function () {
                 Number(
                     ethers.utils.formatEther(afterBNB.sub(beforeBNB).toString())
                 )
-            ).to.be.gt(19.9 * 0.99);
+            ).to.be.gt(19.89);
 
             let bobInfo = await this.investor.userInfos(1, this.bob.address);
             expect(bobInfo.amount).to.eq(BigNumber.from(0));
+
+            const afterProfit = (await this.ybNft.tokenInfos(1)).profit;
+            expect(afterProfit).to.be.gt(beforeProfit);
         });
 
         it("(4) test TVL & participants after Alice & Bob withdraw", async function () {

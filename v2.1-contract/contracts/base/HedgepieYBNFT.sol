@@ -243,21 +243,12 @@ contract YBNFT is ERC721, HedgepieAccessControlled {
      * @notice Update profit info
      * @param _tokenId  YBNFT tokenID
      * @param _value  amount of profit
-     * @param _adding bool to increase or decrease
      */
     function updateProfitInfo(
         uint256 _tokenId,
-        uint256 _value,
-        bool _adding
+        uint256 _value
     ) external onlyInvestor {
-        TokenInfo memory tokenInfo = tokenInfos[_tokenId];
-        if (_adding) tokenInfo.profit += _value;
-        else
-            tokenInfo.profit = tokenInfo.profit < _value
-                ? 0
-                : tokenInfo.profit - _value;
-
-        tokenInfos[_tokenId] = tokenInfo;
+        tokenInfos[_tokenId].profit += _value;
         _emitEvent(_tokenId);
     }
 

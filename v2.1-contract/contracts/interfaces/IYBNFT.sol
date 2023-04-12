@@ -32,11 +32,7 @@ interface IYBNFT {
         string memory
     ) external;
 
-    function updateProfitInfo(
-        uint256 _tokenId,
-        uint256 _value,
-        bool _adding
-    ) external;
+    function updateProfitInfo(uint256 _tokenId, uint256 _value) external;
 
     function updateInfo(UpdateInfo memory _param) external;
 }
