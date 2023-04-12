@@ -1,5 +1,9 @@
 import "@nomiclabs/hardhat-ethers";
-import { deployUsingFactory, verify } from "../utils";
+import fs from "fs";
+import * as path from "path";
+import contracts from "../config/contracts.json";
+
+import { deployUsingFactory } from "../utils";
 import { lib, adapterNames, adapters } from "./constant";
 
 const { setupBscAdapterWithLib } = require("../test/shared/setup");
@@ -11,9 +15,21 @@ async function deploy(name: string) {
     }
 
     const Adapter = await setupBscAdapterWithLib(adapterNames[name], lib);
+    let dAddrs = {};
     for (let i = 0; i < adapters[name].length; i++) {
-        await deployUsingFactory(Adapter, adapters[name][i], name);
+        const res = await deployUsingFactory(Adapter, adapters[name][i], name);
+        dAddrs[res.name] = res.address;
     }
+
+    // update config file
+    const configPath = path.join(__dirname, "../config", "contracts.json");
+    fs.writeFileSync(
+        configPath,
+        JSON.stringify({
+            ...contracts,
+            [name]: dAddrs,
+        })
+    );
 }
 
 async function main() {

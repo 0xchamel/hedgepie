@@ -1,1 +1,15 @@
-{"lib":"0xb4548024CB1Fa5e96343112a8F72e4B644ac5ad4","authority":"0x74Cf0378C7E89A934CbE838950E3C40737cA5a3c"}
+{
+    "lib": "0xd2ae4C6646f5c6623a77eFda41908D6696232d8f",
+    "authority": "0xf52996E8c377F05fe13B835479dA62732b39526b",
+    "investor": "0x0861ae642BFa4f17d9Df8e1Ffc6D28fbCF569843",
+    "pathFinder": "0x2609DFDF2B056D4439A98e3b90D6E7C68F2F228f",
+    "ybnft": "0x5AD452e8f2B8c3669B9d904d63060F572dbcab4e",
+    "adapterList": "0x6a82906B362afc24Ee585422Cbf6dCbef75B38be",
+    "autofarm": {
+        "AutoFarm::Vault::WBNB-CAKE": "0xC10b2eac9233575Cc4096BaF4C9ef4F9ca051154",
+        "AutoFarm::Vault::WBNB-BUSD": "0x33Bb1aD1Ad475401Ca9A6F874B95524A16d9247B",
+        "AutoFarm::Vault::ADA-WBNB": "0x5aF3Ffd4c78F3997cb34F955cCeF8daF885230F7",
+        "AutoFarm::Vault::DOT-WBNB": "0x905Ec9F27fd48f891B54baFaa7a90d1A5bF93220",
+        "AutoFarm::Vault::BTCB-WBNB": "0xae728da666009d78049D6b978eD0797624aB28aC"
+    }
+}

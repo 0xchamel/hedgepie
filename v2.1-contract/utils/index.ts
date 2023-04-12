@@ -241,6 +241,8 @@ const deployUsingFactory = async (factory, params, name) => {
             });
         }
     }
+
+    return { name: params[params.length - 2], address: adapter.address };
 };
 
 export { verify, deployUsingFactory };

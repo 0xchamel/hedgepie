@@ -69,6 +69,10 @@ async function deploy() {
         JSON.stringify({
             lib: lib.address,
             authority: authority.address,
+            investor: investor.address,
+            pathFinder: pathFinder.address,
+            ybnft: ybnft.address,
+            adapterList: adapterList.address,
         })
     );
 
