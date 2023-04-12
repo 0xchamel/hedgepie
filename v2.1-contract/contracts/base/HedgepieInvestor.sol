@@ -189,13 +189,15 @@ contract HedgepieInvestor is ReentrancyGuard, HedgepieAccessControlled {
             IAdapter(adapterInfos[i].addr).claim(_tokenId);
         pending = address(this).balance - pending;
 
-        // 2. update profit info in YBNFT
-        IYBNFT(authority.hYBNFT()).updateProfitInfo(_tokenId, pending, true);
+        if (pending != 0) {
+            // 2. update profit info in YBNFT
+            IYBNFT(authority.hYBNFT()).updateProfitInfo(_tokenId, pending);
 
-        if (pending != 0 && tokenInfo.totalStaked != 0)
-            tokenInfo.accRewardShare +=
-                (pending * 1e12) /
-                tokenInfo.totalStaked;
+            if (tokenInfo.totalStaked != 0)
+                tokenInfo.accRewardShare +=
+                    (pending * 1e12) /
+                    tokenInfo.totalStaked;
+        }
 
         // 3. withdraw reward from investor
         _withdrawReward(_tokenId);
@@ -304,28 +306,23 @@ contract HedgepieInvestor is ReentrancyGuard, HedgepieAccessControlled {
         _claim(_tokenId);
         pending = address(this).balance - pending;
 
-        // 2. update profit info in YBNFT
-        IYBNFT(authority.hYBNFT()).updateProfitInfo(_tokenId, pending, true);
+        if (pending != 0) {
+            // 2. update profit info in YBNFT
+            IYBNFT(authority.hYBNFT()).updateProfitInfo(_tokenId, pending);
 
-        // 3. update accRewardShare, rewardDebt values
-        if (tokenInfo.totalStaked != 0 && pending != 0) {
-            tokenInfo.accRewardShare +=
-                (pending * 1e12) /
-                tokenInfo.totalStaked;
+            // 3. update accRewardShare, rewardDebt values
+            if (tokenInfo.totalStaked != 0) {
+                tokenInfo.accRewardShare +=
+                    (pending * 1e12) /
+                    tokenInfo.totalStaked;
 
-            if (userInfo.amount != 0) {
-                userInfo.rewardDebt +=
-                    (userInfo.amount *
-                        (tokenInfo.accRewardShare - userInfo.userShare)) /
-                    1e12;
+                if (userInfo.amount != 0) {
+                    userInfo.rewardDebt +=
+                        (userInfo.amount *
+                            (tokenInfo.accRewardShare - userInfo.userShare)) /
+                        1e12;
+                }
             }
-
-            // update profit info in YBNFT
-            IYBNFT(authority.hYBNFT()).updateProfitInfo(
-                _tokenId,
-                pending,
-                true
-            );
         }
 
         // 4. update userShare

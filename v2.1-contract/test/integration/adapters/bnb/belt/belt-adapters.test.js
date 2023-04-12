@@ -154,7 +154,7 @@ describe("Belt Adapters Integration Test", function () {
         console.log("PancakeStakeAdapterBsc: ", this.adapter[1].address);
     });
 
-    describe("deposit function test", function () {
+    describe("deposit() function test", function () {
         it("(1) should be reverted when nft tokenId is invalid", async function () {
             // deposit to nftID: 3
             const depositAmount = ethers.utils.parseEther("1");
@@ -196,6 +196,9 @@ describe("Belt Adapters Integration Test", function () {
                 this.alice.address
             );
             expect(aliceInfo.amount).to.gt(0);
+
+            const profitInfo = (await this.ybNft.tokenInfos(1)).profit;
+            expect(profitInfo).to.be.eq(0);
         });
 
         it("(4) deposit should success for Bob", async function () {
@@ -248,6 +251,19 @@ describe("Belt Adapters Integration Test", function () {
             ).to.eq(true);
 
             await this.checkAccRewardShare(1);
+
+            // check profit
+            const profitInfo = (await this.ybNft.tokenInfos(1)).profit;
+            expect(profitInfo).to.be.gt(0);
+
+            const alicePending = await this.investor.pendingReward(
+                1,
+                this.alice.address
+            );
+            expect(profitInfo).to.be.within(
+                alicePending.withdrawable.mul(99).div(100),
+                alicePending.withdrawable.mul(101).div(100)
+            );
         });
 
         it("(5) test TVL & participants", async function () {
@@ -273,6 +289,8 @@ describe("Belt Adapters Integration Test", function () {
 
     describe("claim() function test", function () {
         it("(1) check withdrawable and claim for alice", async function () {
+            const beforeProfit = (await this.ybNft.tokenInfos(1)).profit;
+
             // wait 1 day
             for (let i = 0; i < 1800; i++) {
                 await ethers.provider.send("evm_mine", []);
@@ -287,15 +305,29 @@ describe("Belt Adapters Integration Test", function () {
                 this.performanceFee
             );
             await this.checkAccRewardShare(1);
+
+            // check profit
+            const afterProfit = (await this.ybNft.tokenInfos(1)).profit;
+            expect(afterProfit).to.be.gt(beforeProfit);
+
+            const bobPending = (
+                await this.investor.pendingReward(1, this.bob.address)
+            ).withdrawable;
+            expect(afterProfit.sub(beforeProfit)).to.be.gt(bobPending);
         });
 
         it("(2) check withdrawable and claim for bob", async function () {
+            const beforeProfit = (await this.ybNft.tokenInfos(1)).profit;
+
             await checkPendingWithClaim(
                 this.investor,
                 this.bob,
                 1,
                 this.performanceFee
             );
+
+            const afterProfit = (await this.ybNft.tokenInfos(1)).profit;
+            expect(afterProfit).to.be.gt(beforeProfit);
         });
     });
 
@@ -320,6 +352,7 @@ describe("Belt Adapters Integration Test", function () {
             await ethers.provider.send("evm_mine", []);
 
             // withdraw from nftId: 1
+            const beforeProfit = (await this.ybNft.tokenInfos(1)).profit;
             const beforeBNB = await ethers.provider.getBalance(
                 this.alice.address
             );
@@ -354,6 +387,13 @@ describe("Belt Adapters Integration Test", function () {
             expect(bobInfo.amount).to.gt(0);
 
             await this.checkAccRewardShare(1);
+
+            // check profit
+            const afterProfit = (await this.ybNft.tokenInfos(1)).profit;
+            const bobPending = (
+                await this.investor.pendingReward(1, this.bob.address)
+            ).withdrawable;
+            expect(afterProfit.sub(beforeProfit)).to.be.gt(bobPending);
         });
 
         it("(3) test TVL & participants after Alice withdraw", async function () {
@@ -374,6 +414,7 @@ describe("Belt Adapters Integration Test", function () {
             await ethers.provider.send("evm_mine", []);
 
             // withdraw from nftId: 1
+            const beforeProfit = (await this.ybNft.tokenInfos(1)).profit;
             const beforeBNB = await ethers.provider.getBalance(
                 this.bob.address
             );
@@ -399,6 +440,9 @@ describe("Belt Adapters Integration Test", function () {
             expect(bobInfo.amount).to.eq(BigNumber.from(0));
 
             await this.checkAccRewardShare(1);
+
+            const afterProfit = (await this.ybNft.tokenInfos(1)).profit;
+            expect(afterProfit).to.be.gt(beforeProfit);
         });
 
         it("(5) test TVL & participants after Alice & Bob withdraw", async function () {
@@ -578,7 +622,7 @@ describe("Belt Adapters Integration Test", function () {
         });
     });
 
-    describe("deposit function test after editFund", function () {
+    describe("deposit() function test after editFund", function () {
         it("(1) should be reverted when nft tokenId is invalid", async function () {
             // deposit to nftID: 3
             const depositAmount = ethers.utils.parseEther("1");
@@ -620,6 +664,10 @@ describe("Belt Adapters Integration Test", function () {
                 this.alice.address
             );
             expect(aliceInfo.amount).to.gt(0);
+
+            // check profit
+            const profitInfo = (await this.ybNft.tokenInfos(1)).profit;
+            expect(profitInfo).to.be.gt(0);
         });
 
         it("(4) deposit should success for Bob", async function () {
@@ -632,6 +680,7 @@ describe("Belt Adapters Integration Test", function () {
 
             const beforeAdapterInfos = await this.investor.tokenInfos(1);
             const depositAmount = ethers.utils.parseEther("10");
+            const beforeProfit = (await this.ybNft.tokenInfos(1)).profit;
 
             await expect(
                 this.investor.connect(this.bob).deposit(1, {
@@ -672,6 +721,16 @@ describe("Belt Adapters Integration Test", function () {
             ).to.eq(true);
 
             await this.checkAccRewardShare(1);
+
+            const afterProfit = (await this.ybNft.tokenInfos(1)).profit;
+            const alicePending = await this.investor.pendingReward(
+                1,
+                this.alice.address
+            );
+            expect(afterProfit.sub(beforeProfit)).to.be.within(
+                alicePending.withdrawable.mul(99).div(100),
+                alicePending.withdrawable.mul(101).div(100)
+            );
         });
 
         it("(5) test TVL & participants", async function () {
@@ -697,6 +756,8 @@ describe("Belt Adapters Integration Test", function () {
 
     describe("claim() function test after editFund", function () {
         it("(1) check withdrawable and claim for alice", async function () {
+            const beforeProfit = (await this.ybNft.tokenInfos(1)).profit;
+
             // wait 1 day
             for (let i = 0; i < 1800; i++) {
                 await ethers.provider.send("evm_mine", []);
@@ -711,15 +772,29 @@ describe("Belt Adapters Integration Test", function () {
                 this.performanceFee
             );
             await this.checkAccRewardShare(1);
+
+            // check profit
+            const afterProfit = (await this.ybNft.tokenInfos(1)).profit;
+            expect(afterProfit).to.be.gt(beforeProfit);
+
+            const bobPending = (
+                await this.investor.pendingReward(1, this.bob.address)
+            ).withdrawable;
+            expect(afterProfit.sub(beforeProfit)).to.be.gt(bobPending);
         });
 
         it("(2) check withdrawable and claim for bob", async function () {
+            const beforeProfit = (await this.ybNft.tokenInfos(1)).profit;
+
             await checkPendingWithClaim(
                 this.investor,
                 this.bob,
                 1,
                 this.performanceFee
             );
+
+            const afterProfit = (await this.ybNft.tokenInfos(1)).profit;
+            expect(afterProfit).to.be.gt(beforeProfit);
         });
     });
 
@@ -744,6 +819,7 @@ describe("Belt Adapters Integration Test", function () {
             await ethers.provider.send("evm_mine", []);
 
             // withdraw from nftId: 1
+            const beforeProfit = (await this.ybNft.tokenInfos(1)).profit;
             const beforeBNB = await ethers.provider.getBalance(
                 this.alice.address
             );
@@ -778,6 +854,13 @@ describe("Belt Adapters Integration Test", function () {
             expect(bobInfo.amount).to.gt(0);
 
             await this.checkAccRewardShare(1);
+
+            // check profit
+            const afterProfit = (await this.ybNft.tokenInfos(1)).profit;
+            const bobPending = (
+                await this.investor.pendingReward(1, this.bob.address)
+            ).withdrawable;
+            expect(afterProfit.sub(beforeProfit)).to.be.gt(bobPending);
         });
 
         it("(3) test TVL & participants after Alice withdraw", async function () {
@@ -798,6 +881,7 @@ describe("Belt Adapters Integration Test", function () {
             await ethers.provider.send("evm_mine", []);
 
             // withdraw from nftId: 1
+            const beforeProfit = (await this.ybNft.tokenInfos(1)).profit;
             const beforeBNB = await ethers.provider.getBalance(
                 this.bob.address
             );
@@ -823,6 +907,9 @@ describe("Belt Adapters Integration Test", function () {
             expect(bobInfo.amount).to.eq(BigNumber.from(0));
 
             await this.checkAccRewardShare(1);
+
+            const afterProfit = (await this.ybNft.tokenInfos(1)).profit;
+            expect(afterProfit).to.be.gt(beforeProfit);
         });
 
         it("(5) test TVL & participants after Alice & Bob withdraw", async function () {
@@ -856,6 +943,8 @@ describe("Belt Adapters Integration Test", function () {
                 value: ethers.utils.parseEther("100"),
             });
 
+            let beforeProfit = (await this.ybNft.tokenInfos(1)).profit;
+
             // wait 6 hrs
             for (let i = 0; i < 7200; i++) {
                 await ethers.provider.send("evm_mine", []);
@@ -883,6 +972,11 @@ describe("Belt Adapters Integration Test", function () {
                 this.performanceFee
             );
 
+            let afterProfit = (await this.ybNft.tokenInfos(1)).profit;
+            expect(afterProfit).to.be.gt(beforeProfit);
+
+            beforeProfit = afterProfit;
+
             // Successfully withdraw
             await expect(this.investor.connect(this.kyle).withdraw(1)).to.emit(
                 this.investor,
@@ -893,6 +987,9 @@ describe("Belt Adapters Integration Test", function () {
                 this.investor,
                 "Withdrawn"
             );
+
+            afterProfit = (await this.ybNft.tokenInfos(1)).profit;
+            expect(afterProfit).to.be.gt(beforeProfit);
         });
     });
 });
