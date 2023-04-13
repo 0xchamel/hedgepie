@@ -63,8 +63,7 @@ contract BeltVaultAdapterBsc is BaseAdapter {
                 msg.value,
                 address(this),
                 stakingToken,
-                swapRouter,
-                wbnb
+                swapRouter
             );
 
         // 2. deposit to vault
@@ -126,8 +125,7 @@ contract BeltVaultAdapterBsc is BaseAdapter {
                 lpOut,
                 address(this),
                 stakingToken,
-                swapRouter,
-                wbnb
+                swapRouter
             );
 
         // 3. update userInfo
@@ -193,8 +191,7 @@ contract BeltVaultAdapterBsc is BaseAdapter {
                 lpOut,
                 address(this),
                 stakingToken,
-                swapRouter,
-                wbnb
+                swapRouter
             );
 
         // 5. update user info
@@ -287,8 +284,7 @@ contract BeltVaultAdapterBsc is BaseAdapter {
             amountOut,
             address(this),
             stakingToken,
-            swapRouter,
-            wbnb
+            swapRouter
         );
 
         // 4. remove userInfo and stake pendingReward to rewardDebt1
@@ -321,8 +317,7 @@ contract BeltVaultAdapterBsc is BaseAdapter {
                 msg.value,
                 address(this),
                 stakingToken,
-                swapRouter,
-                wbnb
+                swapRouter
             );
         }
 

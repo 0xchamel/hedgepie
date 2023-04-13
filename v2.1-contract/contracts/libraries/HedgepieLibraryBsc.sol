@@ -3,13 +3,10 @@ pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-import "../interfaces/IYBNFT.sol";
 import "../interfaces/IAdapter.sol";
-import "../interfaces/IPathFinder.sol";
 import "../interfaces/IPancakePair.sol";
 import "../interfaces/IPancakeRouter.sol";
 import "../interfaces/IOffchainOracle.sol";
-import "../interfaces/IHedgepieAuthority.sol";
 
 import "../base/BaseAdapter.sol";
 
@@ -27,18 +24,16 @@ library HedgepieLibraryBsc {
      * @param _adapter  address of adapter
      * @param _outToken  address of targetToken
      * @param _router  address of swap router
-     * @param _wbnb  address of WBNB
      */
     function swapOnRouter(
         uint256 _amountIn,
         address _adapter,
         address _outToken,
-        address _router,
-        address _wbnb
+        address _router
     ) public returns (uint256 amountOut) {
         address[] memory path = IPathFinder(
             IHedgepieAuthority(IAdapter(_adapter).authority()).pathFinder()
-        ).getPaths(_router, _wbnb, _outToken);
+        ).getPaths(_router, _WBNB, _outToken);
         uint256 beforeBalance = IERC20(_outToken).balanceOf(address(this));
 
         IPancakeRouter(_router)
@@ -56,22 +51,20 @@ library HedgepieLibraryBsc {
      * @param _adapter  address of adapter
      * @param _inToken  address of swap token
      * @param _router  address of swap router
-     * @param _wbnb  address of WBNB
      */
     function swapForBnb(
         uint256 _amountIn,
         address _adapter,
         address _inToken,
-        address _router,
-        address _wbnb
+        address _router
     ) public returns (uint256 amountOut) {
-        if (_inToken == _wbnb) {
-            IWrap(_wbnb).withdraw(_amountIn);
+        if (_inToken == _WBNB) {
+            IWrap(_WBNB).withdraw(_amountIn);
             amountOut = _amountIn;
         } else {
             address[] memory path = IPathFinder(
                 IHedgepieAuthority(IAdapter(_adapter).authority()).pathFinder()
-            ).getPaths(_router, _inToken, _wbnb);
+            ).getPaths(_router, _inToken, _WBNB);
             uint256 beforeBalance = address(this).balance;
 
             IERC20(_inToken).safeApprove(_router, 0);
@@ -134,12 +127,10 @@ library HedgepieLibraryBsc {
      * @notice Get LP by add liquidity
      * @param _adapter  AdapterInfo
      * @param _stakingToken  address of staking token
-     * @param wbnb  address of WBNB
      * @param _amountIn  amount of BNB
      */
     function getLP(
         IYBNFT.AdapterParam memory _adapter,
-        address wbnb,
         address _stakingToken,
         uint256 _amountIn
     ) public returns (uint256 amountOut) {
@@ -154,37 +145,35 @@ library HedgepieLibraryBsc {
             tokenAmount[1] = _amountIn - tokenAmount[0];
         }
 
-        if (tokens[0] != wbnb) {
+        if (tokens[0] != _WBNB) {
             tokenAmount[0] = swapOnRouter(
                 tokenAmount[0],
                 _adapter.addr,
                 tokens[0],
-                _router,
-                wbnb
+                _router
             );
             IERC20(tokens[0]).safeApprove(_router, 0);
             IERC20(tokens[0]).safeApprove(_router, tokenAmount[0]);
         }
 
-        if (tokens[1] != wbnb) {
+        if (tokens[1] != _WBNB) {
             tokenAmount[1] = swapOnRouter(
                 tokenAmount[1],
                 _adapter.addr,
                 tokens[1],
-                _router,
-                wbnb
+                _router
             );
             IERC20(tokens[1]).safeApprove(_router, 0);
             IERC20(tokens[1]).safeApprove(_router, tokenAmount[1]);
         }
 
         if (tokenAmount[0] != 0 && tokenAmount[1] != 0) {
-            if (tokens[0] == wbnb || tokens[1] == wbnb) {
+            if (tokens[0] == _WBNB || tokens[1] == _WBNB) {
                 (, , amountOut) = IPancakeRouter(_router).addLiquidityETH{
-                    value: tokens[0] == wbnb ? tokenAmount[0] : tokenAmount[1]
+                    value: tokens[0] == _WBNB ? tokenAmount[0] : tokenAmount[1]
                 }(
-                    tokens[0] == wbnb ? tokens[1] : tokens[0],
-                    tokens[0] == wbnb ? tokenAmount[1] : tokenAmount[0],
+                    tokens[0] == _WBNB ? tokens[1] : tokens[0],
+                    tokens[0] == _WBNB ? tokenAmount[1] : tokenAmount[0],
                     0,
                     0,
                     address(this),
@@ -209,12 +198,10 @@ library HedgepieLibraryBsc {
      * @notice Withdraw LP from pool
      * @param _adapter  AdapterInfo
      * @param _stakingToken  address of staking token
-     * @param wbnb  address of WBNB
      * @param _amountIn  amount of LP
      */
     function withdrawLP(
         IYBNFT.AdapterParam memory _adapter,
-        address wbnb,
         address _stakingToken,
         uint256 _amountIn
     ) public returns (uint256 amountOut) {
@@ -228,8 +215,8 @@ library HedgepieLibraryBsc {
         IERC20(_stakingToken).safeApprove(_router, 0);
         IERC20(_stakingToken).safeApprove(_router, _amountIn);
 
-        if (tokens[0] == wbnb || tokens[1] == wbnb) {
-            address tokenAddr = tokens[0] == wbnb ? tokens[1] : tokens[0];
+        if (tokens[0] == _WBNB || tokens[1] == _WBNB) {
+            address tokenAddr = tokens[0] == _WBNB ? tokens[1] : tokens[0];
             (uint256 amountToken, uint256 amountETH) = IPancakeRouter(_router)
                 .removeLiquidityETH(
                     tokenAddr,
@@ -245,8 +232,7 @@ library HedgepieLibraryBsc {
                 amountToken,
                 _adapter.addr,
                 tokenAddr,
-                swapRouter,
-                wbnb
+                swapRouter
             );
         } else {
             (uint256 amountA, uint256 amountB) = IPancakeRouter(_router)
@@ -264,15 +250,13 @@ library HedgepieLibraryBsc {
                 amountA,
                 _adapter.addr,
                 tokens[0],
-                swapRouter,
-                wbnb
+                swapRouter
             );
             amountOut += swapForBnb(
                 amountB,
                 _adapter.addr,
                 tokens[1],
-                swapRouter,
-                wbnb
+                swapRouter
             );
         }
     }

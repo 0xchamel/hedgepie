@@ -71,7 +71,6 @@ contract AutoVaultAdapterBsc is BaseAdapter {
         // 1. get LP
         amountOut = HedgepieLibraryBsc.getLP(
             IYBNFT.AdapterParam(0, address(this)),
-            wbnb,
             stakingToken,
             msg.value
         );
@@ -121,7 +120,6 @@ contract AutoVaultAdapterBsc is BaseAdapter {
         // 2. swap withdrawn lp to bnb
         amountOut = HedgepieLibraryBsc.withdrawLP(
             IYBNFT.AdapterParam(0, address(this)),
-            wbnb,
             stakingToken,
             lpOut
         );
@@ -182,7 +180,6 @@ contract AutoVaultAdapterBsc is BaseAdapter {
         amountOut =
             HedgepieLibraryBsc.withdrawLP(
                 IYBNFT.AdapterParam(0, address(this)),
-                wbnb,
                 stakingToken,
                 lpOut
             ) +
@@ -297,13 +294,11 @@ contract AutoVaultAdapterBsc is BaseAdapter {
                 amountOut,
                 address(this),
                 stakingToken,
-                swapRouter,
-                wbnb
+                swapRouter
             );
         } else {
             amountOut = HedgepieLibraryBsc.withdrawLP(
                 IYBNFT.AdapterParam(0, address(this)),
-                wbnb,
                 stakingToken,
                 amountOut
             );
@@ -336,7 +331,6 @@ contract AutoVaultAdapterBsc is BaseAdapter {
         // 1. get LP
         amountOut = HedgepieLibraryBsc.getLP(
             IYBNFT.AdapterParam(0, address(this)),
-            wbnb,
             stakingToken,
             msg.value
         );

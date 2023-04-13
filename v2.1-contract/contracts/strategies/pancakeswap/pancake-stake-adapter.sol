@@ -57,13 +57,11 @@ contract PancakeStakeAdapterBsc is BaseAdapter {
                 _amountIn,
                 address(this),
                 stakingToken,
-                swapRouter,
-                wbnb
+                swapRouter
             );
         } else {
             amountOut = HedgepieLibraryBsc.getLP(
                 IYBNFT.AdapterParam(0, address(this)),
-                wbnb,
                 stakingToken,
                 _amountIn
             );
@@ -144,13 +142,11 @@ contract PancakeStakeAdapterBsc is BaseAdapter {
                 amountOut,
                 address(this),
                 stakingToken,
-                swapRouter,
-                wbnb
+                swapRouter
             );
         } else {
             amountOut = HedgepieLibraryBsc.withdrawLP(
                 IYBNFT.AdapterParam(0, address(this)),
-                wbnb,
                 stakingToken,
                 amountOut
             );
@@ -169,8 +165,7 @@ contract PancakeStakeAdapterBsc is BaseAdapter {
                 reward,
                 address(this),
                 rewardToken,
-                swapRouter,
-                wbnb
+                swapRouter
             );
         }
 
@@ -242,8 +237,7 @@ contract PancakeStakeAdapterBsc is BaseAdapter {
                 reward,
                 address(this),
                 rewardToken,
-                swapRouter,
-                wbnb
+                swapRouter
             );
 
             _sendToInvestor(amountOut, _tokenId);
@@ -331,13 +325,11 @@ contract PancakeStakeAdapterBsc is BaseAdapter {
                 amountOut,
                 address(this),
                 stakingToken,
-                swapRouter,
-                wbnb
+                swapRouter
             );
         } else {
             amountOut = HedgepieLibraryBsc.withdrawLP(
                 IYBNFT.AdapterParam(0, address(this)),
-                wbnb,
                 stakingToken,
                 amountOut
             );
@@ -372,13 +364,11 @@ contract PancakeStakeAdapterBsc is BaseAdapter {
                 msg.value,
                 address(this),
                 stakingToken,
-                swapRouter,
-                wbnb
+                swapRouter
             );
         } else {
             amountOut = HedgepieLibraryBsc.getLP(
                 IYBNFT.AdapterParam(0, address(this)),
-                wbnb,
                 stakingToken,
                 msg.value
             );
