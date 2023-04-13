@@ -70,13 +70,11 @@ contract BiSwapFarmLPAdapterBsc is BaseAdapter {
                 msg.value,
                 address(this),
                 stakingToken,
-                swapRouter,
-                wbnb
+                swapRouter
             );
         } else {
             amountOut = HedgepieLibraryBsc.getLP(
                 IYBNFT.AdapterParam(0, address(this)),
-                wbnb,
                 stakingToken,
                 msg.value
             );
@@ -172,13 +170,11 @@ contract BiSwapFarmLPAdapterBsc is BaseAdapter {
                 amountOut,
                 address(this),
                 stakingToken,
-                swapRouter,
-                wbnb
+                swapRouter
             );
         } else {
             amountOut = HedgepieLibraryBsc.withdrawLP(
                 IYBNFT.AdapterParam(0, address(this)),
-                wbnb,
                 stakingToken,
                 amountOut
             );
@@ -197,8 +193,7 @@ contract BiSwapFarmLPAdapterBsc is BaseAdapter {
                 reward,
                 address(this),
                 rewardToken,
-                swapRouter,
-                wbnb
+                swapRouter
             );
 
             amountOut += rewardBnb;
@@ -278,8 +273,7 @@ contract BiSwapFarmLPAdapterBsc is BaseAdapter {
                 reward,
                 address(this),
                 rewardToken,
-                swapRouter,
-                wbnb
+                swapRouter
             );
 
             _sendToInvestor(amountOut, _tokenId);
@@ -382,13 +376,11 @@ contract BiSwapFarmLPAdapterBsc is BaseAdapter {
                 amountOut,
                 address(this),
                 stakingToken,
-                swapRouter,
-                wbnb
+                swapRouter
             );
         } else {
             amountOut = HedgepieLibraryBsc.withdrawLP(
                 IYBNFT.AdapterParam(0, address(this)),
-                wbnb,
                 stakingToken,
                 amountOut
             );
@@ -425,13 +417,11 @@ contract BiSwapFarmLPAdapterBsc is BaseAdapter {
                 msg.value,
                 address(this),
                 stakingToken,
-                swapRouter,
-                wbnb
+                swapRouter
             );
         } else {
             amountOut = HedgepieLibraryBsc.getLP(
                 IYBNFT.AdapterParam(0, address(this)),
-                wbnb,
                 stakingToken,
                 msg.value
             );

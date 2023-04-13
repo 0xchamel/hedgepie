@@ -61,13 +61,11 @@ contract BeefyVaultAdapterBsc is BaseAdapter {
                 msg.value,
                 address(this),
                 stakingToken,
-                swapRouter,
-                wbnb
+                swapRouter
             );
         } else {
             amountOut = HedgepieLibraryBsc.getLP(
                 IYBNFT.AdapterParam(0, address(this)),
-                wbnb,
                 stakingToken,
                 msg.value
             );
@@ -112,13 +110,11 @@ contract BeefyVaultAdapterBsc is BaseAdapter {
                 lpOut,
                 address(this),
                 stakingToken,
-                swapRouter,
-                wbnb
+                swapRouter
             );
         } else {
             amountOut = HedgepieLibraryBsc.withdrawLP(
                 IYBNFT.AdapterParam(0, address(this)),
-                wbnb,
                 stakingToken,
                 lpOut
             );
@@ -177,15 +173,13 @@ contract BeefyVaultAdapterBsc is BaseAdapter {
                     lpOut,
                     address(this),
                     stakingToken,
-                    swapRouter,
-                    wbnb
+                    swapRouter
                 ) +
                 userInfo.rewardDebt1;
         } else {
             amountOut =
                 HedgepieLibraryBsc.withdrawLP(
                     IYBNFT.AdapterParam(0, address(this)),
-                    wbnb,
                     stakingToken,
                     lpOut
                 ) +
@@ -294,13 +288,11 @@ contract BeefyVaultAdapterBsc is BaseAdapter {
                 amountOut,
                 address(this),
                 stakingToken,
-                swapRouter,
-                wbnb
+                swapRouter
             );
         } else {
             amountOut = HedgepieLibraryBsc.withdrawLP(
                 IYBNFT.AdapterParam(0, address(this)),
-                wbnb,
                 stakingToken,
                 amountOut
             );
@@ -336,13 +328,11 @@ contract BeefyVaultAdapterBsc is BaseAdapter {
                 msg.value,
                 address(this),
                 stakingToken,
-                swapRouter,
-                wbnb
+                swapRouter
             );
         } else {
             amountOut = HedgepieLibraryBsc.getLP(
                 IYBNFT.AdapterParam(0, address(this)),
-                wbnb,
                 stakingToken,
                 msg.value
             );
