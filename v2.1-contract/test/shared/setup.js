@@ -65,7 +65,7 @@ async function mintNFT(ybnft, adapters, performanceFee) {
     await ybnft.mint(params, performanceFee, "test tokenURI1");
 
     // tokenID: 2
-    await ybnft.mint(params, performanceFee, "test tokenURI1");
+    await ybnft.mint(params, performanceFee, "test tokenURI2");
 }
 
 async function setupBscAdapterWithLib(adapterName, lib) {
