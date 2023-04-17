@@ -226,22 +226,17 @@ contract BeltVaultAdapterBsc is BaseAdapter {
         wantAmt -= userInfo.invested;
 
         // 2. calc reward
-        if (stakingToken == wbnb) reward += wantAmt;
-        else
-            reward += wantAmt == 0
-                ? 0
-                : IPancakeRouter(swapRouter).getAmountsOut(
+        if (wantAmt != 0) {
+            if (stakingToken == wbnb) reward += wantAmt;
+            else {
+                address[] memory paths = IPathFinder(authority.pathFinder())
+                    .getPaths(swapRouter, stakingToken, wbnb);
+                reward += IPancakeRouter(swapRouter).getAmountsOut(
                     wantAmt,
-                    IPathFinder(authority.pathFinder()).getPaths(
-                        swapRouter,
-                        stakingToken,
-                        wbnb
-                    )
-                )[
-                        IPathFinder(authority.pathFinder())
-                            .getPaths(swapRouter, stakingToken, wbnb)
-                            .length - 1
-                    ];
+                    paths
+                )[paths.length - 1];
+            }
+        }
 
         return (reward + userInfo.rewardDebt1, reward + userInfo.rewardDebt1);
     }

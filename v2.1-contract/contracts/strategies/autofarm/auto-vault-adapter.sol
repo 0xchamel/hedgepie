@@ -205,7 +205,7 @@ contract AutoVaultAdapterBsc is BaseAdapter {
      */
     function pendingReward(
         uint256 _tokenId
-    ) external view override returns (uint256 reward, uint256) {
+    ) external view override returns (uint256 reward, uint256 withdrawable) {
         UserAdapterInfo memory userInfo = userAdapterInfos[_tokenId];
 
         // 1. calc want amount
@@ -229,41 +229,31 @@ contract AutoVaultAdapterBsc is BaseAdapter {
         uint256 amount1 = (reserve1 * vAmount) /
             IPancakePair(stakingToken).totalSupply();
 
-        if (token0 == wbnb) reward += amount0;
-        else
-            reward += amount0 == 0
-                ? 0
-                : IPancakeRouter(swapRouter).getAmountsOut(
-                    amount0,
-                    IPathFinder(authority.pathFinder()).getPaths(
-                        swapRouter,
-                        token0,
-                        wbnb
-                    )
-                )[
-                        IPathFinder(authority.pathFinder())
-                            .getPaths(swapRouter, token0, wbnb)
-                            .length - 1
-                    ];
+        if (amount0 != 0) {
+            if (token0 == wbnb) reward += amount0;
+            else {
+                address[] memory paths = IPathFinder(authority.pathFinder())
+                    .getPaths(swapRouter, token0, wbnb);
 
-        if (token1 == wbnb) reward += amount1;
-        else
-            reward += amount1 == 0
-                ? 0
-                : IPancakeRouter(swapRouter).getAmountsOut(
-                    amount1,
-                    IPathFinder(authority.pathFinder()).getPaths(
-                        swapRouter,
-                        token1,
-                        wbnb
-                    )
-                )[
-                        IPathFinder(authority.pathFinder())
-                            .getPaths(swapRouter, token1, wbnb)
-                            .length - 1
-                    ];
+                reward += IPancakeRouter(swapRouter).getAmountsOut(amount0, paths)[
+                    paths.length - 1
+                ];
+            }
+        }
 
-        return (reward + userInfo.rewardDebt1, reward + userInfo.rewardDebt1);
+        if (amount1 != 0) {
+            if (token1 == wbnb) reward += amount1;
+            else {
+                address[] memory paths = IPathFinder(authority.pathFinder())
+                    .getPaths(swapRouter, token1, wbnb);
+                reward += IPancakeRouter(swapRouter).getAmountsOut(amount1, paths)[
+                    paths.length - 1
+                ];
+            }
+        }
+
+        reward += userInfo.rewardDebt1;
+        withdrawable = reward;
     }
 
     /**

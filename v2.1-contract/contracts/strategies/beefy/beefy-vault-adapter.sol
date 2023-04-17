@@ -203,7 +203,7 @@ contract BeefyVaultAdapterBsc is BaseAdapter {
      */
     function pendingReward(
         uint256 _tokenId
-    ) external view override returns (uint256 reward, uint256) {
+    ) external view override returns (uint256 reward, uint256 withdrawable) {
         UserAdapterInfo memory userInfo = userAdapterInfos[_tokenId];
 
         // 1. calc want amount
@@ -259,7 +259,9 @@ contract BeefyVaultAdapterBsc is BaseAdapter {
                         path1.length - 1
                     ];
         }
-        return (reward + userInfo.rewardDebt1, reward + userInfo.rewardDebt1);
+
+        reward += userInfo.rewardDebt1;
+        withdrawable = reward;
     }
 
     /**
