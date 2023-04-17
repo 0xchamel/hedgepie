@@ -38,6 +38,10 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapter {
         string memory _name,
         address _hedgepieAuthority
     ) BaseAdapter(_hedgepieAuthority) {
+        require(_rewardToken != address(0), "Invalid reward token");
+        require(_stakingToken != address(0), "Invalid staking token");
+        require(_strategy != address(0), "Invalid strategy address");
+
         pid = _pid;
         stakingToken = _stakingToken;
         rewardToken = _rewardToken;
@@ -81,11 +85,7 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapter {
         rewardAmt0 = IERC20(rewardToken).balanceOf(address(this)) - rewardAmt0;
 
         // 3. update accTokenPerShare if reward is generated
-        if (
-            rewardAmt0 != 0 &&
-            rewardToken != address(0) &&
-            mAdapter.totalStaked != 0
-        ) {
+        if (rewardAmt0 != 0 && mAdapter.totalStaked != 0) {
             mAdapter.accTokenPerShare1 +=
                 (rewardAmt0 * 1e12) /
                 mAdapter.totalStaked;
@@ -132,7 +132,7 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapter {
         require(_amount == amountOut, "Failed to withdraw");
 
         // 2. update accTokenPerShare if reward is generated
-        if (rewardAmt0 != 0 && rewardToken != address(0)) {
+        if (rewardAmt0 != 0) {
             mAdapter.accTokenPerShare1 +=
                 (rewardAmt0 * 1e12) /
                 mAdapter.totalStaked;
@@ -213,11 +213,7 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapter {
         uint256 rewardAmt0 = IERC20(rewardToken).balanceOf(address(this));
         IStrategy(strategy).withdraw(pid, 0);
         rewardAmt0 = IERC20(rewardToken).balanceOf(address(this)) - rewardAmt0;
-        if (
-            rewardAmt0 != 0 &&
-            rewardToken != address(0) &&
-            mAdapter.totalStaked != 0
-        ) {
+        if (rewardAmt0 != 0 && mAdapter.totalStaked != 0) {
             mAdapter.accTokenPerShare1 +=
                 (rewardAmt0 * 1e12) /
                 mAdapter.totalStaked;
@@ -234,7 +230,7 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapter {
         userInfo.rewardDebt1 = 0;
 
         // 4. swap reward to bnb and send to investor
-        if (reward != 0 && rewardToken != address(0)) {
+        if (reward != 0) {
             amountOut = HedgepieLibraryBsc.swapForBnb(
                 reward,
                 address(this),
@@ -308,7 +304,7 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapter {
         require(userInfo.amount == amountOut, "Failed to remove funds");
 
         // 2. update mAdapter infor
-        if (rewardAmt0 != 0 && rewardToken != address(0)) {
+        if (rewardAmt0 != 0) {
             mAdapter.accTokenPerShare1 +=
                 (rewardAmt0 * 1e12) /
                 mAdapter.totalStaked;
@@ -385,11 +381,7 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapter {
         rewardAmt0 = IERC20(rewardToken).balanceOf(address(this)) - rewardAmt0;
 
         // 3. update reward infor
-        if (
-            rewardAmt0 != 0 &&
-            rewardToken != address(0) &&
-            mAdapter.totalStaked != 0
-        ) {
+        if (rewardAmt0 != 0 && mAdapter.totalStaked != 0) {
             mAdapter.accTokenPerShare1 +=
                 (rewardAmt0 * 1e12) /
                 mAdapter.totalStaked;

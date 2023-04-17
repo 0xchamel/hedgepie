@@ -37,6 +37,9 @@ contract BeefyVaultAdapterBsc is BaseAdapter {
         string memory _name,
         address _hedgepieAuthority
     ) BaseAdapter(_hedgepieAuthority) {
+        require(_stakingToken != address(0), "Invalid staking token");
+        require(_strategy != address(0), "Invalid strategy address");
+
         strategy = _strategy;
         stakingToken = _stakingToken;
         repayToken = _strategy;

@@ -49,6 +49,10 @@ contract AutoVaultAdapterBsc is BaseAdapter {
         string memory _name,
         address _hedgepieAuthority
     ) BaseAdapter(_hedgepieAuthority) {
+        require(_stakingToken != address(0), "Invalid staking token");
+        require(_strategy != address(0), "Invalid strategy address");
+        require(_vStrategy != address(0), "Invalid vStrategy address");
+
         pid = _pid;
         strategy = _strategy;
         vStrategy = _vStrategy;
