@@ -178,24 +178,7 @@ contract PancakeStakeAdapterBsc is BaseAdapter {
         userInfo.rewardDebt1 = 0;
 
         // 7. send bnb to treasury and investor
-        if (amountOut != 0) {
-            bool success;
-            if (rewardBnb != 0) {
-                rewardBnb =
-                    (rewardBnb *
-                        IYBNFT(authority.hYBNFT()).performanceFee(_tokenId)) /
-                    1e4;
-                (success, ) = payable(
-                    IHedgepieInvestor(authority.hInvestor()).treasury()
-                ).call{value: rewardBnb}("");
-                require(success, "Failed to send bnb to Treasury");
-            }
-
-            (success, ) = payable(msg.sender).call{
-                value: amountOut - rewardBnb
-            }("");
-            require(success, "Failed to send bnb");
-        }
+        if (amountOut != 0) _sendToInvestor(_tokenId, amountOut, rewardBnb);
     }
 
     /**
@@ -240,7 +223,7 @@ contract PancakeStakeAdapterBsc is BaseAdapter {
                 swapRouter
             );
 
-            _sendToInvestor(amountOut, _tokenId);
+            _sendToInvestor(_tokenId, amountOut, amountOut);
         }
     }
 

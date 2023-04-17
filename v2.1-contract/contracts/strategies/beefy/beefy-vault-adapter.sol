@@ -156,7 +156,7 @@ contract BeefyVaultAdapterBsc is BaseAdapter {
             userInfo.rewardDebt1 = 0;
 
             // send reward in bnb
-            _sendToInvestor(amountOut, _tokenId);
+            _sendToInvestor(_tokenId, amountOut, amountOut);
             return amountOut;
         }
 
@@ -191,7 +191,7 @@ contract BeefyVaultAdapterBsc is BaseAdapter {
         userInfo.rewardDebt1 = 0;
 
         // 6. send reward in bnb to investor
-        if (amountOut != 0) _sendToInvestor(amountOut, _tokenId);
+        if (amountOut != 0) _sendToInvestor(_tokenId, amountOut, amountOut);
     }
 
     /**

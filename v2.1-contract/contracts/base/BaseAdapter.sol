@@ -114,15 +114,24 @@ abstract contract BaseAdapter is HedgepieAccessControlled {
      * @notice internal function to send bnb to investor
      * @param _tokenId YBNFT token id
      */
-    function _sendToInvestor(uint256 _amount, uint256 _tokenId) internal {
-        uint256 taxAmount = (_amount *
-            IYBNFT(authority.hYBNFT()).performanceFee(_tokenId)) / 1e4;
-        (bool success, ) = payable(
-            IHedgepieInvestor(authority.hInvestor()).treasury()
-        ).call{value: taxAmount}("");
-        require(success, "Failed to send bnb to Treasury");
+    function _sendToInvestor(
+        uint256 _tokenId,
+        uint256 _amount,
+        uint256 _reward
+    ) internal {
+        bool success;
+        if (_reward != 0) {
+            _reward =
+                (_reward *
+                    IYBNFT(authority.hYBNFT()).performanceFee(_tokenId)) /
+                1e4;
+            (success, ) = payable(
+                IHedgepieInvestor(authority.hInvestor()).treasury()
+            ).call{value: _reward}("");
+            require(success, "Failed to send bnb to Treasury");
+        }
 
-        (success, ) = payable(msg.sender).call{value: _amount - taxAmount}("");
+        (success, ) = payable(msg.sender).call{value: _amount - _reward}("");
         require(success, "Failed to send bnb");
     }
 
