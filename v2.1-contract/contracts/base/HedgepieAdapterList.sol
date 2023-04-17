@@ -128,11 +128,14 @@ contract HedgepieAdapterList is HedgepieAccessControlled {
                 _adapterId[i] < adapterList.length,
                 "Invalid adapter address"
             );
-            adapterList[_adapterId[i]].status = _status[i];
 
-            if (_status[i])
-                emit AdapterActivated(adapterList[_adapterId[i]].addr);
-            else emit AdapterDeactivated(adapterList[_adapterId[i]].addr);
+            if (adapterList[_adapterId[i]].status != _status[i]) {
+                adapterList[_adapterId[i]].status = _status[i];
+
+                if (_status[i])
+                    emit AdapterActivated(adapterList[_adapterId[i]].addr);
+                else emit AdapterDeactivated(adapterList[_adapterId[i]].addr);
+            }
         }
     }
 }
