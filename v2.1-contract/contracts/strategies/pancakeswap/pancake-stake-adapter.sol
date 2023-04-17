@@ -268,20 +268,17 @@ contract PancakeStakeAdapterBsc is BaseAdapter {
 
         // 3. calc pending reward in bnb
         if (tokenRewards != 0) {
-            reward = rewardToken == wbnb
-                ? tokenRewards
-                : IPancakeRouter(swapRouter).getAmountsOut(
+            if (rewardToken == wbnb) reward = tokenRewards;
+            else {
+                address[] memory paths = IPathFinder(authority.pathFinder())
+                    .getPaths(swapRouter, rewardToken, wbnb);
+
+                reward = IPancakeRouter(swapRouter).getAmountsOut(
                     tokenRewards,
-                    IPathFinder(authority.pathFinder()).getPaths(
-                        swapRouter,
-                        rewardToken,
-                        wbnb
-                    )
-                )[
-                        IPathFinder(authority.pathFinder())
-                            .getPaths(swapRouter, rewardToken, wbnb)
-                            .length - 1
-                    ];
+                    paths
+                )[paths.length - 1];
+            }
+
             withdrawable = reward;
         }
     }
