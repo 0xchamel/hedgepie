@@ -3,6 +3,8 @@ pragma solidity ^0.8.4;
 
 import "./HedgepieAccessControlled.sol";
 import "../interfaces/IHedgepieAuthority.sol";
+import "../interfaces/IPancakeFactory.sol";
+import "../interfaces/IPancakeRouter.sol";
 
 contract PathFinder is HedgepieAccessControlled {
     // router information
@@ -88,8 +90,19 @@ contract PathFinder is HedgepieAccessControlled {
             "Invalid inToken address"
         );
 
+        IPancakeFactory factory = IPancakeFactory(
+            IPancakeRouter(_router).factory()
+        );
+
         uint8 i;
         for (i; i < _paths.length; i++) {
+            if (i < _paths.length - 1) {
+                require(
+                    factory.getPair(_paths[i], _paths[i + 1]) != address(0),
+                    "Invalid path"
+                );
+            }
+
             if (i < paths[_router][_inToken][_outToken].length) {
                 paths[_router][_inToken][_outToken][i] = _paths[i];
             } else {

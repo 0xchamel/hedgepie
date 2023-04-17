@@ -76,4 +76,6 @@ interface IPancakeRouter {
         uint256 amountIn,
         address[] memory path
     ) external view returns (uint256[] memory amounts);
+
+    function factory() external view returns (address);
 }
