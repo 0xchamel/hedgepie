@@ -28,9 +28,9 @@ abstract contract BaseAdapter is HedgepieAccessControlled {
 
     address public stakingToken;
 
-    address public rewardToken;
-
     address public rewardToken1;
+
+    address public rewardToken2;
 
     address public repayToken;
 

@@ -49,7 +49,7 @@ contract BiSwapFarmLPAdapterBsc is BaseAdapter {
 
         pid = _pid;
         stakingToken = _stakingToken;
-        rewardToken = _rewardToken;
+        rewardToken1 = _rewardToken;
         strategy = _strategy;
         router = _router;
         swapRouter = _swapRouter;
@@ -66,7 +66,7 @@ contract BiSwapFarmLPAdapterBsc is BaseAdapter {
     ) external payable override onlyInvestor returns (uint256 amountOut) {
         UserAdapterInfo storage userInfo = userAdapterInfos[_tokenId];
 
-        uint256 rewardAmt = IERC20(rewardToken).balanceOf(address(this));
+        uint256 rewardAmt = IERC20(rewardToken1).balanceOf(address(this));
 
         // 1. swap to staking token
         if (router == address(0)) {
@@ -93,7 +93,7 @@ contract BiSwapFarmLPAdapterBsc is BaseAdapter {
         unchecked {
             // 3. check reward amount
             rewardAmt =
-                IERC20(rewardToken).balanceOf(address(this)) -
+                IERC20(rewardToken1).balanceOf(address(this)) -
                 rewardAmt;
 
             // 4. update accTokenPerShare if reward is generated
@@ -139,7 +139,7 @@ contract BiSwapFarmLPAdapterBsc is BaseAdapter {
         amountOut = IERC20(stakingToken).balanceOf(address(this));
         uint256 rewardAmt = pid == 0
             ? amountOut
-            : IERC20(rewardToken).balanceOf(address(this));
+            : IERC20(rewardToken1).balanceOf(address(this));
 
         if (pid == 0) IStrategy(strategy).leaveStaking(_amount);
         else IStrategy(strategy).withdraw(pid, _amount);
@@ -154,7 +154,7 @@ contract BiSwapFarmLPAdapterBsc is BaseAdapter {
                 amountOut = _amount;
             } else {
                 rewardAmt =
-                    IERC20(rewardToken).balanceOf(address(this)) -
+                    IERC20(rewardToken1).balanceOf(address(this)) -
                     rewardAmt;
             }
 
@@ -196,7 +196,7 @@ contract BiSwapFarmLPAdapterBsc is BaseAdapter {
             rewardBnb = HedgepieLibraryBsc.swapForBnb(
                 reward,
                 address(this),
-                rewardToken,
+                rewardToken1,
                 swapRouter
             );
 
@@ -226,7 +226,7 @@ contract BiSwapFarmLPAdapterBsc is BaseAdapter {
         UserAdapterInfo storage userInfo = userAdapterInfos[_tokenId];
 
         // 1. calc & claim rewards
-        uint256 rewardAmt = IERC20(rewardToken).balanceOf(address(this));
+        uint256 rewardAmt = IERC20(rewardToken1).balanceOf(address(this));
 
         if (pid == 0) IStrategy(strategy).leaveStaking(0);
         else IStrategy(strategy).withdraw(pid, 0);
@@ -234,7 +234,7 @@ contract BiSwapFarmLPAdapterBsc is BaseAdapter {
         // 2. update mAdapter info
         unchecked {
             rewardAmt =
-                IERC20(rewardToken).balanceOf(address(this)) -
+                IERC20(rewardToken1).balanceOf(address(this)) -
                 rewardAmt;
 
             if (rewardAmt != 0 && mAdapter.totalStaked != 0) {
@@ -259,7 +259,7 @@ contract BiSwapFarmLPAdapterBsc is BaseAdapter {
             amountOut = HedgepieLibraryBsc.swapForBnb(
                 reward,
                 address(this),
-                rewardToken,
+                rewardToken1,
                 swapRouter
             );
 
@@ -292,10 +292,10 @@ contract BiSwapFarmLPAdapterBsc is BaseAdapter {
 
         // 3. calc pending reward in bnb
         if (tokenRewards != 0) {
-            if (rewardToken == wbnb) reward = tokenRewards;
+            if (rewardToken1 == wbnb) reward = tokenRewards;
             else {
                 address[] memory paths = IPathFinder(authority.pathFinder())
-                    .getPaths(swapRouter, rewardToken, wbnb);
+                    .getPaths(swapRouter, rewardToken1, wbnb);
 
                 reward = IPancakeRouter(swapRouter).getAmountsOut(
                     tokenRewards,
@@ -318,7 +318,7 @@ contract BiSwapFarmLPAdapterBsc is BaseAdapter {
         if (userInfo.amount == 0) return 0;
 
         // 1. update reward infor after withdraw all staking tokens
-        uint256 rewardAmt = IERC20(rewardToken).balanceOf(address(this));
+        uint256 rewardAmt = IERC20(rewardToken1).balanceOf(address(this));
         amountOut = IERC20(stakingToken).balanceOf(address(this));
 
         // withdraw from strategy
@@ -335,7 +335,7 @@ contract BiSwapFarmLPAdapterBsc is BaseAdapter {
                 amountOut = userInfo.amount;
             } else {
                 rewardAmt =
-                    IERC20(rewardToken).balanceOf(address(this)) -
+                    IERC20(rewardToken1).balanceOf(address(this)) -
                     rewardAmt;
             }
 
@@ -396,7 +396,7 @@ contract BiSwapFarmLPAdapterBsc is BaseAdapter {
 
         UserAdapterInfo storage userInfo = userAdapterInfos[_tokenId];
 
-        uint256 rewardAmt = IERC20(rewardToken).balanceOf(address(this));
+        uint256 rewardAmt = IERC20(rewardToken1).balanceOf(address(this));
 
         // 1. swap bnb to staking token
         if (router == address(0)) {
@@ -423,7 +423,7 @@ contract BiSwapFarmLPAdapterBsc is BaseAdapter {
         // 3. update reward info
         unchecked {
             rewardAmt =
-                IERC20(rewardToken).balanceOf(address(this)) -
+                IERC20(rewardToken1).balanceOf(address(this)) -
                 rewardAmt;
 
             // update reward info

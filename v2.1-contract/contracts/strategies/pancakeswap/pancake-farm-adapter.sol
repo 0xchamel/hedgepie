@@ -44,7 +44,7 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapter {
 
         pid = _pid;
         stakingToken = _stakingToken;
-        rewardToken = _rewardToken;
+        rewardToken1 = _rewardToken;
         strategy = _strategy;
         router = _router;
         swapRouter = _router;
@@ -78,11 +78,11 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapter {
         }
 
         // 2. calc reward amount
-        uint256 rewardAmt0 = IERC20(rewardToken).balanceOf(address(this));
+        uint256 rewardAmt0 = IERC20(rewardToken1).balanceOf(address(this));
         IERC20(stakingToken).safeApprove(strategy, 0);
         IERC20(stakingToken).safeApprove(strategy, amountOut);
         IStrategy(strategy).deposit(pid, amountOut);
-        rewardAmt0 = IERC20(rewardToken).balanceOf(address(this)) - rewardAmt0;
+        rewardAmt0 = IERC20(rewardToken1).balanceOf(address(this)) - rewardAmt0;
 
         // 3. update accTokenPerShare if reward is generated
         if (rewardAmt0 != 0 && mAdapter.totalStaked != 0) {
@@ -124,10 +124,10 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapter {
         require(_amount <= userInfo.amount, "Not enough balance to withdraw");
 
         // 1. calc reward and withdraw from adapter
-        uint256 rewardAmt0 = IERC20(rewardToken).balanceOf(address(this));
+        uint256 rewardAmt0 = IERC20(rewardToken1).balanceOf(address(this));
         amountOut = IERC20(stakingToken).balanceOf(address(this));
         IStrategy(strategy).withdraw(pid, _amount);
-        rewardAmt0 = IERC20(rewardToken).balanceOf(address(this)) - rewardAmt0;
+        rewardAmt0 = IERC20(rewardToken1).balanceOf(address(this)) - rewardAmt0;
         amountOut = IERC20(stakingToken).balanceOf(address(this)) - amountOut;
         require(_amount == amountOut, "Failed to withdraw");
 
@@ -166,7 +166,7 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapter {
             rewardBnb = HedgepieLibraryBsc.swapForBnb(
                 reward,
                 address(this),
-                rewardToken,
+                rewardToken1,
                 swapRouter
             );
         }
@@ -193,9 +193,9 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapter {
         UserAdapterInfo storage userInfo = userAdapterInfos[_tokenId];
 
         // 1. check if reward is generated
-        uint256 rewardAmt0 = IERC20(rewardToken).balanceOf(address(this));
+        uint256 rewardAmt0 = IERC20(rewardToken1).balanceOf(address(this));
         IStrategy(strategy).withdraw(pid, 0);
-        rewardAmt0 = IERC20(rewardToken).balanceOf(address(this)) - rewardAmt0;
+        rewardAmt0 = IERC20(rewardToken1).balanceOf(address(this)) - rewardAmt0;
         if (rewardAmt0 != 0 && mAdapter.totalStaked != 0) {
             mAdapter.accTokenPerShare1 +=
                 (rewardAmt0 * 1e12) /
@@ -217,7 +217,7 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapter {
             amountOut = HedgepieLibraryBsc.swapForBnb(
                 reward,
                 address(this),
-                rewardToken,
+                rewardToken1,
                 swapRouter
             );
 
@@ -275,11 +275,11 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapter {
         if (userInfo.amount == 0) return 0;
 
         // 1. update reward infor after withdraw all staking tokens
-        uint256 rewardAmt0 = IERC20(rewardToken).balanceOf(address(this));
+        uint256 rewardAmt0 = IERC20(rewardToken1).balanceOf(address(this));
         amountOut = IERC20(stakingToken).balanceOf(address(this));
         IStrategy(strategy).withdraw(pid, userInfo.amount);
         amountOut = IERC20(stakingToken).balanceOf(address(this)) - amountOut;
-        rewardAmt0 = IERC20(rewardToken).balanceOf(address(this)) - rewardAmt0;
+        rewardAmt0 = IERC20(rewardToken1).balanceOf(address(this)) - rewardAmt0;
         require(userInfo.amount == amountOut, "Failed to remove funds");
 
         // 2. update mAdapter infor
@@ -353,11 +353,11 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapter {
         }
 
         // 2. get reward amount after deposit
-        uint256 rewardAmt0 = IERC20(rewardToken).balanceOf(address(this));
+        uint256 rewardAmt0 = IERC20(rewardToken1).balanceOf(address(this));
         IERC20(stakingToken).safeApprove(strategy, 0);
         IERC20(stakingToken).safeApprove(strategy, amountOut);
         IStrategy(strategy).deposit(pid, amountOut);
-        rewardAmt0 = IERC20(rewardToken).balanceOf(address(this)) - rewardAmt0;
+        rewardAmt0 = IERC20(rewardToken1).balanceOf(address(this)) - rewardAmt0;
 
         // 3. update reward infor
         if (rewardAmt0 != 0 && mAdapter.totalStaked != 0) {
