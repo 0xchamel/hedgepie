@@ -11,16 +11,16 @@ import "./HedgepieAccessControlled.sol";
 abstract contract BaseAdapter is HedgepieAccessControlled {
     struct UserAdapterInfo {
         uint256 amount; // Staking token amount
-        uint256 userShare1; // Reward tokens' share
-        uint256 userShare2; // Reward tokens' share
-        uint256 rewardDebt1; // Reward Debt for reward tokens
-        uint256 rewardDebt2; // Reward Debt for reward tokens
+        uint256 userShare1; // First rewardTokens' share
+        uint256 userShare2; // Second rewardTokens' share
+        uint256 rewardDebt1; // Reward Debt for first reward token
+        uint256 rewardDebt2; // Reward Debt for second reward token
         uint256 invested; // invested lp token amount
     }
 
     struct AdapterInfo {
         uint256 accTokenPerShare1; // Accumulated per share for first reward token
-        uint256 accTokenPerShare2; // Accumulated per share for first reward token
+        uint256 accTokenPerShare2; // Accumulated per share for second reward token
         uint256 totalStaked; // Total staked staking token
     }
 
