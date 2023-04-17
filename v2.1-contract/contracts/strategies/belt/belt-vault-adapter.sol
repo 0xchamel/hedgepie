@@ -40,6 +40,10 @@ contract BeltVaultAdapterBsc is BaseAdapter {
         string memory _name,
         address _hedgepieAuthority
     ) BaseAdapter(_hedgepieAuthority) {
+        require(_repayToken != address(0), "Invalid reward token");
+        require(_stakingToken != address(0), "Invalid staking token");
+        require(_strategy != address(0), "Invalid strategy address");
+
         stakingToken = _stakingToken;
         repayToken = _repayToken;
         strategy = _strategy;

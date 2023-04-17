@@ -43,6 +43,10 @@ contract BiSwapFarmLPAdapterBsc is BaseAdapter {
         string memory _name,
         address _hedgepieAuthority
     ) BaseAdapter(_hedgepieAuthority) {
+        require(_rewardToken != address(0), "Invalid reward token");
+        require(_stakingToken != address(0), "Invalid staking token");
+        require(_strategy != address(0), "Invalid strategy address");
+
         pid = _pid;
         stakingToken = _stakingToken;
         rewardToken = _rewardToken;
