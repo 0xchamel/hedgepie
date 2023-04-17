@@ -250,10 +250,10 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapter {
 
         // 3. calc pending reward in bnb
         if (tokenRewards != 0) {
-            if (rewardToken == wbnb) reward = tokenRewards;
+            if (rewardToken1 == wbnb) reward = tokenRewards;
             else {
                 address[] memory paths = IPathFinder(authority.pathFinder())
-                    .getPaths(swapRouter, rewardToken, wbnb);
+                    .getPaths(swapRouter, rewardToken1, wbnb);
                 reward = IPancakeRouter(swapRouter).getAmountsOut(
                     tokenRewards,
                     paths
