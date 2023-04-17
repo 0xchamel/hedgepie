@@ -59,6 +59,14 @@ contract HedgepieInvestor is ReentrancyGuard, HedgepieAccessControlled {
         _;
     }
 
+    modifier onlyYBNft() {
+        require(
+            msg.sender == authority.hYBNFT(),
+            "Error: YBNFT address mismatch"
+        );
+        _;
+    }
+
     /**
      * @notice Construct
      * @param _treasury  address of treasury
@@ -266,12 +274,7 @@ contract HedgepieInvestor is ReentrancyGuard, HedgepieAccessControlled {
      * @notice Update funds for token id
      * @param _tokenId YBNFT token id
      */
-    function updateFunds(uint256 _tokenId) external whenNotPaused {
-        require(
-            msg.sender == authority.hYBNFT(),
-            "Error: YBNFT address mismatch"
-        );
-
+    function updateFunds(uint256 _tokenId) external whenNotPaused onlyYBNft {
         IYBNFT.AdapterParam[] memory adapterInfos = IYBNFT(authority.hYBNFT())
             .getTokenAdapterParams(_tokenId);
 

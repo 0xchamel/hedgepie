@@ -50,20 +50,9 @@ contract PathFinder is HedgepieAccessControlled {
         address _inToken,
         address _outToken
     ) public view returns (address[] memory) {
-        require(routers[_router], "Router not registered");
         require(
             paths[_router][_inToken][_outToken].length > 1,
-            "Path length is not valid"
-        );
-        require(
-            paths[_router][_inToken][_outToken][0] == _inToken,
-            "Path is not existed"
-        );
-        require(
-            paths[_router][_inToken][_outToken][
-                paths[_router][_inToken][_outToken].length - 1
-            ] == _outToken,
-            "Path is not existed"
+            "Path not existing"
         );
 
         return paths[_router][_inToken][_outToken];

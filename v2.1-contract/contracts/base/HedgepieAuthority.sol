@@ -164,7 +164,7 @@ contract HedgepieAuthority is IHedgepieAuthority, HedgepieAccessControlled {
      * @notice Pull path manager
      */
     function pullPathManager() external {
-        require(msg.sender == newPathManager, "!newGuard");
+        require(msg.sender == newPathManager, "!newPathManager");
         emit PathManagerPulled(pathManager, newPathManager);
         pathManager = newPathManager;
     }

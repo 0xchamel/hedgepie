@@ -18,7 +18,7 @@ contract HedgepieAdapterList is HedgepieAccessControlled {
     AdapterInfo[] public adapterList;
 
     // existing status of adapters
-    mapping(address => bool) public adapterExist;
+    mapping(address => bool) public adapterActive;
 
     /// @dev events
     event AdapterAdded(address indexed adapter);
@@ -35,7 +35,7 @@ contract HedgepieAdapterList is HedgepieAccessControlled {
 
     /// @dev modifier for active adapters
     modifier onlyActiveAdapter(address _adapter) {
-        require(adapterExist[_adapter], "Error: Adapter is not active");
+        require(adapterActive[_adapter], "Error: Adapter is not active");
         _;
     }
 
@@ -94,7 +94,7 @@ contract HedgepieAdapterList is HedgepieAccessControlled {
         address[] memory _adapters
     ) external onlyAdapterManager {
         for (uint256 i = 0; i < _adapters.length; i++) {
-            require(!adapterExist[_adapters[i]], "Already added");
+            require(!adapterActive[_adapters[i]], "Already added");
             require(_adapters[i] != address(0), "Invalid adapter address");
 
             adapterList.push(
@@ -105,7 +105,7 @@ contract HedgepieAdapterList is HedgepieAccessControlled {
                     status: true
                 })
             );
-            adapterExist[_adapters[i]] = true;
+            adapterActive[_adapters[i]] = true;
 
             emit AdapterAdded(_adapters[i]);
         }
