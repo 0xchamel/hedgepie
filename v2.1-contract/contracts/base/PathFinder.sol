@@ -97,11 +97,10 @@ contract PathFinder is HedgepieAccessControlled {
             }
         }
 
-        if (paths[_router][_inToken][_outToken].length > _paths.length)
-            for (
-                i = 0;
-                i < paths[_router][_inToken][_outToken].length - _paths.length;
-                i++
-            ) paths[_router][_inToken][_outToken].pop();
+        if (paths[_router][_inToken][_outToken].length > _paths.length) {
+            uint256 len = paths[_router][_inToken][_outToken].length;
+            for (i = 0; i < len - _paths.length; i++)
+                paths[_router][_inToken][_outToken].pop();
+        }
     }
 }
