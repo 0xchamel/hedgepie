@@ -13,9 +13,14 @@ import "../base/BaseAdapter.sol";
 library HedgepieLibraryBsc {
     using SafeERC20 for IERC20;
 
-    address private constant _WBNB = 0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c;
-    address private constant _USDT = 0x55d398326f99059fF775485246999027B3197955;
-    address private constant _ORACLE = 0xfbD61B037C325b959c0F6A7e69D8f37770C2c550;
+    // WBNB address
+    address public constant WBNB = 0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c;
+
+    // USDT address
+    address public constant USDT = 0x55d398326f99059fF775485246999027B3197955;
+
+    // 1inch oracle address
+    address public constant ORACLE = 0xfbD61B037C325b959c0F6A7e69D8f37770C2c550;
 
     /**
      * @notice Swap tokens
@@ -32,7 +37,7 @@ library HedgepieLibraryBsc {
     ) public returns (uint256 amountOut) {
         address[] memory path = IPathFinder(IHedgepieAuthority(IAdapter(_adapter).authority()).pathFinder()).getPaths(
             _router,
-            _WBNB,
+            WBNB,
             _outToken
         );
         uint256 beforeBalance = IERC20(_outToken).balanceOf(address(this));
@@ -49,7 +54,7 @@ library HedgepieLibraryBsc {
     }
 
     /**
-     * @notice Swap tokens and receive BNB
+     * @notice Swap tokens to bnb
      * @param _amountIn  amount of swap token
      * @param _adapter  address of adapter
      * @param _inToken  address of swap token
@@ -61,12 +66,12 @@ library HedgepieLibraryBsc {
         address _inToken,
         address _router
     ) public returns (uint256 amountOut) {
-        if (_inToken == _WBNB) {
-            IWrap(_WBNB).withdraw(_amountIn);
+        if (_inToken == WBNB) {
+            IWrap(WBNB).withdraw(_amountIn);
             amountOut = _amountIn;
         } else {
             address[] memory path = IPathFinder(IHedgepieAuthority(IAdapter(_adapter).authority()).pathFinder())
-                .getPaths(_router, _inToken, _WBNB);
+                .getPaths(_router, _inToken, WBNB);
             uint256 beforeBalance = address(this).balance;
 
             IERC20(_inToken).safeApprove(_router, 0);
@@ -86,7 +91,7 @@ library HedgepieLibraryBsc {
     }
 
     /**
-     * @notice Get user's reward amount in adapter
+     * @notice Get the reward amount of user from adapter
      * @param _tokenId  tokenID
      * @param _adapterAddr  address of adapter
      */
@@ -118,7 +123,7 @@ library HedgepieLibraryBsc {
     }
 
     /**
-     * @notice Get LP by add liquidity
+     * @notice Get LP token
      * @param _adapter  AdapterInfo
      * @param _stakingToken  address of staking token
      * @param _amountIn  amount of BNB
@@ -139,25 +144,25 @@ library HedgepieLibraryBsc {
             tokenAmount[1] = _amountIn - tokenAmount[0];
         }
 
-        if (tokens[0] != _WBNB) {
+        if (tokens[0] != WBNB) {
             tokenAmount[0] = swapOnRouter(tokenAmount[0], _adapter.addr, tokens[0], _router);
             IERC20(tokens[0]).safeApprove(_router, 0);
             IERC20(tokens[0]).safeApprove(_router, tokenAmount[0]);
         }
 
-        if (tokens[1] != _WBNB) {
+        if (tokens[1] != WBNB) {
             tokenAmount[1] = swapOnRouter(tokenAmount[1], _adapter.addr, tokens[1], _router);
             IERC20(tokens[1]).safeApprove(_router, 0);
             IERC20(tokens[1]).safeApprove(_router, tokenAmount[1]);
         }
 
         if (tokenAmount[0] != 0 && tokenAmount[1] != 0) {
-            if (tokens[0] == _WBNB || tokens[1] == _WBNB) {
+            if (tokens[0] == WBNB || tokens[1] == WBNB) {
                 (, , amountOut) = IPancakeRouter(_router).addLiquidityETH{
-                    value: tokens[0] == _WBNB ? tokenAmount[0] : tokenAmount[1]
+                    value: tokens[0] == WBNB ? tokenAmount[0] : tokenAmount[1]
                 }(
-                    tokens[0] == _WBNB ? tokens[1] : tokens[0],
-                    tokens[0] == _WBNB ? tokenAmount[1] : tokenAmount[0],
+                    tokens[0] == WBNB ? tokens[1] : tokens[0],
+                    tokens[0] == WBNB ? tokenAmount[1] : tokenAmount[0],
                     0,
                     0,
                     address(this),
@@ -179,7 +184,7 @@ library HedgepieLibraryBsc {
     }
 
     /**
-     * @notice Withdraw LP from pool
+     * @notice Withdraw LP token
      * @param _adapter  AdapterInfo
      * @param _stakingToken  address of staking token
      * @param _amountIn  amount of LP
@@ -199,8 +204,8 @@ library HedgepieLibraryBsc {
         IERC20(_stakingToken).safeApprove(_router, 0);
         IERC20(_stakingToken).safeApprove(_router, _amountIn);
 
-        if (tokens[0] == _WBNB || tokens[1] == _WBNB) {
-            address tokenAddr = tokens[0] == _WBNB ? tokens[1] : tokens[0];
+        if (tokens[0] == WBNB || tokens[1] == WBNB) {
+            address tokenAddr = tokens[0] == WBNB ? tokens[1] : tokens[0];
             (uint256 amountToken, uint256 amountETH) = IPancakeRouter(_router).removeLiquidityETH(
                 tokenAddr,
                 _amountIn,
@@ -229,9 +234,9 @@ library HedgepieLibraryBsc {
     }
 
     /**
-     * @notice Get BNB Price from oracle
+     * @notice Get BNB Price from 1inch oracle
      */
     function getBNBPrice() public view returns (uint256) {
-        return IOffchainOracle(_ORACLE).getRate(_WBNB, _USDT, false);
+        return IOffchainOracle(ORACLE).getRate(WBNB, USDT, false);
     }
 }

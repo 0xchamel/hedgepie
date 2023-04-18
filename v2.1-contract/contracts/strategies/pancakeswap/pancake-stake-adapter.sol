@@ -15,24 +15,22 @@ contract PancakeStakeAdapterBsc is BaseAdapter {
     using SafeERC20 for IERC20;
 
     /**
-     * @notice Construct
+     * @notice Constructor
      * @param _strategy  address of strategy
      * @param _stakingToken  address of staking token
      * @param _swapRouter  address of swap router
      * @param _rewardToken  address of reward token
-     * @param _wbnb  address of wbnb
      * @param _name  name of adapter
-     * @param _hedgepieAuthority  hedgepieAuthority address
+     * @param _authority  hedgepieAuthority address
      */
     constructor(
         address _strategy,
         address _stakingToken,
         address _rewardToken,
         address _swapRouter,
-        address _wbnb,
         string memory _name,
-        address _hedgepieAuthority
-    ) BaseAdapter(_hedgepieAuthority) {
+        address _authority
+    ) BaseAdapter(_authority) {
         require(_rewardToken != address(0), "Invalid reward token");
         require(_stakingToken != address(0), "Invalid staking token");
         require(_strategy != address(0), "Invalid strategy address");
@@ -41,7 +39,6 @@ contract PancakeStakeAdapterBsc is BaseAdapter {
         rewardToken1 = _rewardToken;
         swapRouter = _swapRouter;
         strategy = _strategy;
-        wbnb = _wbnb;
         name = _name;
     }
 
@@ -86,7 +83,7 @@ contract PancakeStakeAdapterBsc is BaseAdapter {
     }
 
     /**
-     * @notice Withdraw the deposited Bnb
+     * @notice Withdraw from strategy
      * @param _tokenId YBNFT token id
      * @param _amount staking token amount to withdraw
      */
@@ -193,9 +190,13 @@ contract PancakeStakeAdapterBsc is BaseAdapter {
 
         // 3. calc pending reward in bnb
         if (tokenRewards != 0) {
-            if (rewardToken1 == wbnb) reward = tokenRewards;
+            if (rewardToken1 == HedgepieLibraryBsc.WBNB) reward = tokenRewards;
             else {
-                address[] memory paths = IPathFinder(authority.pathFinder()).getPaths(swapRouter, rewardToken1, wbnb);
+                address[] memory paths = IPathFinder(authority.pathFinder()).getPaths(
+                    swapRouter,
+                    rewardToken1,
+                    HedgepieLibraryBsc.WBNB
+                );
 
                 reward = IPancakeRouter(swapRouter).getAmountsOut(tokenRewards, paths)[paths.length - 1];
             }

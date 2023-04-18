@@ -19,24 +19,22 @@ contract BeefyVaultAdapterBsc is BaseAdapter {
     using SafeERC20 for IERC20;
 
     /**
-     * @notice Construct
+     * @notice Constructor
      * @param _strategy  address of strategy
      * @param _stakingToken  address of staking token
      * @param _router  address of router for LP
      * @param _swapRouter  address of swap router
-     * @param _wbnb  address of wbnb
      * @param _name  adatper name
-     * @param _hedgepieAuthority HedgepieAuthority address
+     * @param _authority HedgepieAuthority address
      */
     constructor(
         address _strategy,
         address _stakingToken,
         address _router,
         address _swapRouter,
-        address _wbnb,
         string memory _name,
-        address _hedgepieAuthority
-    ) BaseAdapter(_hedgepieAuthority) {
+        address _authority
+    ) BaseAdapter(_authority) {
         require(_stakingToken != address(0), "Invalid staking token");
         require(_strategy != address(0), "Invalid strategy address");
 
@@ -45,7 +43,6 @@ contract BeefyVaultAdapterBsc is BaseAdapter {
         repayToken = _strategy;
         router = _router;
         swapRouter = _swapRouter;
-        wbnb = _wbnb;
         name = _name;
     }
 
@@ -79,7 +76,7 @@ contract BeefyVaultAdapterBsc is BaseAdapter {
     }
 
     /**
-     * @notice Withdraw the deposited BNB
+     * @notice Withdraw from strategy
      * @param _tokenId YBNFT token id
      * @param _amount amount of repayToken to withdraw
      */
@@ -180,28 +177,40 @@ contract BeefyVaultAdapterBsc is BaseAdapter {
         wantAmt -= userInfo.invested;
 
         if (router == address(0)) {
-            address[] memory pathStake = IPathFinder(authority.pathFinder()).getPaths(swapRouter, stakingToken, wbnb);
+            address[] memory pathStake = IPathFinder(authority.pathFinder()).getPaths(
+                swapRouter,
+                stakingToken,
+                HedgepieLibraryBsc.WBNB
+            );
 
-            if (stakingToken != wbnb)
+            if (stakingToken != HedgepieLibraryBsc.WBNB)
                 reward += wantAmt == 0
                     ? 0
                     : IPancakeRouter(swapRouter).getAmountsOut(wantAmt, pathStake)[pathStake.length - 1];
         } else {
             address token0 = IPancakePair(stakingToken).token0();
             address token1 = IPancakePair(stakingToken).token1();
-            address[] memory path0 = IPathFinder(authority.pathFinder()).getPaths(swapRouter, token0, wbnb);
-            address[] memory path1 = IPathFinder(authority.pathFinder()).getPaths(swapRouter, token1, wbnb);
+            address[] memory path0 = IPathFinder(authority.pathFinder()).getPaths(
+                swapRouter,
+                token0,
+                HedgepieLibraryBsc.WBNB
+            );
+            address[] memory path1 = IPathFinder(authority.pathFinder()).getPaths(
+                swapRouter,
+                token1,
+                HedgepieLibraryBsc.WBNB
+            );
 
             (uint112 reserve0, uint112 reserve1, ) = IPancakePair(stakingToken).getReserves();
 
             uint256 amount0 = (reserve0 * wantAmt) / IPancakePair(stakingToken).totalSupply();
             uint256 amount1 = (reserve1 * wantAmt) / IPancakePair(stakingToken).totalSupply();
 
-            if (token0 == wbnb) reward += amount0;
+            if (token0 == HedgepieLibraryBsc.WBNB) reward += amount0;
             else
                 reward += amount0 == 0 ? 0 : IPancakeRouter(swapRouter).getAmountsOut(amount0, path0)[path0.length - 1];
 
-            if (token1 == wbnb) reward += amount1;
+            if (token1 == HedgepieLibraryBsc.WBNB) reward += amount1;
             else
                 reward += amount1 == 0 ? 0 : IPancakeRouter(swapRouter).getAmountsOut(amount1, path1)[path1.length - 1];
         }
