@@ -8,10 +8,10 @@ import "./HedgepieAccessControlled.sol";
 
 contract HedgepieAdapterList is HedgepieAccessControlled {
     struct AdapterInfo {
-        address addr;
-        string name;
-        address stakingToken;
-        bool status;
+        address addr; // adapter address
+        string name;  // adapter name
+        address stakingToken; // staking token of adapter
+        bool status; // adapter contract status
     }
 
     // list of adapters

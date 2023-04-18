@@ -8,8 +8,10 @@ abstract contract HedgepieAccessControlled {
 
     event AuthorityUpdated(IHedgepieAuthority indexed authority);
 
+    // unauthorized error message
     string private _unauthorized = "UNAUTHORIZED"; // save gas
 
+    // paused error message
     string private _paused = "PAUSED"; // save gas
 
     /* ========== STATE VARIABLES ========== */

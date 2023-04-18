@@ -16,14 +16,14 @@ contract HedgepieInvestor is ReentrancyGuard, HedgepieAccessControlled {
     using SafeERC20 for IERC20;
 
     struct UserInfo {
-        uint256 userShare;
-        uint256 amount;
-        uint256 rewardDebt;
+        uint256 userShare; // user share amount
+        uint256 amount; // user deposit amount
+        uint256 rewardDebt; // user reward amount
     }
 
     struct TokenInfo {
-        uint256 totalStaked;
-        uint256 accRewardShare;
+        uint256 totalStaked; // total staked in usd
+        uint256 accRewardShare; // reward share per account
     }
 
     // token id => token info
