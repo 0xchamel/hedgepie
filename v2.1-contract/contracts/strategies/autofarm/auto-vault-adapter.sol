@@ -21,16 +21,15 @@ contract AutoVaultAdapterBsc is BaseAdapter {
     address public immutable vStrategy;
 
     /**
-     * @notice Construct
+     * @notice Constructor
      * @param _pid pool id of strategy
      * @param _strategy  address of strategy
      * @param _vStrategy  address of vault strategy
      * @param _stakingToken  address of staking token
      * @param _router  address of DEX router
      * @param _swapRouter  address of swap router
-     * @param _wbnb  address of wbnb
      * @param _name  adatper name
-     * @param _hedgepieAuthority HedgepieAuthority address
+     * @param _authority HedgepieAuthority address
      */
     constructor(
         uint256 _pid,
@@ -39,10 +38,9 @@ contract AutoVaultAdapterBsc is BaseAdapter {
         address _stakingToken,
         address _router,
         address _swapRouter,
-        address _wbnb,
         string memory _name,
-        address _hedgepieAuthority
-    ) BaseAdapter(_hedgepieAuthority) {
+        address _authority
+    ) BaseAdapter(_authority) {
         require(_stakingToken != address(0), "Invalid staking token");
         require(_strategy != address(0), "Invalid strategy address");
         require(_vStrategy != address(0), "Invalid vStrategy address");
@@ -53,7 +51,6 @@ contract AutoVaultAdapterBsc is BaseAdapter {
         stakingToken = _stakingToken;
         router = _router;
         swapRouter = _swapRouter;
-        wbnb = _wbnb;
         name = _name;
     }
 
@@ -83,7 +80,7 @@ contract AutoVaultAdapterBsc is BaseAdapter {
     }
 
     /**
-     * @notice Withdraw the deposited Bnb
+     * @notice Withdraw from strategy
      * @param _tokenId YBNFT token id
      * @param _amount amount of staking token to withdraw
      */
@@ -185,18 +182,26 @@ contract AutoVaultAdapterBsc is BaseAdapter {
         uint256 amount1 = (reserve1 * vAmount) / IPancakePair(stakingToken).totalSupply();
 
         if (amount0 != 0) {
-            if (token0 == wbnb) reward += amount0;
+            if (token0 == HedgepieLibraryBsc.WBNB) reward += amount0;
             else {
-                address[] memory paths = IPathFinder(authority.pathFinder()).getPaths(swapRouter, token0, wbnb);
+                address[] memory paths = IPathFinder(authority.pathFinder()).getPaths(
+                    swapRouter,
+                    token0,
+                    HedgepieLibraryBsc.WBNB
+                );
 
                 reward += IPancakeRouter(swapRouter).getAmountsOut(amount0, paths)[paths.length - 1];
             }
         }
 
         if (amount1 != 0) {
-            if (token1 == wbnb) reward += amount1;
+            if (token1 == HedgepieLibraryBsc.WBNB) reward += amount1;
             else {
-                address[] memory paths = IPathFinder(authority.pathFinder()).getPaths(swapRouter, token1, wbnb);
+                address[] memory paths = IPathFinder(authority.pathFinder()).getPaths(
+                    swapRouter,
+                    token1,
+                    HedgepieLibraryBsc.WBNB
+                );
                 reward += IPancakeRouter(swapRouter).getAmountsOut(amount1, paths)[paths.length - 1];
             }
         }

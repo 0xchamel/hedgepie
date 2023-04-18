@@ -23,12 +23,11 @@ contract BeltVaultAdapterBsc is BaseAdapter {
     using SafeERC20 for IERC20;
 
     /**
-     * @notice Construct
+     * @notice Constructor
      * @param _strategy  address of strategy
      * @param _stakingToken  address of staking token
      * @param _repayToken  address of reward token
      * @param _swapRouter  address of swap router
-     * @param _wbnb  address of wbnb
      * @param _name  adatper name
      */
     constructor(
@@ -36,10 +35,9 @@ contract BeltVaultAdapterBsc is BaseAdapter {
         address _stakingToken,
         address _repayToken,
         address _swapRouter,
-        address _wbnb,
         string memory _name,
-        address _hedgepieAuthority
-    ) BaseAdapter(_hedgepieAuthority) {
+        address _authority
+    ) BaseAdapter(_authority) {
         require(_repayToken != address(0), "Invalid reward token");
         require(_stakingToken != address(0), "Invalid staking token");
         require(_strategy != address(0), "Invalid strategy address");
@@ -48,7 +46,6 @@ contract BeltVaultAdapterBsc is BaseAdapter {
         repayToken = _repayToken;
         strategy = _strategy;
         swapRouter = _swapRouter;
-        wbnb = _wbnb;
         name = _name;
     }
 
@@ -60,13 +57,13 @@ contract BeltVaultAdapterBsc is BaseAdapter {
         UserAdapterInfo storage userInfo = userAdapterInfos[_tokenId];
 
         // 1. get stakingToken
-        if (stakingToken != wbnb)
+        if (stakingToken != HedgepieLibraryBsc.WBNB)
             amountOut = HedgepieLibraryBsc.swapOnRouter(msg.value, address(this), stakingToken, swapRouter);
 
         // 2. deposit to vault
         uint256 repayAmt = IERC20(repayToken).balanceOf(address(this));
 
-        if (stakingToken == wbnb) {
+        if (stakingToken == HedgepieLibraryBsc.WBNB) {
             IStrategy(strategy).deposit{value: msg.value}(0);
         } else {
             IERC20(stakingToken).safeApprove(strategy, 0);
@@ -85,7 +82,7 @@ contract BeltVaultAdapterBsc is BaseAdapter {
     }
 
     /**
-     * @notice Withdraw the deposited Bnb
+     * @notice Withdraw from strategy
      * @param _tokenId YBNFT token id
      * @param _amount amount of staking token to withdraw
      */
@@ -97,7 +94,7 @@ contract BeltVaultAdapterBsc is BaseAdapter {
 
         UserAdapterInfo storage userInfo = userAdapterInfos[_tokenId];
 
-        bool isBNB = stakingToken == wbnb;
+        bool isBNB = stakingToken == HedgepieLibraryBsc.WBNB;
 
         // 1. withdraw from Vault
         uint256 lpOut = isBNB ? address(this).balance : IERC20(stakingToken).balanceOf(address(this));
@@ -131,7 +128,7 @@ contract BeltVaultAdapterBsc is BaseAdapter {
     function claim(uint256 _tokenId) external payable override onlyInvestor returns (uint256 amountOut) {
         UserAdapterInfo storage userInfo = userAdapterInfos[_tokenId];
 
-        bool isBNB = stakingToken == wbnb;
+        bool isBNB = stakingToken == HedgepieLibraryBsc.WBNB;
 
         // 1. check if reward is generated
         uint256 wantAmt = ((userInfo.amount * IStrategy(strategy).getPricePerFullShare()) / 1e18);
@@ -182,9 +179,13 @@ contract BeltVaultAdapterBsc is BaseAdapter {
 
         // 2. calc reward
         if (wantAmt != 0) {
-            if (stakingToken == wbnb) reward += wantAmt;
+            if (stakingToken == HedgepieLibraryBsc.WBNB) reward += wantAmt;
             else {
-                address[] memory paths = IPathFinder(authority.pathFinder()).getPaths(swapRouter, stakingToken, wbnb);
+                address[] memory paths = IPathFinder(authority.pathFinder()).getPaths(
+                    swapRouter,
+                    stakingToken,
+                    HedgepieLibraryBsc.WBNB
+                );
                 reward += IPancakeRouter(swapRouter).getAmountsOut(wantAmt, paths)[paths.length - 1];
             }
         }
@@ -200,7 +201,7 @@ contract BeltVaultAdapterBsc is BaseAdapter {
         UserAdapterInfo storage userInfo = userAdapterInfos[_tokenId];
         if (userInfo.amount == 0) return 0;
 
-        bool isBNB = stakingToken == wbnb;
+        bool isBNB = stakingToken == HedgepieLibraryBsc.WBNB;
 
         // 1. withdraw all from Vault
         amountOut = isBNB ? address(this).balance : IERC20(stakingToken).balanceOf(address(this));
@@ -241,14 +242,14 @@ contract BeltVaultAdapterBsc is BaseAdapter {
         UserAdapterInfo storage userInfo = userAdapterInfos[_tokenId];
 
         // 1. get stakingToken
-        if (stakingToken != wbnb) {
+        if (stakingToken != HedgepieLibraryBsc.WBNB) {
             amountOut = HedgepieLibraryBsc.swapOnRouter(msg.value, address(this), stakingToken, swapRouter);
         }
 
         // 2. deposit to vault
         uint256 repayAmt = IERC20(repayToken).balanceOf(address(this));
 
-        if (stakingToken == wbnb) {
+        if (stakingToken == HedgepieLibraryBsc.WBNB) {
             IStrategy(strategy).deposit{value: msg.value}(0);
         } else {
             IERC20(stakingToken).safeApprove(strategy, 0);

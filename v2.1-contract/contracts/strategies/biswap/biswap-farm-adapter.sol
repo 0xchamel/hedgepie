@@ -19,15 +19,14 @@ contract BiSwapFarmLPAdapterBsc is BaseAdapter {
     using SafeERC20 for IERC20;
 
     /**
-     * @notice Construct
+     * @notice Constructor
      * @param _strategy  address of strategy
      * @param _stakingToken  address of staking token
      * @param _rewardToken  address of reward token
      * @param _router  address of biswap
      * @param _swapRouter  address of swap router
-     * @param _wbnb  wbnb address
      * @param _name  adatper name
-     * @param _hedgepieAuthority  hedgepieAuthority address
+     * @param _authority  hedgepieAuthority address
      */
     constructor(
         uint256 _pid,
@@ -36,10 +35,9 @@ contract BiSwapFarmLPAdapterBsc is BaseAdapter {
         address _rewardToken,
         address _router,
         address _swapRouter,
-        address _wbnb,
         string memory _name,
-        address _hedgepieAuthority
-    ) BaseAdapter(_hedgepieAuthority) {
+        address _authority
+    ) BaseAdapter(_authority) {
         require(_rewardToken != address(0), "Invalid reward token");
         require(_stakingToken != address(0), "Invalid staking token");
         require(_strategy != address(0), "Invalid strategy address");
@@ -50,7 +48,6 @@ contract BiSwapFarmLPAdapterBsc is BaseAdapter {
         strategy = _strategy;
         router = _router;
         swapRouter = _swapRouter;
-        wbnb = _wbnb;
         name = _name;
     }
 
@@ -100,7 +97,7 @@ contract BiSwapFarmLPAdapterBsc is BaseAdapter {
     }
 
     /**
-     * @notice Withdraw the deposited Bnb
+     * @notice Withdraw from strategy
      * @param _tokenId YBNFT token id
      * @param _amount amount of staking token to withdraw
      */
@@ -227,9 +224,13 @@ contract BiSwapFarmLPAdapterBsc is BaseAdapter {
 
         // 3. calc pending reward in bnb
         if (tokenRewards != 0) {
-            if (rewardToken1 == wbnb) reward = tokenRewards;
+            if (rewardToken1 == HedgepieLibraryBsc.WBNB) reward = tokenRewards;
             else {
-                address[] memory paths = IPathFinder(authority.pathFinder()).getPaths(swapRouter, rewardToken1, wbnb);
+                address[] memory paths = IPathFinder(authority.pathFinder()).getPaths(
+                    swapRouter,
+                    rewardToken1,
+                    HedgepieLibraryBsc.WBNB
+                );
 
                 reward = IPancakeRouter(swapRouter).getAmountsOut(tokenRewards, paths)[paths.length - 1];
             }
