@@ -52,6 +52,11 @@ contract YBNFT is ERC721, HedgepieAccessControlled {
     event Mint(address indexed minter, uint256 indexed tokenId);
     event AdapterInfoUpdated(uint256 indexed tokenId, uint256 participant, uint256 traded, uint256 profit);
 
+    modifier onlyNftOwner(uint256 tokenId) {
+        require(msg.sender == ownerOf(tokenId), "Invalid NFT Owner");
+        _;
+    }
+
     /**
      * @notice Construct
      * @param _hedgepieAuthority HedgepieAuthority address
@@ -60,6 +65,7 @@ contract YBNFT is ERC721, HedgepieAccessControlled {
         address _hedgepieAuthority
     ) ERC721("Hedgepie YBNFT", "YBNFT") HedgepieAccessControlled(IHedgepieAuthority(_hedgepieAuthority)) {}
 
+    /* ========== View ========== */
     /**
      * @notice Get current nft token id
      */
@@ -91,6 +97,7 @@ contract YBNFT is ERC721, HedgepieAccessControlled {
         return _exists(_tokenId);
     }
 
+    /* ========== General ========== */
     /**
      * @notice Mint nft with adapter infos
      * @param _adapterParams  parameters of adapters
@@ -105,6 +112,7 @@ contract YBNFT is ERC721, HedgepieAccessControlled {
 
         _checkPercent(_adapterParams);
 
+        // check if adapters are listed and active
         for (uint256 i; i < _adapterParams.length; i++) {
             (address adapterAddr, , , bool status) = IHedgepieAdapterList(authority.hAdapterList()).getAdapterInfo(
                 _adapterParams[i].addr
@@ -114,8 +122,11 @@ contract YBNFT is ERC721, HedgepieAccessControlled {
         }
 
         _tokenIdPointer.increment();
+
+        // update performance fee
         performanceFee[_tokenIdPointer._value] = _performanceFee;
 
+        // mint NFT, set tokenURI and update adapter info
         _safeMint(msg.sender, _tokenIdPointer._value);
         _setTokenURI(_tokenIdPointer._value, _tokenURI);
         _setAdapterInfo(_tokenIdPointer._value, _adapterParams);
@@ -123,14 +134,14 @@ contract YBNFT is ERC721, HedgepieAccessControlled {
         emit Mint(msg.sender, _tokenIdPointer._value);
     }
 
+    /* ========== NFT Onwer ONLY ========== */
     /**
      * @notice Update performance fee of adapters
      * @param _tokenId  tokenId of NFT
      * @param _performanceFee  address of adapters
      */
-    function updatePerformanceFee(uint256 _tokenId, uint256 _performanceFee) external {
+    function updatePerformanceFee(uint256 _tokenId, uint256 _performanceFee) external onlyNftOwner(_tokenId) {
         require(_performanceFee < 1e3, "Fee should be under 10%");
-        require(msg.sender == ownerOf(_tokenId), "Invalid NFT Owner");
 
         performanceFee[_tokenId] = _performanceFee;
         _setModifiedDate(_tokenId);
@@ -141,15 +152,15 @@ contract YBNFT is ERC721, HedgepieAccessControlled {
      * @param _tokenId  tokenId of NFT
      * @param _adapterParams  parameters of adapters
      */
-    function updateAllocations(uint256 _tokenId, AdapterParam[] memory _adapterParams) external {
+    function updateAllocations(uint256 _tokenId, AdapterParam[] memory _adapterParams) external onlyNftOwner(_tokenId) {
         require(_adapterParams.length == adapterParams[_tokenId].length, "Invalid allocation length");
-        require(msg.sender == ownerOf(_tokenId), "Invalid NFT Owner");
+        require(authority.hInvestor() != address(0), "Invalid investor address");
 
+        // update storage adapter allocation info
         _checkPercent(_adapterParams);
         _setAdapterInfo(_tokenId, _adapterParams);
 
         // update funds flow
-        require(authority.hInvestor() != address(0), "Invalid investor address");
         IHedgepieInvestor(authority.hInvestor()).updateFunds(_tokenId);
     }
 
@@ -158,17 +169,12 @@ contract YBNFT is ERC721, HedgepieAccessControlled {
      * @param _tokenId  tokenId of NFT
      * @param _tokenURI  URI of NFT
      */
-    function updateTokenURI(uint256 _tokenId, string memory _tokenURI) external {
-        require(msg.sender == ownerOf(_tokenId), "Invalid NFT Owner");
-
+    function updateTokenURI(uint256 _tokenId, string memory _tokenURI) external onlyNftOwner(_tokenId) {
         _setTokenURI(_tokenId, _tokenURI);
         _setModifiedDate(_tokenId);
     }
 
-    /////////////////////////
-    /// Manager Functions ///
-    /////////////////////////
-
+    /* ========== Investor ONLY ========== */
     /**
      * @notice Update TVL, Profit, Participants info
      * @param param  update info param
@@ -207,10 +213,7 @@ contract YBNFT is ERC721, HedgepieAccessControlled {
         _emitEvent(_tokenId);
     }
 
-    /////////////////////////
-    /// Internal Functions //
-    /////////////////////////
-
+    /* ========== Internal ========== */
     /**
      * @notice Set token uri
      * @param _tokenId  token id

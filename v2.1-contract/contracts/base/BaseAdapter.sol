@@ -94,10 +94,10 @@ abstract contract BaseAdapter is HedgepieAccessControlled {
     function pendingReward(uint256 _tokenId) external view virtual returns (uint256 reward, uint256 withdrawable) {}
 
     /**
-     * @notice internal function to send bnb to investor
+     * @notice Charge Fee and send BNB to investor
      * @param _tokenId YBNFT token id
      */
-    function _sendToInvestor(uint256 _tokenId, uint256 _amount, uint256 _reward) internal {
+    function _chargeFeeAndSendToInvestor(uint256 _tokenId, uint256 _amount, uint256 _reward) internal {
         bool success;
         if (_reward != 0) {
             _reward = (_reward * IYBNFT(authority.hYBNFT()).performanceFee(_tokenId)) / 1e4;

@@ -166,8 +166,8 @@ contract BiSwapFarmLPAdapterBsc is BaseAdapter {
             userInfo.rewardDebt1 = 0;
         }
 
-        // 7. send to treasury and investor
-        if (amountOut != 0) _sendToInvestor(_tokenId, amountOut, rewardBnb);
+        // 7. charge fee and send BNB to investor
+        if (amountOut != 0) _chargeFeeAndSendToInvestor(_tokenId, amountOut, rewardBnb);
     }
 
     /**
@@ -202,8 +202,8 @@ contract BiSwapFarmLPAdapterBsc is BaseAdapter {
         // 4. swap reward to bnb and send to investor
         if (reward != 0) {
             amountOut = HedgepieLibraryBsc.swapForBnb(reward, address(this), rewardToken1, swapRouter);
-
-            _sendToInvestor(_tokenId, amountOut, amountOut);
+            // 5. charge fee and send BNB to investor
+            _chargeFeeAndSendToInvestor(_tokenId, amountOut, amountOut);
         }
     }
 

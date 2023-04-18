@@ -138,8 +138,8 @@ contract PancakeStakeAdapterBsc is BaseAdapter {
         userInfo.userShare1 = mAdapter.accTokenPerShare1;
         userInfo.rewardDebt1 = 0;
 
-        // 7. send bnb to treasury and investor
-        if (amountOut != 0) _sendToInvestor(_tokenId, amountOut, rewardBnb);
+        // 7. charge fee and send BNB to investor
+        if (amountOut != 0) _chargeFeeAndSendToInvestor(_tokenId, amountOut, rewardBnb);
     }
 
     /**
@@ -168,7 +168,8 @@ contract PancakeStakeAdapterBsc is BaseAdapter {
         if (reward != 0) {
             amountOut += HedgepieLibraryBsc.swapForBnb(reward, address(this), rewardToken1, swapRouter);
 
-            _sendToInvestor(_tokenId, amountOut, amountOut);
+            // 5. charge fee and send BNB to investor
+            _chargeFeeAndSendToInvestor(_tokenId, amountOut, amountOut);
         }
     }
 
