@@ -1,16 +1,8 @@
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
-const {
-    setPath,
-    unlockAccount,
-    forkBNBNetwork,
-    checkPendingWithClaim,
-} = require("../../../../shared/utilities");
-const {
-    setupHedgepie,
-    setupBscAdapterWithLib,
-} = require("../../../../shared/setup");
+const { setPath, unlockAccount, forkBNBNetwork, checkPendingWithClaim } = require("../../../../shared/utilities");
+const { setupHedgepie, setupBscAdapterWithLib } = require("../../../../shared/setup");
 
 const BigNumber = ethers.BigNumber;
 
@@ -32,14 +24,7 @@ describe("Multiple Adapters Integration Test", function () {
         ] = await ethers.getSigners();
 
         // Get base contracts
-        [
-            this.investor,
-            this.authority,
-            this.ybNft,
-            this.adapterList,
-            this.pathFinder,
-            this.lib,
-        ] = await setupHedgepie(
+        [this.investor, this.authority, this.ybNft, this.adapterList, this.pathFinder, this.lib] = await setupHedgepie(
             this.governor,
             this.pathManager,
             this.adapterManager,
@@ -63,17 +48,13 @@ describe("Multiple Adapters Integration Test", function () {
         // Deploy PancakeSwapFarmLPAdapterBsc contract
         const pksMasterChef = "0xa5f8C5Dbd5F286960b9d90548680aE5ebFf07652"; // MasterChef v2 pks
         const pksLpToken = "0x0eD7e52944161450477ee417DE9Cd3a859b14fD0"; // WBNB-CAKE LP
-        const PancakeSwapFarmLPAdapterBsc = await setupBscAdapterWithLib(
-            "PancakeSwapFarmLPAdapterBsc",
-            this.lib
-        );
+        const PancakeSwapFarmLPAdapterBsc = await setupBscAdapterWithLib("PancakeSwapFarmLPAdapterBsc", this.lib);
         this.adapter[0] = await PancakeSwapFarmLPAdapterBsc.deploy(
             2, // pid
             pksMasterChef,
             pksLpToken,
             cake,
             pksRouter,
-            wbnb,
             "PancakeSwap::Farm::CAKE-WBNB",
             this.authority.address
         );
@@ -82,16 +63,12 @@ describe("Multiple Adapters Integration Test", function () {
         // Deploy PancakeStakeAdapterBsc contract
         const pksStakeStrategy = "0x08C9d626a2F0CC1ed9BD07eBEdeF8929F45B83d3";
         const pksStakeReward = "0x724A32dFFF9769A0a0e1F0515c0012d1fB14c3bd"; // SQUAD
-        const PancakeStakeAdapterBsc = await setupBscAdapterWithLib(
-            "PancakeStakeAdapterBsc",
-            this.lib
-        );
+        const PancakeStakeAdapterBsc = await setupBscAdapterWithLib("PancakeStakeAdapterBsc", this.lib);
         this.adapter[1] = await PancakeStakeAdapterBsc.deploy(
             pksStakeStrategy,
             cake,
             pksStakeReward,
             pksRouter,
-            wbnb,
             "PK::STAKE::SQUAD-ADAPTER",
             this.authority.address
         );
@@ -100,10 +77,7 @@ describe("Multiple Adapters Integration Test", function () {
         // Deploy BiswapFarmLPAdapterBsc contract
         const biswapStrategy = "0xDbc1A13490deeF9c3C12b44FE77b503c1B061739"; // MasterChef Biswap
         const biswapLpToken = "0x2b30c317ceDFb554Ec525F85E79538D59970BEb0"; // USDT-BSW LP
-        const BiswapFarmLPAdapterBsc = await setupBscAdapterWithLib(
-            "BiSwapFarmLPAdapterBsc",
-            this.lib
-        );
+        const BiswapFarmLPAdapterBsc = await setupBscAdapterWithLib("BiSwapFarmLPAdapterBsc", this.lib);
         this.adapter[2] = await BiswapFarmLPAdapterBsc.deploy(
             9, // pid
             biswapStrategy,
@@ -111,17 +85,13 @@ describe("Multiple Adapters Integration Test", function () {
             bsw,
             biswapRouter,
             biswapRouter,
-            wbnb,
             "Biswap::Farm::USDT-BSW",
             this.authority.address
         );
         await this.adapter[2].deployed();
 
         // Deploy BiswapBSWPoolAdapterBsc contract
-        const BiswapBSWPoolAdapterBsc = await setupBscAdapterWithLib(
-            "BiSwapFarmLPAdapterBsc",
-            this.lib
-        );
+        const BiswapBSWPoolAdapterBsc = await setupBscAdapterWithLib("BiSwapFarmLPAdapterBsc", this.lib);
         this.adapter[3] = await BiswapBSWPoolAdapterBsc.deploy(
             0, // pid
             biswapStrategy,
@@ -129,7 +99,6 @@ describe("Multiple Adapters Integration Test", function () {
             bsw,
             ethers.constants.AddressZero,
             biswapRouter,
-            wbnb,
             "Biswap::Pool::BSW",
             this.authority.address
         );
@@ -139,10 +108,7 @@ describe("Multiple Adapters Integration Test", function () {
         const autofarmStrategy = "0x0895196562C7868C5Be92459FaE7f877ED450452"; // MasterChef
         const autofarmVStrategy = "0xcFF7815e0e85a447b0C21C94D25434d1D0F718D1"; // vStrategy of vault
         const autofarmStaking = "0x0ed7e52944161450477ee417de9cd3a859b14fd0"; // WBNB-Cake LP
-        const AutoFarmAdapter = await setupBscAdapterWithLib(
-            "AutoVaultAdapterBsc",
-            this.lib
-        );
+        const AutoFarmAdapter = await setupBscAdapterWithLib("AutoVaultAdapterBsc", this.lib);
         this.adapter[4] = await AutoFarmAdapter.deploy(
             619,
             autofarmStrategy,
@@ -150,7 +116,6 @@ describe("Multiple Adapters Integration Test", function () {
             autofarmStaking,
             pksRouter,
             pksRouter,
-            wbnb,
             "AutoFarm::Vault::WBNB-CAKE",
             this.authority.address
         );
@@ -158,10 +123,7 @@ describe("Multiple Adapters Integration Test", function () {
 
         // Deploy BeltVaultAdapterBsc contract
         const beltStrategy = "0x9171Bf7c050aC8B4cf7835e51F7b4841DFB2cCD0"; // beltBUSD
-        const BeltVaultAdapter = await setupBscAdapterWithLib(
-            "BeltVaultAdapterBsc",
-            this.lib
-        );
+        const BeltVaultAdapter = await setupBscAdapterWithLib("BeltVaultAdapterBsc", this.lib);
         this.adapter[5] = await BeltVaultAdapter.deploy(
             beltStrategy,
             busd,
@@ -176,55 +138,29 @@ describe("Multiple Adapters Integration Test", function () {
         // Deploy BeefyVaultAdapterBsc contract
         const beefyStrategy = "0x164fb78cAf2730eFD63380c2a645c32eBa1C52bc"; // Moo BiSwap USDT-BUSD
         const beefyStaking = "0xDA8ceb724A06819c0A5cDb4304ea0cB27F8304cF"; // Biswap USDT-BUSD LP
-        const BeefyVaultAdapter = await setupBscAdapterWithLib(
-            "BeefyVaultAdapterBsc",
-            this.lib
-        );
+        const BeefyVaultAdapter = await setupBscAdapterWithLib("BeefyVaultAdapterBsc", this.lib);
         this.adapter[6] = await BeefyVaultAdapter.deploy(
             beefyStrategy,
             beefyStaking,
             biswapRouter,
             pksRouter,
-            wbnb,
             "Beefy::Vault::Biswap USDT-BUSD",
             this.authority.address
         );
         await this.adapter[6].deployed();
 
         // setPath for PKS adapters
-        await setPath(this.pathFinder, this.pathManager, pksRouter, [
-            wbnb,
-            cake,
-        ]);
-        await setPath(this.pathFinder, this.pathManager, pksRouter, [
-            wbnb,
-            cake,
-            pksStakeReward,
-        ]);
+        await setPath(this.pathFinder, this.pathManager, pksRouter, [wbnb, cake]);
+        await setPath(this.pathFinder, this.pathManager, pksRouter, [wbnb, cake, pksStakeReward]);
 
         // setPath for biswap adapters
-        await setPath(this.pathFinder, this.pathManager, biswapRouter, [
-            wbnb,
-            bsw,
-        ]);
-        await setPath(this.pathFinder, this.pathManager, biswapRouter, [
-            wbnb,
-            usdt,
-        ]);
+        await setPath(this.pathFinder, this.pathManager, biswapRouter, [wbnb, bsw]);
+        await setPath(this.pathFinder, this.pathManager, biswapRouter, [wbnb, usdt]);
 
         // register path to pathFinder contract
-        await setPath(this.pathFinder, this.pathManager, biswapRouter, [
-            wbnb,
-            busd,
-        ]);
-        await setPath(this.pathFinder, this.pathManager, pksRouter, [
-            wbnb,
-            usdt,
-        ]);
-        await setPath(this.pathFinder, this.pathManager, pksRouter, [
-            wbnb,
-            busd,
-        ]);
+        await setPath(this.pathFinder, this.pathManager, biswapRouter, [wbnb, busd]);
+        await setPath(this.pathFinder, this.pathManager, pksRouter, [wbnb, usdt]);
+        await setPath(this.pathFinder, this.pathManager, pksRouter, [wbnb, busd]);
 
         // add adapters to adapterList
         await this.adapterList
@@ -270,25 +206,18 @@ describe("Multiple Adapters Integration Test", function () {
 
         this.checkAccRewardShare = async (tokenId) => {
             expect(
-                BigNumber.from(
-                    (await this.investor.tokenInfos(tokenId)).accRewardShare
-                ).gt(BigNumber.from(this.accRewardShare))
+                BigNumber.from((await this.investor.tokenInfos(tokenId)).accRewardShare).gt(
+                    BigNumber.from(this.accRewardShare)
+                )
             ).to.eq(true);
 
-            this.accRewardShare = (
-                await this.investor.tokenInfos(tokenId)
-            ).accRewardShare;
+            this.accRewardShare = (await this.investor.tokenInfos(tokenId)).accRewardShare;
         };
 
         // rewarder for beefy
-        this.rewarder = await unlockAccount(
-            "0x612e072e433A8a08496Ee0714930b357426c12Ce"
-        );
+        this.rewarder = await unlockAccount("0x612e072e433A8a08496Ee0714930b357426c12Ce");
         this.rewardReceiver = "0x164fb78cAf2730eFD63380c2a645c32eBa1C52bc";
-        this.lpToken = await ethers.getContractAt(
-            "IERC20",
-            "0xDA8ceb724A06819c0A5cDb4304ea0cB27F8304cF"
-        );
+        this.lpToken = await ethers.getContractAt("IERC20", "0xDA8ceb724A06819c0A5cDb4304ea0cB27F8304cF");
 
         console.log("Lib: ", this.lib.address);
         console.log("YBNFT: ", this.ybNft.address);
@@ -335,17 +264,9 @@ describe("Multiple Adapters Integration Test", function () {
                 })
             )
                 .to.emit(this.investor, "Deposited")
-                .withArgs(
-                    this.alice.address,
-                    this.ybNft.address,
-                    1,
-                    depositAmount
-                );
+                .withArgs(this.alice.address, this.ybNft.address, 1, depositAmount);
 
-            const aliceInfo = await this.investor.userInfos(
-                1,
-                this.alice.address
-            );
+            const aliceInfo = await this.investor.userInfos(1, this.alice.address);
             expect(aliceInfo.amount).to.gt(0);
 
             // check profit
@@ -372,12 +293,7 @@ describe("Multiple Adapters Integration Test", function () {
                 })
             )
                 .to.emit(this.investor, "Deposited")
-                .withArgs(
-                    this.bob.address,
-                    this.ybNft.address,
-                    1,
-                    depositAmount
-                );
+                .withArgs(this.bob.address, this.ybNft.address, 1, depositAmount);
 
             await expect(
                 this.investor.connect(this.bob).deposit(1, {
@@ -386,31 +302,19 @@ describe("Multiple Adapters Integration Test", function () {
                 })
             )
                 .to.emit(this.investor, "Deposited")
-                .withArgs(
-                    this.bob.address,
-                    this.ybNft.address,
-                    1,
-                    depositAmount
-                );
+                .withArgs(this.bob.address, this.ybNft.address, 1, depositAmount);
 
             const bobInfo = await this.investor.userInfos(1, this.bob.address);
             expect(bobInfo.amount).to.gt(0);
 
             const afterAdapterInfos = await this.investor.tokenInfos(1);
-            expect(
-                BigNumber.from(afterAdapterInfos.totalStaked).gt(
-                    beforeAdapterInfos.totalStaked
-                )
-            ).to.eq(true);
+            expect(BigNumber.from(afterAdapterInfos.totalStaked).gt(beforeAdapterInfos.totalStaked)).to.eq(true);
 
             await this.checkAccRewardShare(1);
 
             // check profit
             const afterProfit = (await this.ybNft.tokenInfos(1)).profit;
-            const alicePending = await this.investor.pendingReward(
-                1,
-                this.alice.address
-            );
+            const alicePending = await this.investor.pendingReward(1, this.alice.address);
             expect(afterProfit.sub(beforeProfit)).to.be.within(
                 alicePending.withdrawable.mul(95).div(100),
                 alicePending.withdrawable.mul(105).div(100)
@@ -418,23 +322,15 @@ describe("Multiple Adapters Integration Test", function () {
         });
 
         it("(5) test TVL & participants", async function () {
-            const aliceInfo = await this.investor.userInfos(
-                1,
-                this.alice.address
-            );
+            const aliceInfo = await this.investor.userInfos(1, this.alice.address);
             const bobInfo = await this.investor.userInfos(1, this.bob.address);
 
             // const bnbPrice = BigNumber.from(await this.lib.getBNBPrice());
             const nftInfo = await this.ybNft.tokenInfos(1);
 
             expect(BigNumber.from(nftInfo.tvl).toString()).to.be.eq(
-                BigNumber.from(aliceInfo.amount).add(
-                    BigNumber.from(bobInfo.amount)
-                )
-            ) &&
-                expect(BigNumber.from(nftInfo.participant).toString()).to.be.eq(
-                    "2"
-                );
+                BigNumber.from(aliceInfo.amount).add(BigNumber.from(bobInfo.amount))
+            ) && expect(BigNumber.from(nftInfo.participant).toString()).to.be.eq("2");
         });
     });
 
@@ -449,33 +345,21 @@ describe("Multiple Adapters Integration Test", function () {
             await ethers.provider.send("evm_increaseTime", [3600 * 24]);
             await ethers.provider.send("evm_mine", []);
 
-            await checkPendingWithClaim(
-                this.investor,
-                this.alice,
-                1,
-                this.performanceFee
-            );
+            await checkPendingWithClaim(this.investor, this.alice, 1, this.performanceFee);
             await this.checkAccRewardShare(1);
 
             // check profit
             const afterProfit = (await this.ybNft.tokenInfos(1)).profit;
             expect(afterProfit).to.be.gt(beforeProfit);
 
-            const bobPending = (
-                await this.investor.pendingReward(1, this.bob.address)
-            ).withdrawable;
+            const bobPending = (await this.investor.pendingReward(1, this.bob.address)).withdrawable;
             expect(afterProfit.sub(beforeProfit)).to.be.gt(bobPending);
         });
 
         it("(2) check withdrawable and claim for bob", async function () {
             const beforeProfit = (await this.ybNft.tokenInfos(1)).profit;
 
-            await checkPendingWithClaim(
-                this.investor,
-                this.bob,
-                1,
-                this.performanceFee
-            );
+            await checkPendingWithClaim(this.investor, this.bob, 1, this.performanceFee);
 
             const afterProfit = (await this.ybNft.tokenInfos(1)).profit;
             expect(afterProfit).to.be.gt(beforeProfit);
@@ -491,11 +375,9 @@ describe("Multiple Adapters Integration Test", function () {
             await ethers.provider.send("evm_mine", []);
 
             // withdraw to nftID: 3
-            await expect(
-                this.investor
-                    .connect(this.governor)
-                    .withdraw(3, { gasPrice: 21e9 })
-            ).to.be.revertedWith("Error: nft tokenId is invalid");
+            await expect(this.investor.connect(this.governor).withdraw(3, { gasPrice: 21e9 })).to.be.revertedWith(
+                "Error: nft tokenId is invalid"
+            );
         });
 
         it("(2) should receive the BNB successfully after withdraw function for Alice", async function () {
@@ -504,32 +386,16 @@ describe("Multiple Adapters Integration Test", function () {
 
             // withdraw from nftId: 1
             const beforeProfit = (await this.ybNft.tokenInfos(1)).profit;
-            const beforeBNB = await ethers.provider.getBalance(
-                this.alice.address
-            );
-            await expect(this.investor.connect(this.alice).withdraw(1)).to.emit(
-                this.investor,
-                "Withdrawn"
-            );
-            const afterBNB = await ethers.provider.getBalance(
-                this.alice.address
-            );
-            expect(
-                BigNumber.from(afterBNB).gt(BigNumber.from(beforeBNB))
-            ).to.eq(true);
+            const beforeBNB = await ethers.provider.getBalance(this.alice.address);
+            await expect(this.investor.connect(this.alice).withdraw(1)).to.emit(this.investor, "Withdrawn");
+            const afterBNB = await ethers.provider.getBalance(this.alice.address);
+            expect(BigNumber.from(afterBNB).gt(BigNumber.from(beforeBNB))).to.eq(true);
 
             // check withdrawn balance
-            expect(
-                Number(
-                    ethers.utils.formatEther(afterBNB.sub(beforeBNB).toString())
-                )
-            ).to.be.gt(9.9);
+            expect(Number(ethers.utils.formatEther(afterBNB.sub(beforeBNB).toString()))).to.be.gt(9.9);
 
             // check userInfo
-            let aliceInfo = await this.investor.userInfos(
-                1,
-                this.alice.address
-            );
+            let aliceInfo = await this.investor.userInfos(1, this.alice.address);
             expect(aliceInfo.amount).to.eq(BigNumber.from(0));
 
             //------- check bob info -----//
@@ -544,9 +410,7 @@ describe("Multiple Adapters Integration Test", function () {
 
             // check profit
             const afterProfit = (await this.ybNft.tokenInfos(1)).profit;
-            const bobPending = (
-                await this.investor.pendingReward(1, this.bob.address)
-            ).withdrawable;
+            const bobPending = (await this.investor.pendingReward(1, this.bob.address)).withdrawable;
             expect(afterProfit.sub(beforeProfit)).to.be.gt(bobPending);
         });
 
@@ -557,41 +421,25 @@ describe("Multiple Adapters Integration Test", function () {
             expect(BigNumber.from(nftInfo.tvl).toString()).to.be.within(
                 BigNumber.from(20).mul(bnbPrice).mul(99).div(100),
                 BigNumber.from(20).mul(bnbPrice).mul(101).div(100)
-            ) &&
-                expect(BigNumber.from(nftInfo.participant).toString()).to.be.eq(
-                    "1"
-                );
+            ) && expect(BigNumber.from(nftInfo.participant).toString()).to.be.eq("1");
         });
 
         it("(4) should receive the BNB successfully after withdraw function for Bob", async function () {
             await ethers.provider.send("evm_increaseTime", [3600 * 24 * 30]);
             await ethers.provider.send("evm_mine", []);
-            await this.lpToken
-                .connect(this.rewarder)
-                .transfer(this.rewardReceiver, ethers.utils.parseEther("20"));
+            await this.lpToken.connect(this.rewarder).transfer(this.rewardReceiver, ethers.utils.parseEther("20"));
 
             // withdraw from nftId: 1
             const beforeProfit = (await this.ybNft.tokenInfos(1)).profit;
-            const beforeBNB = await ethers.provider.getBalance(
-                this.bob.address
-            );
+            const beforeBNB = await ethers.provider.getBalance(this.bob.address);
 
-            await expect(this.investor.connect(this.bob).withdraw(1)).to.emit(
-                this.investor,
-                "Withdrawn"
-            );
+            await expect(this.investor.connect(this.bob).withdraw(1)).to.emit(this.investor, "Withdrawn");
 
             const afterBNB = await ethers.provider.getBalance(this.bob.address);
-            expect(
-                BigNumber.from(afterBNB).gt(BigNumber.from(beforeBNB))
-            ).to.eq(true);
+            expect(BigNumber.from(afterBNB).gt(BigNumber.from(beforeBNB))).to.eq(true);
 
             // check withdrawn balance
-            expect(
-                Number(
-                    ethers.utils.formatEther(afterBNB.sub(beforeBNB).toString())
-                )
-            ).to.be.gt(19.8);
+            expect(Number(ethers.utils.formatEther(afterBNB.sub(beforeBNB).toString()))).to.be.gt(19.8);
 
             let bobInfo = await this.investor.userInfos(1, this.bob.address);
             expect(bobInfo.amount).to.eq(BigNumber.from(0));
@@ -606,9 +454,7 @@ describe("Multiple Adapters Integration Test", function () {
             const nftInfo = await this.ybNft.tokenInfos(1);
 
             expect(BigNumber.from(nftInfo.tvl).toString()).to.be.eq("0");
-            expect(BigNumber.from(nftInfo.participant).toString()).to.be.eq(
-                "0"
-            );
+            expect(BigNumber.from(nftInfo.participant).toString()).to.be.eq("0");
         });
     });
 
@@ -657,75 +503,37 @@ describe("Multiple Adapters Integration Test", function () {
             ];
             const bTokenInfo1 = await this.adapter[0].userAdapterInfos(2);
             const bTokenInfo2 = await this.adapter[1].userAdapterInfos(2);
-            const bPending1 = await this.investor.pendingReward(
-                1,
-                this.user1.address
-            );
-            const bPending2 = await this.investor.pendingReward(
-                2,
-                this.user2.address
-            );
-            await this.ybNft
-                .connect(this.governor)
-                .updateAllocations(2, allocation);
+            const bPending1 = await this.investor.pendingReward(1, this.user1.address);
+            const bPending2 = await this.investor.pendingReward(2, this.user2.address);
+            await this.ybNft.connect(this.governor).updateAllocations(2, allocation);
 
             // check pendingReward amount
-            const aPending1 = await this.investor.pendingReward(
-                1,
-                this.user1.address
-            );
-            const aPending2 = await this.investor.pendingReward(
-                2,
-                this.user2.address
-            );
-            expect(aPending1[0]).gte(bPending1[0]) &&
-                expect(aPending1[1]).gte(bPending1[1]);
-            expect(aPending2[0]).gte(bPending2[0]) &&
-                expect(aPending2[1]).gte(bPending2[1]);
+            const aPending1 = await this.investor.pendingReward(1, this.user1.address);
+            const aPending2 = await this.investor.pendingReward(2, this.user2.address);
+            expect(aPending1[0]).gte(bPending1[0]) && expect(aPending1[1]).gte(bPending1[1]);
+            expect(aPending2[0]).gte(bPending2[0]) && expect(aPending2[1]).gte(bPending2[1]);
 
             // check invested amount
             const aTokenInfo1 = await this.adapter[0].userAdapterInfos(2);
             const aTokenInfo2 = await this.adapter[1].userAdapterInfos(2);
             expect(BigNumber.from(bTokenInfo1.amount).div(50)).to.be.gt(
-                BigNumber.from(aTokenInfo1.amount)
-                    .div(allocation[0][0])
-                    .mul(95)
-                    .div(100)
+                BigNumber.from(aTokenInfo1.amount).div(allocation[0][0]).mul(95).div(100)
             );
             expect(BigNumber.from(bTokenInfo2.amount).div(50)).to.be.gt(
-                BigNumber.from(aTokenInfo2.amount)
-                    .div(allocation[1][0])
-                    .mul(95)
-                    .div(100)
+                BigNumber.from(aTokenInfo2.amount).div(allocation[1][0]).mul(95).div(100)
             );
         });
 
         it("test claimed rewards after allocation change", async function () {
             // Check pending reward by claim
-            await checkPendingWithClaim(
-                this.investor,
-                this.user1,
-                1,
-                this.performanceFee
-            );
-            await checkPendingWithClaim(
-                this.investor,
-                this.user2,
-                2,
-                this.performanceFee
-            );
+            await checkPendingWithClaim(this.investor, this.user1, 1, this.performanceFee);
+            await checkPendingWithClaim(this.investor, this.user2, 2, this.performanceFee);
         });
 
         it("test withdraw after allocation change", async function () {
             // Successfully withdraw
-            await expect(this.investor.connect(this.user1).withdraw(1)).to.emit(
-                this.investor,
-                "Withdrawn"
-            );
-            await expect(this.investor.connect(this.user2).withdraw(2)).to.emit(
-                this.investor,
-                "Withdrawn"
-            );
+            await expect(this.investor.connect(this.user1).withdraw(1)).to.emit(this.investor, "Withdrawn");
+            await expect(this.investor.connect(this.user2).withdraw(2)).to.emit(this.investor, "Withdrawn");
         });
     });
 
@@ -739,17 +547,9 @@ describe("Multiple Adapters Integration Test", function () {
                 })
             )
                 .to.emit(this.investor, "Deposited")
-                .withArgs(
-                    this.alice.address,
-                    this.ybNft.address,
-                    1,
-                    depositAmount
-                );
+                .withArgs(this.alice.address, this.ybNft.address, 1, depositAmount);
 
-            const aliceInfo = await this.investor.userInfos(
-                1,
-                this.alice.address
-            );
+            const aliceInfo = await this.investor.userInfos(1, this.alice.address);
             expect(aliceInfo.amount).to.gt(0);
 
             // check profit
@@ -776,12 +576,7 @@ describe("Multiple Adapters Integration Test", function () {
                 })
             )
                 .to.emit(this.investor, "Deposited")
-                .withArgs(
-                    this.bob.address,
-                    this.ybNft.address,
-                    1,
-                    depositAmount
-                );
+                .withArgs(this.bob.address, this.ybNft.address, 1, depositAmount);
 
             await expect(
                 this.investor.connect(this.bob).deposit(1, {
@@ -790,31 +585,19 @@ describe("Multiple Adapters Integration Test", function () {
                 })
             )
                 .to.emit(this.investor, "Deposited")
-                .withArgs(
-                    this.bob.address,
-                    this.ybNft.address,
-                    1,
-                    depositAmount
-                );
+                .withArgs(this.bob.address, this.ybNft.address, 1, depositAmount);
 
             const bobInfo = await this.investor.userInfos(1, this.bob.address);
             expect(bobInfo.amount).to.gt(0);
 
             const afterAdapterInfos = await this.investor.tokenInfos(1);
-            expect(
-                BigNumber.from(afterAdapterInfos.totalStaked).gt(
-                    beforeAdapterInfos.totalStaked
-                )
-            ).to.eq(true);
+            expect(BigNumber.from(afterAdapterInfos.totalStaked).gt(beforeAdapterInfos.totalStaked)).to.eq(true);
 
             await this.checkAccRewardShare(1);
 
             // check profit
             const afterProfit = (await this.ybNft.tokenInfos(1)).profit;
-            const alicePending = await this.investor.pendingReward(
-                1,
-                this.alice.address
-            );
+            const alicePending = await this.investor.pendingReward(1, this.alice.address);
             expect(afterProfit.sub(beforeProfit)).to.be.within(
                 alicePending.withdrawable.mul(99).div(100),
                 alicePending.withdrawable.mul(101).div(100)
@@ -822,23 +605,15 @@ describe("Multiple Adapters Integration Test", function () {
         });
 
         it("(3) test TVL & participants", async function () {
-            const aliceInfo = await this.investor.userInfos(
-                1,
-                this.alice.address
-            );
+            const aliceInfo = await this.investor.userInfos(1, this.alice.address);
             const bobInfo = await this.investor.userInfos(1, this.bob.address);
 
             // const bnbPrice = BigNumber.from(await this.lib.getBNBPrice());
             const nftInfo = await this.ybNft.tokenInfos(1);
 
             expect(BigNumber.from(nftInfo.tvl).toString()).to.be.eq(
-                BigNumber.from(aliceInfo.amount).add(
-                    BigNumber.from(bobInfo.amount)
-                )
-            ) &&
-                expect(BigNumber.from(nftInfo.participant).toString()).to.be.eq(
-                    "2"
-                );
+                BigNumber.from(aliceInfo.amount).add(BigNumber.from(bobInfo.amount))
+            ) && expect(BigNumber.from(nftInfo.participant).toString()).to.be.eq("2");
         });
     });
 
@@ -853,33 +628,21 @@ describe("Multiple Adapters Integration Test", function () {
             await ethers.provider.send("evm_increaseTime", [3600 * 24]);
             await ethers.provider.send("evm_mine", []);
 
-            await checkPendingWithClaim(
-                this.investor,
-                this.alice,
-                1,
-                this.performanceFee
-            );
+            await checkPendingWithClaim(this.investor, this.alice, 1, this.performanceFee);
             await this.checkAccRewardShare(1);
 
             // check profit
             const afterProfit = (await this.ybNft.tokenInfos(1)).profit;
             expect(afterProfit).to.be.gt(beforeProfit);
 
-            const bobPending = (
-                await this.investor.pendingReward(1, this.bob.address)
-            ).withdrawable;
+            const bobPending = (await this.investor.pendingReward(1, this.bob.address)).withdrawable;
             expect(afterProfit.sub(beforeProfit)).to.be.gt(bobPending);
         });
 
         it("(2) check withdrawable and claim for bob", async function () {
             const beforeProfit = (await this.ybNft.tokenInfos(1)).profit;
 
-            await checkPendingWithClaim(
-                this.investor,
-                this.bob,
-                1,
-                this.performanceFee
-            );
+            await checkPendingWithClaim(this.investor, this.bob, 1, this.performanceFee);
 
             const afterProfit = (await this.ybNft.tokenInfos(1)).profit;
             expect(afterProfit).to.be.gt(beforeProfit);
@@ -893,32 +656,16 @@ describe("Multiple Adapters Integration Test", function () {
 
             // withdraw from nftId: 1
             const beforeProfit = (await this.ybNft.tokenInfos(1)).profit;
-            const beforeBNB = await ethers.provider.getBalance(
-                this.alice.address
-            );
-            await expect(this.investor.connect(this.alice).withdraw(1)).to.emit(
-                this.investor,
-                "Withdrawn"
-            );
-            const afterBNB = await ethers.provider.getBalance(
-                this.alice.address
-            );
-            expect(
-                BigNumber.from(afterBNB).gt(BigNumber.from(beforeBNB))
-            ).to.eq(true);
+            const beforeBNB = await ethers.provider.getBalance(this.alice.address);
+            await expect(this.investor.connect(this.alice).withdraw(1)).to.emit(this.investor, "Withdrawn");
+            const afterBNB = await ethers.provider.getBalance(this.alice.address);
+            expect(BigNumber.from(afterBNB).gt(BigNumber.from(beforeBNB))).to.eq(true);
 
             // check withdrawn balance
-            expect(
-                Number(
-                    ethers.utils.formatEther(afterBNB.sub(beforeBNB).toString())
-                )
-            ).to.be.gt(9.9);
+            expect(Number(ethers.utils.formatEther(afterBNB.sub(beforeBNB).toString()))).to.be.gt(9.9);
 
             // check userInfo
-            let aliceInfo = await this.investor.userInfos(
-                1,
-                this.alice.address
-            );
+            let aliceInfo = await this.investor.userInfos(1, this.alice.address);
             expect(aliceInfo.amount).to.eq(BigNumber.from(0));
 
             //------- check bob info -----//
@@ -931,9 +678,7 @@ describe("Multiple Adapters Integration Test", function () {
 
             // check profit
             const afterProfit = (await this.ybNft.tokenInfos(1)).profit;
-            const bobPending = (
-                await this.investor.pendingReward(1, this.bob.address)
-            ).withdrawable;
+            const bobPending = (await this.investor.pendingReward(1, this.bob.address)).withdrawable;
             expect(afterProfit.sub(beforeProfit)).to.be.gt(bobPending);
         });
 
@@ -944,10 +689,7 @@ describe("Multiple Adapters Integration Test", function () {
             expect(BigNumber.from(nftInfo.tvl).toString()).to.be.within(
                 BigNumber.from(20).mul(bnbPrice).mul(99).div(100),
                 BigNumber.from(20).mul(bnbPrice).mul(101).div(100)
-            ) &&
-                expect(BigNumber.from(nftInfo.participant).toString()).to.be.eq(
-                    "1"
-                );
+            ) && expect(BigNumber.from(nftInfo.participant).toString()).to.be.eq("1");
         });
 
         it("(3) should receive the BNB successfully after withdraw function for Bob", async function () {
@@ -956,26 +698,15 @@ describe("Multiple Adapters Integration Test", function () {
 
             // withdraw from nftId: 1
             const beforeProfit = (await this.ybNft.tokenInfos(1)).profit;
-            const beforeBNB = await ethers.provider.getBalance(
-                this.bob.address
-            );
+            const beforeBNB = await ethers.provider.getBalance(this.bob.address);
 
-            await expect(this.investor.connect(this.bob).withdraw(1)).to.emit(
-                this.investor,
-                "Withdrawn"
-            );
+            await expect(this.investor.connect(this.bob).withdraw(1)).to.emit(this.investor, "Withdrawn");
 
             const afterBNB = await ethers.provider.getBalance(this.bob.address);
-            expect(
-                BigNumber.from(afterBNB).gt(BigNumber.from(beforeBNB))
-            ).to.eq(true);
+            expect(BigNumber.from(afterBNB).gt(BigNumber.from(beforeBNB))).to.eq(true);
 
             // check withdrawn balance
-            expect(
-                Number(
-                    ethers.utils.formatEther(afterBNB.sub(beforeBNB).toString())
-                )
-            ).to.be.gt(19.89);
+            expect(Number(ethers.utils.formatEther(afterBNB.sub(beforeBNB).toString()))).to.be.gt(19.89);
 
             let bobInfo = await this.investor.userInfos(1, this.bob.address);
             expect(bobInfo.amount).to.eq(BigNumber.from(0));
@@ -988,9 +719,7 @@ describe("Multiple Adapters Integration Test", function () {
             const nftInfo = await this.ybNft.tokenInfos(1);
 
             expect(BigNumber.from(nftInfo.tvl).toString()).to.be.eq("0");
-            expect(BigNumber.from(nftInfo.participant).toString()).to.be.eq(
-                "0"
-            );
+            expect(BigNumber.from(nftInfo.participant).toString()).to.be.eq("0");
         });
     });
 });
