@@ -50,12 +50,7 @@ contract YBNFT is ERC721, HedgepieAccessControlled {
 
     /// @dev events
     event Mint(address indexed minter, uint256 indexed tokenId);
-    event AdapterInfoUpdated(
-        uint256 indexed tokenId,
-        uint256 participant,
-        uint256 traded,
-        uint256 profit
-    );
+    event AdapterInfoUpdated(uint256 indexed tokenId, uint256 participant, uint256 traded, uint256 profit);
 
     /**
      * @notice Construct
@@ -63,10 +58,7 @@ contract YBNFT is ERC721, HedgepieAccessControlled {
      */
     constructor(
         address _hedgepieAuthority
-    )
-        ERC721("Hedgepie YBNFT", "YBNFT")
-        HedgepieAccessControlled(IHedgepieAuthority(_hedgepieAuthority))
-    {}
+    ) ERC721("Hedgepie YBNFT", "YBNFT") HedgepieAccessControlled(IHedgepieAuthority(_hedgepieAuthority)) {}
 
     /**
      * @notice Get current nft token id
@@ -79,9 +71,7 @@ contract YBNFT is ERC721, HedgepieAccessControlled {
      * @notice Get adapter parameters from nft tokenId
      * @param _tokenId  YBNft token id
      */
-    function getTokenAdapterParams(
-        uint256 _tokenId
-    ) public view returns (AdapterParam[] memory) {
+    function getTokenAdapterParams(uint256 _tokenId) public view returns (AdapterParam[] memory) {
         return adapterParams[_tokenId];
     }
 
@@ -89,9 +79,7 @@ contract YBNFT is ERC721, HedgepieAccessControlled {
      * @notice Get tokenURI from token id
      * @param _tokenId token id
      */
-    function tokenURI(
-        uint256 _tokenId
-    ) public view override returns (string memory) {
+    function tokenURI(uint256 _tokenId) public view override returns (string memory) {
         return _tokenURIs[_tokenId];
     }
 
@@ -110,28 +98,18 @@ contract YBNFT is ERC721, HedgepieAccessControlled {
      * @param _tokenURI  token URI
      */
     /// #if_succeeds {:msg "Mint failed"} adapterInfo[_tokenIdPointer._value].length == _adapterAllocations.length;
-    function mint(
-        AdapterParam[] memory _adapterParams,
-        uint256 _performanceFee,
-        string memory _tokenURI
-    ) external {
+    function mint(AdapterParam[] memory _adapterParams, uint256 _performanceFee, string memory _tokenURI) external {
         require(_performanceFee < 1e3, "Fee should be less than 10%");
         require(_adapterParams.length != 0, "Mismatched adapters");
-        require(
-            address(authority.hAdapterList()) != address(0),
-            "AdaterList not set"
-        );
+        require(address(authority.hAdapterList()) != address(0), "AdaterList not set");
 
         _checkPercent(_adapterParams);
 
         for (uint256 i; i < _adapterParams.length; i++) {
-            (address adapterAddr, , , bool status) = IHedgepieAdapterList(
-                authority.hAdapterList()
-            ).getAdapterInfo(_adapterParams[i].addr);
-            require(
-                _adapterParams[i].addr == adapterAddr,
-                "Adapter address mismatch"
+            (address adapterAddr, , , bool status) = IHedgepieAdapterList(authority.hAdapterList()).getAdapterInfo(
+                _adapterParams[i].addr
             );
+            require(_adapterParams[i].addr == adapterAddr, "Adapter address mismatch");
             require(status, "Adapter is inactive");
         }
 
@@ -150,10 +128,7 @@ contract YBNFT is ERC721, HedgepieAccessControlled {
      * @param _tokenId  tokenId of NFT
      * @param _performanceFee  address of adapters
      */
-    function updatePerformanceFee(
-        uint256 _tokenId,
-        uint256 _performanceFee
-    ) external {
+    function updatePerformanceFee(uint256 _tokenId, uint256 _performanceFee) external {
         require(_performanceFee < 1e3, "Fee should be under 10%");
         require(msg.sender == ownerOf(_tokenId), "Invalid NFT Owner");
 
@@ -166,24 +141,15 @@ contract YBNFT is ERC721, HedgepieAccessControlled {
      * @param _tokenId  tokenId of NFT
      * @param _adapterParams  parameters of adapters
      */
-    function updateAllocations(
-        uint256 _tokenId,
-        AdapterParam[] memory _adapterParams
-    ) external {
-        require(
-            _adapterParams.length == adapterParams[_tokenId].length,
-            "Invalid allocation length"
-        );
+    function updateAllocations(uint256 _tokenId, AdapterParam[] memory _adapterParams) external {
+        require(_adapterParams.length == adapterParams[_tokenId].length, "Invalid allocation length");
         require(msg.sender == ownerOf(_tokenId), "Invalid NFT Owner");
 
         _checkPercent(_adapterParams);
         _setAdapterInfo(_tokenId, _adapterParams);
 
         // update funds flow
-        require(
-            authority.hInvestor() != address(0),
-            "Invalid investor address"
-        );
+        require(authority.hInvestor() != address(0), "Invalid investor address");
         IHedgepieInvestor(authority.hInvestor()).updateFunds(_tokenId);
     }
 
@@ -192,10 +158,7 @@ contract YBNFT is ERC721, HedgepieAccessControlled {
      * @param _tokenId  tokenId of NFT
      * @param _tokenURI  URI of NFT
      */
-    function updateTokenURI(
-        uint256 _tokenId,
-        string memory _tokenURI
-    ) external {
+    function updateTokenURI(uint256 _tokenId, string memory _tokenURI) external {
         require(msg.sender == ownerOf(_tokenId), "Invalid NFT Owner");
 
         _setTokenURI(_tokenId, _tokenURI);
@@ -215,10 +178,7 @@ contract YBNFT is ERC721, HedgepieAccessControlled {
 
         // 1. update tvl info
         if (param.isDeposit) tokenInfo.tvl += param.value;
-        else
-            tokenInfo.tvl = tokenInfo.tvl < param.value
-                ? 0
-                : tokenInfo.tvl - param.value;
+        else tokenInfo.tvl = tokenInfo.tvl < param.value ? 0 : tokenInfo.tvl - param.value;
 
         // 2. update traded info
         tokenInfo.traded += param.value;
@@ -242,10 +202,7 @@ contract YBNFT is ERC721, HedgepieAccessControlled {
      * @param _tokenId  YBNFT tokenID
      * @param _value  amount of profit
      */
-    function updateProfitInfo(
-        uint256 _tokenId,
-        uint256 _value
-    ) external onlyInvestor {
+    function updateProfitInfo(uint256 _tokenId, uint256 _value) external onlyInvestor {
         tokenInfos[_tokenId].profit += _value;
         _emitEvent(_tokenId);
     }
@@ -259,10 +216,7 @@ contract YBNFT is ERC721, HedgepieAccessControlled {
      * @param _tokenId  token id
      * @param _tokenURI  token uri
      */
-    function _setTokenURI(
-        uint256 _tokenId,
-        string memory _tokenURI
-    ) internal virtual {
+    function _setTokenURI(uint256 _tokenId, string memory _tokenURI) internal virtual {
         require(_exists(_tokenId), "Nonexistent token");
         _tokenURIs[_tokenId] = _tokenURI;
     }
@@ -272,18 +226,12 @@ contract YBNFT is ERC721, HedgepieAccessControlled {
      * @param _tokenId  token id
      * @param _adapterParams  adapter parameters
      */
-    function _setAdapterInfo(
-        uint256 _tokenId,
-        AdapterParam[] memory _adapterParams
-    ) internal {
+    function _setAdapterInfo(uint256 _tokenId, AdapterParam[] memory _adapterParams) internal {
         bool isExist = adapterParams[_tokenId].length != 0;
         if (!isExist) {
             for (uint256 i = 0; i < _adapterParams.length; i++) {
                 adapterParams[_tokenId].push(
-                    AdapterParam({
-                        allocation: _adapterParams[i].allocation,
-                        addr: _adapterParams[i].addr
-                    })
+                    AdapterParam({allocation: _adapterParams[i].allocation, addr: _adapterParams[i].addr})
                 );
             }
             adapterDate[_tokenId] = AdapterDate({
@@ -292,8 +240,7 @@ contract YBNFT is ERC721, HedgepieAccessControlled {
             });
         } else {
             for (uint256 i = 0; i < _adapterParams.length; i++)
-                adapterParams[_tokenId][i].allocation = _adapterParams[i]
-                    .allocation;
+                adapterParams[_tokenId][i].allocation = _adapterParams[i].allocation;
 
             _setModifiedDate(_tokenId);
         }

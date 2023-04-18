@@ -5,15 +5,9 @@ import "../../interfaces/IVaultStrategy.sol";
 import "../../libraries/HedgepieLibraryBsc.sol";
 
 interface IStrategy {
-    function pendingAUTO(
-        uint256 pid,
-        address user
-    ) external view returns (uint256);
+    function pendingAUTO(uint256 pid, address user) external view returns (uint256);
 
-    function userInfo(
-        uint256 pid,
-        address user
-    ) external view returns (uint256, uint256);
+    function userInfo(uint256 pid, address user) external view returns (uint256, uint256);
 
     function deposit(uint256 pid, uint256 shares) external;
 
@@ -67,30 +61,18 @@ contract AutoVaultAdapterBsc is BaseAdapter {
      * @notice Deposit with Bnb
      * @param _tokenId YBNFT token id
      */
-    function deposit(
-        uint256 _tokenId
-    ) external payable override onlyInvestor returns (uint256 amountOut) {
+    function deposit(uint256 _tokenId) external payable override onlyInvestor returns (uint256 amountOut) {
         UserAdapterInfo storage userInfo = userAdapterInfos[_tokenId];
 
         // 1. get LP
-        amountOut = HedgepieLibraryBsc.getLP(
-            IYBNFT.AdapterParam(0, address(this)),
-            stakingToken,
-            msg.value
-        );
+        amountOut = HedgepieLibraryBsc.getLP(IYBNFT.AdapterParam(0, address(this)), stakingToken, msg.value);
 
         // 2. deposit to vault
-        (uint256 beforeShare, ) = IStrategy(strategy).userInfo(
-            pid,
-            address(this)
-        );
+        (uint256 beforeShare, ) = IStrategy(strategy).userInfo(pid, address(this));
         IERC20(stakingToken).safeApprove(strategy, 0);
         IERC20(stakingToken).safeApprove(strategy, amountOut);
         IStrategy(strategy).deposit(pid, amountOut);
-        (uint256 afterShare, ) = IStrategy(strategy).userInfo(
-            pid,
-            address(this)
-        );
+        (uint256 afterShare, ) = IStrategy(strategy).userInfo(pid, address(this));
         require(afterShare > beforeShare, "Failed to deposit");
 
         // 3. update user info
@@ -114,19 +96,14 @@ contract AutoVaultAdapterBsc is BaseAdapter {
         UserAdapterInfo storage userInfo = userAdapterInfos[_tokenId];
 
         // 1. withdraw from Vault
-        uint256 vAmount = (_amount *
-            IVaultStrategy(vStrategy).wantLockedTotal()) /
+        uint256 vAmount = (_amount * IVaultStrategy(vStrategy).wantLockedTotal()) /
             IVaultStrategy(vStrategy).sharesTotal();
         uint256 lpOut = IERC20(stakingToken).balanceOf(address(this));
         IStrategy(strategy).withdraw(pid, vAmount);
         lpOut = IERC20(stakingToken).balanceOf(address(this)) - lpOut;
 
         // 2. swap withdrawn lp to bnb
-        amountOut = HedgepieLibraryBsc.withdrawLP(
-            IYBNFT.AdapterParam(0, address(this)),
-            stakingToken,
-            lpOut
-        );
+        amountOut = HedgepieLibraryBsc.withdrawLP(IYBNFT.AdapterParam(0, address(this)), stakingToken, lpOut);
 
         // 3. update userInfo
         userInfo.amount -= _amount;
@@ -144,14 +121,11 @@ contract AutoVaultAdapterBsc is BaseAdapter {
      * @notice Claim the pending reward
      * @param _tokenId YBNFT token id
      */
-    function claim(
-        uint256 _tokenId
-    ) external payable override onlyInvestor returns (uint256 amountOut) {
+    function claim(uint256 _tokenId) external payable override onlyInvestor returns (uint256 amountOut) {
         UserAdapterInfo storage userInfo = userAdapterInfos[_tokenId];
 
         // 1. check if reward is generated
-        uint256 vAmount = (userInfo.amount *
-            IVaultStrategy(vStrategy).wantLockedTotal()) /
+        uint256 vAmount = (userInfo.amount * IVaultStrategy(vStrategy).wantLockedTotal()) /
             IVaultStrategy(vStrategy).sharesTotal();
 
         // 2. if reward is not generated
@@ -168,25 +142,15 @@ contract AutoVaultAdapterBsc is BaseAdapter {
 
         // 3. withdraw reward from vault
         vAmount -= userInfo.invested;
-        (uint256 beforeShare, ) = IStrategy(strategy).userInfo(
-            pid,
-            address(this)
-        );
+        (uint256 beforeShare, ) = IStrategy(strategy).userInfo(pid, address(this));
         uint256 lpOut = IERC20(stakingToken).balanceOf(address(this));
         IStrategy(strategy).withdraw(pid, vAmount);
         lpOut = IERC20(stakingToken).balanceOf(address(this)) - lpOut;
-        (uint256 afterShare, ) = IStrategy(strategy).userInfo(
-            pid,
-            address(this)
-        );
+        (uint256 afterShare, ) = IStrategy(strategy).userInfo(pid, address(this));
 
         // 4. swap reward to bnb
         amountOut =
-            HedgepieLibraryBsc.withdrawLP(
-                IYBNFT.AdapterParam(0, address(this)),
-                stakingToken,
-                lpOut
-            ) +
+            HedgepieLibraryBsc.withdrawLP(IYBNFT.AdapterParam(0, address(this)), stakingToken, lpOut) +
             userInfo.rewardDebt1;
 
         // 5. update user info
@@ -203,52 +167,39 @@ contract AutoVaultAdapterBsc is BaseAdapter {
      * @notice Return the pending reward by BNB
      * @param _tokenId YBNFT token id
      */
-    function pendingReward(
-        uint256 _tokenId
-    ) external view override returns (uint256 reward, uint256 withdrawable) {
+    function pendingReward(uint256 _tokenId) external view override returns (uint256 reward, uint256 withdrawable) {
         UserAdapterInfo memory userInfo = userAdapterInfos[_tokenId];
 
         // 1. calc want amount
-        uint256 vAmount = (userInfo.amount *
-            IVaultStrategy(vStrategy).wantLockedTotal()) /
+        uint256 vAmount = (userInfo.amount * IVaultStrategy(vStrategy).wantLockedTotal()) /
             IVaultStrategy(vStrategy).sharesTotal();
 
-        if (vAmount <= userInfo.invested)
-            return (userInfo.rewardDebt1, userInfo.rewardDebt1);
+        if (vAmount <= userInfo.invested) return (userInfo.rewardDebt1, userInfo.rewardDebt1);
 
         // 2. calc reward
         vAmount -= userInfo.invested;
 
         address token0 = IPancakePair(stakingToken).token0();
         address token1 = IPancakePair(stakingToken).token1();
-        (uint112 reserve0, uint112 reserve1, ) = IPancakePair(stakingToken)
-            .getReserves();
+        (uint112 reserve0, uint112 reserve1, ) = IPancakePair(stakingToken).getReserves();
 
-        uint256 amount0 = (reserve0 * vAmount) /
-            IPancakePair(stakingToken).totalSupply();
-        uint256 amount1 = (reserve1 * vAmount) /
-            IPancakePair(stakingToken).totalSupply();
+        uint256 amount0 = (reserve0 * vAmount) / IPancakePair(stakingToken).totalSupply();
+        uint256 amount1 = (reserve1 * vAmount) / IPancakePair(stakingToken).totalSupply();
 
         if (amount0 != 0) {
             if (token0 == wbnb) reward += amount0;
             else {
-                address[] memory paths = IPathFinder(authority.pathFinder())
-                    .getPaths(swapRouter, token0, wbnb);
+                address[] memory paths = IPathFinder(authority.pathFinder()).getPaths(swapRouter, token0, wbnb);
 
-                reward += IPancakeRouter(swapRouter).getAmountsOut(amount0, paths)[
-                    paths.length - 1
-                ];
+                reward += IPancakeRouter(swapRouter).getAmountsOut(amount0, paths)[paths.length - 1];
             }
         }
 
         if (amount1 != 0) {
             if (token1 == wbnb) reward += amount1;
             else {
-                address[] memory paths = IPathFinder(authority.pathFinder())
-                    .getPaths(swapRouter, token1, wbnb);
-                reward += IPancakeRouter(swapRouter).getAmountsOut(amount1, paths)[
-                    paths.length - 1
-                ];
+                address[] memory paths = IPathFinder(authority.pathFinder()).getPaths(swapRouter, token1, wbnb);
+                reward += IPancakeRouter(swapRouter).getAmountsOut(amount1, paths)[paths.length - 1];
             }
         }
 
@@ -260,16 +211,13 @@ contract AutoVaultAdapterBsc is BaseAdapter {
      * @notice Remove funds
      * @param _tokenId YBNFT token id
      */
-    function removeFunds(
-        uint256 _tokenId
-    ) external payable override onlyInvestor returns (uint256 amountOut) {
+    function removeFunds(uint256 _tokenId) external payable override onlyInvestor returns (uint256 amountOut) {
         UserAdapterInfo storage userInfo = userAdapterInfos[_tokenId];
         if (userInfo.amount == 0) return 0;
 
         // 1. withdraw all from Vault
         amountOut = IERC20(stakingToken).balanceOf(address(this));
-        uint256 vAmount = (userInfo.amount *
-            IVaultStrategy(vStrategy).wantLockedTotal()) /
+        uint256 vAmount = (userInfo.amount * IVaultStrategy(vStrategy).wantLockedTotal()) /
             IVaultStrategy(vStrategy).sharesTotal();
         IStrategy(strategy).withdraw(pid, vAmount);
         amountOut = IERC20(stakingToken).balanceOf(address(this)) - amountOut;
@@ -277,25 +225,14 @@ contract AutoVaultAdapterBsc is BaseAdapter {
         // 2. calc reward
         uint256 rewardPercent = 0;
         if (amountOut > userInfo.invested) {
-            rewardPercent =
-                ((amountOut - userInfo.invested) * 1e12) /
-                amountOut;
+            rewardPercent = ((amountOut - userInfo.invested) * 1e12) / amountOut;
         }
 
         // 3. swap withdrawn lp to bnb
         if (router == address(0)) {
-            amountOut = HedgepieLibraryBsc.swapForBnb(
-                amountOut,
-                address(this),
-                stakingToken,
-                swapRouter
-            );
+            amountOut = HedgepieLibraryBsc.swapForBnb(amountOut, address(this), stakingToken, swapRouter);
         } else {
-            amountOut = HedgepieLibraryBsc.withdrawLP(
-                IYBNFT.AdapterParam(0, address(this)),
-                stakingToken,
-                amountOut
-            );
+            amountOut = HedgepieLibraryBsc.withdrawLP(IYBNFT.AdapterParam(0, address(this)), stakingToken, amountOut);
         }
 
         // 4. remove userInfo and stake pendingReward to rewardDebt1
@@ -305,9 +242,7 @@ contract AutoVaultAdapterBsc is BaseAdapter {
         userInfo.rewardDebt1 += reward;
 
         // 5. send withdrawn bnb to investor
-        (bool success, ) = payable(authority.hInvestor()).call{
-            value: amountOut - reward
-        }("");
+        (bool success, ) = payable(authority.hInvestor()).call{value: amountOut - reward}("");
         require(success, "Failed to send bnb to investor");
     }
 
@@ -315,32 +250,20 @@ contract AutoVaultAdapterBsc is BaseAdapter {
      * @notice Update funds
      * @param _tokenId YBNFT token id
      */
-    function updateFunds(
-        uint256 _tokenId
-    ) external payable override onlyInvestor returns (uint256 amountOut) {
+    function updateFunds(uint256 _tokenId) external payable override onlyInvestor returns (uint256 amountOut) {
         if (msg.value == 0) return 0;
 
         UserAdapterInfo storage userInfo = userAdapterInfos[_tokenId];
 
         // 1. get LP
-        amountOut = HedgepieLibraryBsc.getLP(
-            IYBNFT.AdapterParam(0, address(this)),
-            stakingToken,
-            msg.value
-        );
+        amountOut = HedgepieLibraryBsc.getLP(IYBNFT.AdapterParam(0, address(this)), stakingToken, msg.value);
 
         // 2. deposit to vault
-        (uint256 beforeShare, ) = IStrategy(strategy).userInfo(
-            pid,
-            address(this)
-        );
+        (uint256 beforeShare, ) = IStrategy(strategy).userInfo(pid, address(this));
         IERC20(stakingToken).safeApprove(strategy, 0);
         IERC20(stakingToken).safeApprove(strategy, amountOut);
         IStrategy(strategy).deposit(pid, amountOut);
-        (uint256 afterShare, ) = IStrategy(strategy).userInfo(
-            pid,
-            address(this)
-        );
+        (uint256 afterShare, ) = IStrategy(strategy).userInfo(pid, address(this));
         require(afterShare > beforeShare, "Failed to update funds");
 
         // 3. update user info

@@ -11,8 +11,7 @@ contract PathFinder is HedgepieAccessControlled {
     mapping(address => bool) public routers;
 
     // router => inToken => outToken => paths
-    mapping(address => mapping(address => mapping(address => address[])))
-        public paths;
+    mapping(address => mapping(address => mapping(address => address[]))) public paths;
 
     /// @dev events
     event RouterAdded(address indexed router, bool value);
@@ -22,9 +21,7 @@ contract PathFinder is HedgepieAccessControlled {
      * @notice Construct
      * @param _hedgepieAuthority HedgepieAuthority address
      */
-    constructor(
-        address _hedgepieAuthority
-    ) HedgepieAccessControlled(IHedgepieAuthority(_hedgepieAuthority)) {}
+    constructor(address _hedgepieAuthority) HedgepieAccessControlled(IHedgepieAuthority(_hedgepieAuthority)) {}
 
     /**
      * @notice Set paths from inToken to outToken
@@ -45,15 +42,8 @@ contract PathFinder is HedgepieAccessControlled {
      * @param _inToken token address of inToken
      * @param _outToken token address of outToken
      */
-    function getPaths(
-        address _router,
-        address _inToken,
-        address _outToken
-    ) public view returns (address[] memory) {
-        require(
-            paths[_router][_inToken][_outToken].length > 1,
-            "Path not existing"
-        );
+    function getPaths(address _router, address _inToken, address _outToken) public view returns (address[] memory) {
+        require(paths[_router][_inToken][_outToken].length > 1, "Path not existing");
 
         return paths[_router][_inToken][_outToken];
     }
@@ -74,22 +64,14 @@ contract PathFinder is HedgepieAccessControlled {
         require(routers[_router], "Router not registered");
         require(_paths.length > 1, "Invalid paths length");
         require(_inToken == _paths[0], "Invalid inToken address");
-        require(
-            _outToken == _paths[_paths.length - 1],
-            "Invalid inToken address"
-        );
+        require(_outToken == _paths[_paths.length - 1], "Invalid inToken address");
 
-        IPancakeFactory factory = IPancakeFactory(
-            IPancakeRouter(_router).factory()
-        );
+        IPancakeFactory factory = IPancakeFactory(IPancakeRouter(_router).factory());
 
         uint8 i;
         for (i; i < _paths.length; i++) {
             if (i < _paths.length - 1) {
-                require(
-                    factory.getPair(_paths[i], _paths[i + 1]) != address(0),
-                    "Invalid path"
-                );
+                require(factory.getPair(_paths[i], _paths[i + 1]) != address(0), "Invalid path");
             }
 
             if (i < paths[_router][_inToken][_outToken].length) {
@@ -101,8 +83,7 @@ contract PathFinder is HedgepieAccessControlled {
 
         if (paths[_router][_inToken][_outToken].length > _paths.length) {
             uint256 len = paths[_router][_inToken][_outToken].length;
-            for (i = 0; i < len - _paths.length; i++)
-                paths[_router][_inToken][_outToken].pop();
+            for (i = 0; i < len - _paths.length; i++) paths[_router][_inToken][_outToken].pop();
         }
     }
 }

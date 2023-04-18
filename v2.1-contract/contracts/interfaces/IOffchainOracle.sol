@@ -2,9 +2,5 @@
 pragma solidity ^0.8.4;
 
 interface IOffchainOracle {
-    function getRate(
-        address srcToken,
-        address dstToken,
-        bool
-    ) external view returns (uint256);
+    function getRate(address srcToken, address dstToken, bool) external view returns (uint256);
 }

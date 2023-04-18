@@ -58,9 +58,7 @@ abstract contract HedgepieAccessControlled {
      * @notice Set new authority
      * @param _newAuthority address of new authority
      */
-    function setAuthority(
-        IHedgepieAuthority _newAuthority
-    ) external onlyGovernor {
+    function setAuthority(IHedgepieAuthority _newAuthority) external onlyGovernor {
         require(address(_newAuthority) != address(0), "Invalid adddress");
         authority = _newAuthority;
         emit AuthorityUpdated(_newAuthority);

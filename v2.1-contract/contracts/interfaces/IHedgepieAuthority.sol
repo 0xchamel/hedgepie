@@ -4,21 +4,9 @@ pragma solidity ^0.8.4;
 interface IHedgepieAuthority {
     /* ========== EVENTS ========== */
 
-    event GovernorPushed(
-        address indexed from,
-        address indexed to,
-        bool _effectiveImmediately
-    );
-    event PathManagerPushed(
-        address indexed from,
-        address indexed to,
-        bool _effectiveImmediately
-    );
-    event AdapterManagerPushed(
-        address indexed from,
-        address indexed to,
-        bool _effectiveImmediately
-    );
+    event GovernorPushed(address indexed from, address indexed to, bool _effectiveImmediately);
+    event PathManagerPushed(address indexed from, address indexed to, bool _effectiveImmediately);
+    event AdapterManagerPushed(address indexed from, address indexed to, bool _effectiveImmediately);
 
     event GovernorPulled(address indexed from, address indexed to);
     event PathManagerPulled(address indexed from, address indexed to);

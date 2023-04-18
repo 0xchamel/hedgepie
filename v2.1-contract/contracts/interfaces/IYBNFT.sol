@@ -18,19 +18,11 @@ interface IYBNFT {
 
     function performanceFee(uint256 tokenId) external view returns (uint256);
 
-    function getTokenAdapterParams(
-        uint256 tokenId
-    ) external view returns (AdapterParam[] memory);
+    function getTokenAdapterParams(uint256 tokenId) external view returns (AdapterParam[] memory);
 
     function exists(uint256) external view returns (bool);
 
-    function mint(
-        uint256[] calldata,
-        address[] calldata,
-        address[] calldata,
-        uint256,
-        string memory
-    ) external;
+    function mint(uint256[] calldata, address[] calldata, address[] calldata, uint256, string memory) external;
 
     function updateProfitInfo(uint256 _tokenId, uint256 _value) external;
 

@@ -15,8 +15,7 @@ library HedgepieLibraryBsc {
 
     address private constant _WBNB = 0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c;
     address private constant _USDT = 0x55d398326f99059fF775485246999027B3197955;
-    address private constant _ORACLE =
-        0xfbD61B037C325b959c0F6A7e69D8f37770C2c550;
+    address private constant _ORACLE = 0xfbD61B037C325b959c0F6A7e69D8f37770C2c550;
 
     /**
      * @notice Swap tokens
@@ -31,15 +30,19 @@ library HedgepieLibraryBsc {
         address _outToken,
         address _router
     ) public returns (uint256 amountOut) {
-        address[] memory path = IPathFinder(
-            IHedgepieAuthority(IAdapter(_adapter).authority()).pathFinder()
-        ).getPaths(_router, _WBNB, _outToken);
+        address[] memory path = IPathFinder(IHedgepieAuthority(IAdapter(_adapter).authority()).pathFinder()).getPaths(
+            _router,
+            _WBNB,
+            _outToken
+        );
         uint256 beforeBalance = IERC20(_outToken).balanceOf(address(this));
 
-        IPancakeRouter(_router)
-            .swapExactETHForTokensSupportingFeeOnTransferTokens{
-            value: _amountIn
-        }(0, path, address(this), block.timestamp + 2 hours);
+        IPancakeRouter(_router).swapExactETHForTokensSupportingFeeOnTransferTokens{value: _amountIn}(
+            0,
+            path,
+            address(this),
+            block.timestamp + 2 hours
+        );
 
         uint256 afterBalance = IERC20(_outToken).balanceOf(address(this));
         amountOut = afterBalance - beforeBalance;
@@ -62,22 +65,20 @@ library HedgepieLibraryBsc {
             IWrap(_WBNB).withdraw(_amountIn);
             amountOut = _amountIn;
         } else {
-            address[] memory path = IPathFinder(
-                IHedgepieAuthority(IAdapter(_adapter).authority()).pathFinder()
-            ).getPaths(_router, _inToken, _WBNB);
+            address[] memory path = IPathFinder(IHedgepieAuthority(IAdapter(_adapter).authority()).pathFinder())
+                .getPaths(_router, _inToken, _WBNB);
             uint256 beforeBalance = address(this).balance;
 
             IERC20(_inToken).safeApprove(_router, 0);
             IERC20(_inToken).safeApprove(_router, _amountIn);
 
-            IPancakeRouter(_router)
-                .swapExactTokensForETHSupportingFeeOnTransferTokens(
-                    _amountIn,
-                    0,
-                    path,
-                    address(this),
-                    block.timestamp + 2 hours
-                );
+            IPancakeRouter(_router).swapExactTokensForETHSupportingFeeOnTransferTokens(
+                _amountIn,
+                0,
+                path,
+                address(this),
+                block.timestamp + 2 hours
+            );
 
             uint256 afterBalance = address(this).balance;
             amountOut = afterBalance - beforeBalance;
@@ -89,14 +90,9 @@ library HedgepieLibraryBsc {
      * @param _tokenId  tokenID
      * @param _adapterAddr  address of adapter
      */
-    function getMRewards(
-        uint256 _tokenId,
-        address _adapterAddr
-    ) public view returns (uint256 reward, uint256 reward1) {
-        BaseAdapter.AdapterInfo memory adapterInfo = IAdapter(_adapterAddr)
-            .mAdapter();
-        BaseAdapter.UserAdapterInfo memory userInfo = IAdapter(_adapterAddr)
-            .userAdapterInfos(_tokenId);
+    function getMRewards(uint256 _tokenId, address _adapterAddr) public view returns (uint256 reward, uint256 reward1) {
+        BaseAdapter.AdapterInfo memory adapterInfo = IAdapter(_adapterAddr).mAdapter();
+        BaseAdapter.UserAdapterInfo memory userInfo = IAdapter(_adapterAddr).userAdapterInfos(_tokenId);
 
         if (
             IAdapter(_adapterAddr).rewardToken1() != address(0) &&
@@ -104,8 +100,7 @@ library HedgepieLibraryBsc {
             adapterInfo.accTokenPerShare1 != 0
         ) {
             reward =
-                (userInfo.amount *
-                    (adapterInfo.accTokenPerShare1 - userInfo.userShare1)) /
+                (userInfo.amount * (adapterInfo.accTokenPerShare1 - userInfo.userShare1)) /
                 1e12 +
                 userInfo.rewardDebt1;
         }
@@ -116,8 +111,7 @@ library HedgepieLibraryBsc {
             adapterInfo.accTokenPerShare2 != 0
         ) {
             reward1 =
-                (userInfo.amount *
-                    (adapterInfo.accTokenPerShare2 - userInfo.userShare2)) /
+                (userInfo.amount * (adapterInfo.accTokenPerShare2 - userInfo.userShare2)) /
                 1e12 +
                 userInfo.rewardDebt2;
         }
@@ -146,23 +140,13 @@ library HedgepieLibraryBsc {
         }
 
         if (tokens[0] != _WBNB) {
-            tokenAmount[0] = swapOnRouter(
-                tokenAmount[0],
-                _adapter.addr,
-                tokens[0],
-                _router
-            );
+            tokenAmount[0] = swapOnRouter(tokenAmount[0], _adapter.addr, tokens[0], _router);
             IERC20(tokens[0]).safeApprove(_router, 0);
             IERC20(tokens[0]).safeApprove(_router, tokenAmount[0]);
         }
 
         if (tokens[1] != _WBNB) {
-            tokenAmount[1] = swapOnRouter(
-                tokenAmount[1],
-                _adapter.addr,
-                tokens[1],
-                _router
-            );
+            tokenAmount[1] = swapOnRouter(tokenAmount[1], _adapter.addr, tokens[1], _router);
             IERC20(tokens[1]).safeApprove(_router, 0);
             IERC20(tokens[1]).safeApprove(_router, tokenAmount[1]);
         }
@@ -217,47 +201,30 @@ library HedgepieLibraryBsc {
 
         if (tokens[0] == _WBNB || tokens[1] == _WBNB) {
             address tokenAddr = tokens[0] == _WBNB ? tokens[1] : tokens[0];
-            (uint256 amountToken, uint256 amountETH) = IPancakeRouter(_router)
-                .removeLiquidityETH(
-                    tokenAddr,
-                    _amountIn,
-                    0,
-                    0,
-                    address(this),
-                    block.timestamp + 2 hours
-                );
+            (uint256 amountToken, uint256 amountETH) = IPancakeRouter(_router).removeLiquidityETH(
+                tokenAddr,
+                _amountIn,
+                0,
+                0,
+                address(this),
+                block.timestamp + 2 hours
+            );
 
             amountOut = amountETH;
-            amountOut += swapForBnb(
-                amountToken,
-                _adapter.addr,
-                tokenAddr,
-                swapRouter
-            );
+            amountOut += swapForBnb(amountToken, _adapter.addr, tokenAddr, swapRouter);
         } else {
-            (uint256 amountA, uint256 amountB) = IPancakeRouter(_router)
-                .removeLiquidity(
-                    tokens[0],
-                    tokens[1],
-                    _amountIn,
-                    0,
-                    0,
-                    address(this),
-                    block.timestamp + 2 hours
-                );
-
-            amountOut += swapForBnb(
-                amountA,
-                _adapter.addr,
+            (uint256 amountA, uint256 amountB) = IPancakeRouter(_router).removeLiquidity(
                 tokens[0],
-                swapRouter
-            );
-            amountOut += swapForBnb(
-                amountB,
-                _adapter.addr,
                 tokens[1],
-                swapRouter
+                _amountIn,
+                0,
+                0,
+                address(this),
+                block.timestamp + 2 hours
             );
+
+            amountOut += swapForBnb(amountA, _adapter.addr, tokens[0], swapRouter);
+            amountOut += swapForBnb(amountB, _adapter.addr, tokens[1], swapRouter);
         }
     }
 

@@ -15,24 +15,14 @@ interface IVaultStrategy {
     function earn() external;
 
     // Transfer want tokens autoFarm -> strategy
-    function deposit(
-        address _userAddress,
-        uint256 _wantAmt
-    ) external returns (uint256);
+    function deposit(address _userAddress, uint256 _wantAmt) external returns (uint256);
 
     // Transfer want tokens strategy -> autoFarm
-    function withdraw(
-        address _userAddress,
-        uint256 _wantAmt
-    ) external returns (uint256);
+    function withdraw(address _userAddress, uint256 _wantAmt) external returns (uint256);
 
     function entranceFeeFactor() external returns (uint256);
 
     function entranceFeeFactorMax() external returns (uint256);
 
-    function inCaseTokensGetStuck(
-        address _token,
-        uint256 _amount,
-        address _to
-    ) external;
+    function inCaseTokensGetStuck(address _token, uint256 _amount, address _to) external;
 }

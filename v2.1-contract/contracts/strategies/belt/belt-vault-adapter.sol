@@ -56,19 +56,12 @@ contract BeltVaultAdapterBsc is BaseAdapter {
      * @notice Deposit with Bnb
      * @param _tokenId YBNFT token id
      */
-    function deposit(
-        uint256 _tokenId
-    ) external payable override onlyInvestor returns (uint256 amountOut) {
+    function deposit(uint256 _tokenId) external payable override onlyInvestor returns (uint256 amountOut) {
         UserAdapterInfo storage userInfo = userAdapterInfos[_tokenId];
 
         // 1. get stakingToken
         if (stakingToken != wbnb)
-            amountOut = HedgepieLibraryBsc.swapOnRouter(
-                msg.value,
-                address(this),
-                stakingToken,
-                swapRouter
-            );
+            amountOut = HedgepieLibraryBsc.swapOnRouter(msg.value, address(this), stakingToken, swapRouter);
 
         // 2. deposit to vault
         uint256 repayAmt = IERC20(repayToken).balanceOf(address(this));
@@ -107,30 +100,16 @@ contract BeltVaultAdapterBsc is BaseAdapter {
         bool isBNB = stakingToken == wbnb;
 
         // 1. withdraw from Vault
-        uint256 lpOut = isBNB
-            ? address(this).balance
-            : IERC20(stakingToken).balanceOf(address(this));
+        uint256 lpOut = isBNB ? address(this).balance : IERC20(stakingToken).balanceOf(address(this));
         if (isBNB) {
             IStrategy(strategy).withdrawBNB(_amount, 0);
         } else {
             IStrategy(strategy).withdraw(_amount, 0);
         }
-        lpOut =
-            (
-                isBNB
-                    ? address(this).balance
-                    : IERC20(stakingToken).balanceOf(address(this))
-            ) -
-            lpOut;
+        lpOut = (isBNB ? address(this).balance : IERC20(stakingToken).balanceOf(address(this))) - lpOut;
 
         // 2. swap withdrawn lp to bnb
-        if (!isBNB)
-            amountOut = HedgepieLibraryBsc.swapForBnb(
-                lpOut,
-                address(this),
-                stakingToken,
-                swapRouter
-            );
+        if (!isBNB) amountOut = HedgepieLibraryBsc.swapForBnb(lpOut, address(this), stakingToken, swapRouter);
 
         // 3. update userInfo
         userInfo.amount -= _amount;
@@ -149,19 +128,15 @@ contract BeltVaultAdapterBsc is BaseAdapter {
      * @notice Claim the pending reward
      * @param _tokenId YBNFT token id
      */
-    function claim(
-        uint256 _tokenId
-    ) external payable override onlyInvestor returns (uint256 amountOut) {
+    function claim(uint256 _tokenId) external payable override onlyInvestor returns (uint256 amountOut) {
         UserAdapterInfo storage userInfo = userAdapterInfos[_tokenId];
 
         bool isBNB = stakingToken == wbnb;
 
         // 1. check if reward is generated
-        uint256 wantAmt = ((userInfo.amount *
-            IStrategy(strategy).getPricePerFullShare()) / 1e18);
-        uint256 wantShare = ((
-            wantAmt > userInfo.invested ? wantAmt - userInfo.invested : 0
-        ) * 1e18) / IStrategy(strategy).getPricePerFullShare();
+        uint256 wantAmt = ((userInfo.amount * IStrategy(strategy).getPricePerFullShare()) / 1e18);
+        uint256 wantShare = ((wantAmt > userInfo.invested ? wantAmt - userInfo.invested : 0) * 1e18) /
+            IStrategy(strategy).getPricePerFullShare();
 
         // 2. if reward is not generated
         if (wantAmt <= userInfo.invested) {
@@ -177,26 +152,12 @@ contract BeltVaultAdapterBsc is BaseAdapter {
 
         // 3. withdraw reward from vault
         wantAmt -= userInfo.invested;
-        uint256 lpOut = isBNB
-            ? address(this).balance
-            : IERC20(stakingToken).balanceOf(address(this));
+        uint256 lpOut = isBNB ? address(this).balance : IERC20(stakingToken).balanceOf(address(this));
         IStrategy(strategy).withdraw(wantShare, 0);
-        lpOut =
-            (
-                isBNB
-                    ? address(this).balance
-                    : IERC20(stakingToken).balanceOf(address(this))
-            ) -
-            lpOut;
+        lpOut = (isBNB ? address(this).balance : IERC20(stakingToken).balanceOf(address(this))) - lpOut;
 
         // 4. swap reward to bnb
-        if (!isBNB)
-            amountOut = HedgepieLibraryBsc.swapForBnb(
-                lpOut,
-                address(this),
-                stakingToken,
-                swapRouter
-            );
+        if (!isBNB) amountOut = HedgepieLibraryBsc.swapForBnb(lpOut, address(this), stakingToken, swapRouter);
 
         // 5. update user info
         userInfo.amount -= wantShare;
@@ -212,29 +173,21 @@ contract BeltVaultAdapterBsc is BaseAdapter {
      * @notice Return the pending reward by BNB
      * @param _tokenId YBNFT token id
      */
-    function pendingReward(
-        uint256 _tokenId
-    ) external view override returns (uint256 reward, uint256) {
+    function pendingReward(uint256 _tokenId) external view override returns (uint256 reward, uint256) {
         UserAdapterInfo memory userInfo = userAdapterInfos[_tokenId];
 
         // 1. calc want amount
-        uint256 wantAmt = ((userInfo.amount *
-            IStrategy(strategy).getPricePerFullShare()) / 1e18);
+        uint256 wantAmt = ((userInfo.amount * IStrategy(strategy).getPricePerFullShare()) / 1e18);
 
-        if (wantAmt <= userInfo.invested)
-            return (userInfo.rewardDebt1, userInfo.rewardDebt1);
+        if (wantAmt <= userInfo.invested) return (userInfo.rewardDebt1, userInfo.rewardDebt1);
         wantAmt -= userInfo.invested;
 
         // 2. calc reward
         if (wantAmt != 0) {
             if (stakingToken == wbnb) reward += wantAmt;
             else {
-                address[] memory paths = IPathFinder(authority.pathFinder())
-                    .getPaths(swapRouter, stakingToken, wbnb);
-                reward += IPancakeRouter(swapRouter).getAmountsOut(
-                    wantAmt,
-                    paths
-                )[paths.length - 1];
+                address[] memory paths = IPathFinder(authority.pathFinder()).getPaths(swapRouter, stakingToken, wbnb);
+                reward += IPancakeRouter(swapRouter).getAmountsOut(wantAmt, paths)[paths.length - 1];
             }
         }
 
@@ -245,46 +198,29 @@ contract BeltVaultAdapterBsc is BaseAdapter {
      * @notice Remove funds
      * @param _tokenId YBNFT token id
      */
-    function removeFunds(
-        uint256 _tokenId
-    ) external payable override onlyInvestor returns (uint256 amountOut) {
+    function removeFunds(uint256 _tokenId) external payable override onlyInvestor returns (uint256 amountOut) {
         UserAdapterInfo storage userInfo = userAdapterInfos[_tokenId];
         if (userInfo.amount == 0) return 0;
 
         bool isBNB = stakingToken == wbnb;
 
         // 1. withdraw all from Vault
-        amountOut = isBNB
-            ? address(this).balance
-            : IERC20(stakingToken).balanceOf(address(this));
+        amountOut = isBNB ? address(this).balance : IERC20(stakingToken).balanceOf(address(this));
         if (isBNB) {
             IStrategy(strategy).withdrawBNB(userInfo.amount, 0);
         } else {
             IStrategy(strategy).withdraw(userInfo.amount, 0);
         }
-        amountOut =
-            (
-                isBNB
-                    ? address(this).balance
-                    : IERC20(stakingToken).balanceOf(address(this))
-            ) -
-            amountOut;
+        amountOut = (isBNB ? address(this).balance : IERC20(stakingToken).balanceOf(address(this))) - amountOut;
 
         // 2. calc reward
         uint256 rewardPercent = 0;
         if (amountOut > userInfo.invested) {
-            rewardPercent =
-                ((amountOut - userInfo.invested) * 1e12) /
-                amountOut;
+            rewardPercent = ((amountOut - userInfo.invested) * 1e12) / amountOut;
         }
 
         // 3. swap withdrawn lp to bnb
-        amountOut = HedgepieLibraryBsc.swapForBnb(
-            amountOut,
-            address(this),
-            stakingToken,
-            swapRouter
-        );
+        amountOut = HedgepieLibraryBsc.swapForBnb(amountOut, address(this), stakingToken, swapRouter);
 
         // 4. remove userInfo and stake pendingReward to rewardDebt1
         uint256 reward = (amountOut * rewardPercent) / 1e12;
@@ -293,9 +229,7 @@ contract BeltVaultAdapterBsc is BaseAdapter {
         userInfo.rewardDebt1 += reward;
 
         // 5. send withdrawn bnb to investor
-        (bool success, ) = payable(authority.hInvestor()).call{
-            value: amountOut - reward
-        }("");
+        (bool success, ) = payable(authority.hInvestor()).call{value: amountOut - reward}("");
         require(success, "Failed to send bnb to investor");
     }
 
@@ -303,21 +237,14 @@ contract BeltVaultAdapterBsc is BaseAdapter {
      * @notice Update funds
      * @param _tokenId YBNFT token id
      */
-    function updateFunds(
-        uint256 _tokenId
-    ) external payable override onlyInvestor returns (uint256 amountOut) {
+    function updateFunds(uint256 _tokenId) external payable override onlyInvestor returns (uint256 amountOut) {
         if (msg.value == 0) return 0;
 
         UserAdapterInfo storage userInfo = userAdapterInfos[_tokenId];
 
         // 1. get stakingToken
         if (stakingToken != wbnb) {
-            amountOut = HedgepieLibraryBsc.swapOnRouter(
-                msg.value,
-                address(this),
-                stakingToken,
-                swapRouter
-            );
+            amountOut = HedgepieLibraryBsc.swapOnRouter(msg.value, address(this), stakingToken, swapRouter);
         }
 
         // 2. deposit to vault

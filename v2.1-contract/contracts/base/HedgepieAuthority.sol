@@ -55,10 +55,7 @@ contract HedgepieAuthority is IHedgepieAuthority, HedgepieAccessControlled {
      * @param _newGovernor address of new governor
      * @param _effectiveImmediately  bool to set immediately or not
      */
-    function pushGovernor(
-        address _newGovernor,
-        bool _effectiveImmediately
-    ) external onlyGovernor {
+    function pushGovernor(address _newGovernor, bool _effectiveImmediately) external onlyGovernor {
         if (_effectiveImmediately) governor = _newGovernor;
         newGovernor = _newGovernor;
         emit GovernorPushed(governor, newGovernor, _effectiveImmediately);
@@ -69,17 +66,10 @@ contract HedgepieAuthority is IHedgepieAuthority, HedgepieAccessControlled {
      * @param _newPathManager address of new path manager
      * @param _effectiveImmediately  bool to set immediately or not
      */
-    function pushPathManager(
-        address _newPathManager,
-        bool _effectiveImmediately
-    ) external onlyGovernor {
+    function pushPathManager(address _newPathManager, bool _effectiveImmediately) external onlyGovernor {
         if (_effectiveImmediately) pathManager = _newPathManager;
         newPathManager = _newPathManager;
-        emit PathManagerPushed(
-            pathManager,
-            newPathManager,
-            _effectiveImmediately
-        );
+        emit PathManagerPushed(pathManager, newPathManager, _effectiveImmediately);
     }
 
     /**
@@ -87,17 +77,10 @@ contract HedgepieAuthority is IHedgepieAuthority, HedgepieAccessControlled {
      * @param _newAdapterManager address of new adapter manager
      * @param _effectiveImmediately  bool to set immediately or not
      */
-    function pushAdapterManager(
-        address _newAdapterManager,
-        bool _effectiveImmediately
-    ) external onlyGovernor {
+    function pushAdapterManager(address _newAdapterManager, bool _effectiveImmediately) external onlyGovernor {
         if (_effectiveImmediately) adapterManager = _newAdapterManager;
         newAdapterManager = _newAdapterManager;
-        emit AdapterManagerPushed(
-            adapterManager,
-            newAdapterManager,
-            _effectiveImmediately
-        );
+        emit AdapterManagerPushed(adapterManager, newAdapterManager, _effectiveImmediately);
     }
 
     /**

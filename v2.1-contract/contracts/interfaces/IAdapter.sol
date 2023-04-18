@@ -21,42 +21,23 @@ interface IAdapter {
 
     function authority() external view returns (address);
 
-    function deposit(
-        uint256 _tokenId
-    ) external payable returns (uint256 amountOut);
+    function deposit(uint256 _tokenId) external payable returns (uint256 amountOut);
 
-    function withdraw(
-        uint256 _tokenId,
-        uint256 _amount
-    ) external payable returns (uint256 amountOut);
+    function withdraw(uint256 _tokenId, uint256 _amount) external payable returns (uint256 amountOut);
 
-    function claim(
-        uint256 _tokenId
-    ) external payable returns (uint256 amountOut);
+    function claim(uint256 _tokenId) external payable returns (uint256 amountOut);
 
-    function pendingReward(
-        uint256 _tokenId
-    ) external view returns (uint256 amountOut, uint256 withdrawable);
+    function pendingReward(uint256 _tokenId) external view returns (uint256 amountOut, uint256 withdrawable);
 
-    function adapterInfos(
-        uint256 _tokenId
-    ) external view returns (BaseAdapter.AdapterInfo memory);
+    function adapterInfos(uint256 _tokenId) external view returns (BaseAdapter.AdapterInfo memory);
 
-    function userAdapterInfos(
-        uint256 _tokenId
-    ) external view returns (BaseAdapter.UserAdapterInfo memory);
+    function userAdapterInfos(uint256 _tokenId) external view returns (BaseAdapter.UserAdapterInfo memory);
 
     function mAdapter() external view returns (BaseAdapter.AdapterInfo memory);
 
-    function removeFunds(
-        uint256 _tokenId
-    ) external payable returns (uint256 amount);
+    function removeFunds(uint256 _tokenId) external payable returns (uint256 amount);
 
-    function getUserAmount(
-        uint256 _tokenId
-    ) external view returns (uint256 amount);
+    function getUserAmount(uint256 _tokenId) external view returns (uint256 amount);
 
-    function updateFunds(
-        uint256 _tokenId
-    ) external payable returns (uint256 amount);
+    function updateFunds(uint256 _tokenId) external payable returns (uint256 amount);
 }
