@@ -16,20 +16,20 @@ contract YBNFT is ERC721, HedgepieAccessControlled {
     using Strings for uint256;
 
     struct AdapterParam {
-        uint256 allocation;
-        address addr;
+        uint256 allocation; // allocation percent for adapter
+        address addr;  // adapter address
     }
 
     struct AdapterDate {
-        uint128 created;
-        uint128 modified;
+        uint128 created; // created time
+        uint128 modified; // modified time
     }
 
     struct TokenInfo {
-        uint256 tvl;
-        uint256 participant;
-        uint256 traded;
-        uint256 profit;
+        uint256 tvl;  // total tvl in usd
+        uint256 participant; // total paticipants count
+        uint256 traded; // total traded amount in usd
+        uint256 profit; // total profit amount in usd
     }
 
     // current max tokenId

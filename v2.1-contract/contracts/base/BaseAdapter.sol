@@ -24,31 +24,46 @@ abstract contract BaseAdapter is HedgepieAccessControlled {
         uint256 totalStaked; // Total staked staking token
     }
 
+    // LP pool id - should be 0 when stakingToken is not LP
     uint256 public pid;
 
+    // staking token
     address public stakingToken;
 
+    // first reward token
     address public rewardToken1;
 
+    // second reward token - optional
     address public rewardToken2;
 
+    // repay token which we will receive after deposit - optional
     address public repayToken;
 
+    // strategy where we deposit staking token
     address public strategy;
 
+    // router address for LP token
     address public router;
 
+    // swap router address for ERC20 token swap
     address public swapRouter;
 
+    // wbnb address
     address public wbnb;
 
+    // adapter name
     string public name;
 
+    // adapter info having totalStaked and 1st, 2nd share info
     AdapterInfo public mAdapter;
 
+    // adapter info for each nft
     // nft id => UserAdapterInfo
     mapping(uint256 => UserAdapterInfo) public userAdapterInfos;
 
+    /** @notice Constructor
+     * @param _hedgepieAuthority  address of authority
+     */
     constructor(address _hedgepieAuthority) HedgepieAccessControlled(IHedgepieAuthority(_hedgepieAuthority)) {}
 
     /** @notice get user staked amount */

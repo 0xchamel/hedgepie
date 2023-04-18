@@ -7,26 +7,37 @@ import "../interfaces/IHedgepieAuthority.sol";
 contract HedgepieAuthority is IHedgepieAuthority, HedgepieAccessControlled {
     /* ========== STATE VARIABLES ========== */
 
+    // governor address
     address public override governor;
 
+    // path manager address
     address public override pathManager;
 
+    // adapter manager contract address
     address public override adapterManager;
 
+    // investor contract address
     address public override hInvestor;
 
+    // ybnft contract address
     address public override hYBNFT;
 
+    // adapter list contract address
     address public override hAdapterList;
 
+    // path finder contract address
     address public override pathFinder;
 
+    // new governor address
     address public newGovernor;
 
+    // new path manager address
     address public newPathManager;
 
+    // new adapter manager contract address
     address public newAdapterManager;
 
+    // to check protocol is paused or not
     bool public override paused;
 
     /* ========== Constructor ========== */
