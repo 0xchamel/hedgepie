@@ -107,15 +107,6 @@ describe("Beefy Adapters Integration Test", function () {
         // register path to pathFinder contract
         await setPath(this.pathFinder, this.pathManager, this.swapRouter, [
             wbnb,
-            "0x0000000000000000000000000000000000000001",
-            "0x0000000000000000000000000000000000000002",
-            "0x0000000000000000000000000000000000000003",
-            cake,
-        ]);
-
-        // register path to pathFinder contract
-        await setPath(this.pathFinder, this.pathManager, this.swapRouter, [
-            wbnb,
             cake,
         ]);
         await setPath(this.pathFinder, this.pathManager, this.swapRouter, [

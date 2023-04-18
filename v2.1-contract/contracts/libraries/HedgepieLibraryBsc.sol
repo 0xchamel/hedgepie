@@ -99,7 +99,7 @@ library HedgepieLibraryBsc {
             .userAdapterInfos(_tokenId);
 
         if (
-            IAdapter(_adapterAddr).rewardToken() != address(0) &&
+            IAdapter(_adapterAddr).rewardToken1() != address(0) &&
             adapterInfo.totalStaked != 0 &&
             adapterInfo.accTokenPerShare1 != 0
         ) {
@@ -111,7 +111,7 @@ library HedgepieLibraryBsc {
         }
 
         if (
-            IAdapter(_adapterAddr).rewardToken1() != address(0) &&
+            IAdapter(_adapterAddr).rewardToken2() != address(0) &&
             adapterInfo.totalStaked != 0 &&
             adapterInfo.accTokenPerShare2 != 0
         ) {

@@ -11,9 +11,9 @@ interface IAdapter {
 
     function name() external view returns (string memory);
 
-    function rewardToken() external view returns (address);
-
     function rewardToken1() external view returns (address);
+
+    function rewardToken2() external view returns (address);
 
     function router() external view returns (address);
 
