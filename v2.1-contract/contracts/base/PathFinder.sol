@@ -10,12 +10,12 @@ contract PathFinder is HedgepieAccessControlled {
     // router information
     mapping(address => bool) public routers;
 
-    // router => inToken => outToken => paths
+    // router => inToken => outToken => path
     mapping(address => mapping(address => mapping(address => address[]))) public paths;
 
     /// @dev events
-    event RouterAdded(address indexed router, bool value);
-    event RouterRemoved(address indexed router, bool value);
+    event RouterAdded(address indexed router, bool status);
+    event RouterRemoved(address indexed router, bool status);
 
     /**
      * @notice Construct
@@ -24,16 +24,16 @@ contract PathFinder is HedgepieAccessControlled {
     constructor(address _hedgepieAuthority) HedgepieAccessControlled(IHedgepieAuthority(_hedgepieAuthority)) {}
 
     /**
-     * @notice Set paths from inToken to outToken
+     * @notice Set swap router
      * @param _router swap router address
-     * @param _value add or remove router
+     * @param _status router status flag
      */
-    function setRouter(address _router, bool _value) external onlyPathManager {
+    function setRouter(address _router, bool _status) external onlyPathManager {
         require(_router != address(0), "Invalid router address");
-        routers[_router] = _value;
+        routers[_router] = _status;
 
-        if (_value) emit RouterAdded(_router, _value);
-        else emit RouterRemoved(_router, _value);
+        if (_status) emit RouterAdded(_router, _status);
+        else emit RouterRemoved(_router, _status);
     }
 
     /**
@@ -49,41 +49,39 @@ contract PathFinder is HedgepieAccessControlled {
     }
 
     /**
-     * @notice Set paths from inToken to outToken
+     * @notice Set path from inToken to outToken
      * @param _router swap router address
      * @param _inToken token address of inToken
      * @param _outToken token address of outToken
-     * @param _paths swapping paths
+     * @param _path swapping path
      */
     function setPath(
         address _router,
         address _inToken,
         address _outToken,
-        address[] memory _paths
+        address[] memory _path
     ) external onlyPathManager {
         require(routers[_router], "Router not registered");
-        require(_paths.length > 1, "Invalid paths length");
-        require(_inToken == _paths[0], "Invalid inToken address");
-        require(_outToken == _paths[_paths.length - 1], "Invalid inToken address");
+        require(_path.length > 1, "Invalid path length");
+        require(_inToken == _path[0], "Invalid inToken address");
+        require(_outToken == _path[_path.length - 1], "Invalid inToken address");
 
         IPancakeFactory factory = IPancakeFactory(IPancakeRouter(_router).factory());
+        address[] storage cPath = paths[_router][_inToken][_outToken];
 
         uint8 i;
-        for (i; i < _paths.length; i++) {
-            if (i < _paths.length - 1) {
-                require(factory.getPair(_paths[i], _paths[i + 1]) != address(0), "Invalid path");
-            }
+        for (i; i < _path.length; i++) {
+            // check if new path is valid
+            if (i < _path.length - 1) require(factory.getPair(_path[i], _path[i + 1]) != address(0), "Invalid path");
 
-            if (i < paths[_router][_inToken][_outToken].length) {
-                paths[_router][_inToken][_outToken][i] = _paths[i];
-            } else {
-                paths[_router][_inToken][_outToken].push(_paths[i]);
-            }
+            // update current path if new path is valid
+            if (i < cPath.length) cPath[i] = _path[i];
+            else cPath.push(_path[i]);
         }
 
-        if (paths[_router][_inToken][_outToken].length > _paths.length) {
-            uint256 len = paths[_router][_inToken][_outToken].length;
-            for (i = 0; i < len - _paths.length; i++) paths[_router][_inToken][_outToken].pop();
+        // remove deprecated path token info after new path is updated
+        if (cPath.length > _path.length) {
+            for (i = 0; i < cPath.length - _path.length; i++) cPath.pop();
         }
     }
 }
