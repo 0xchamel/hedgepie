@@ -129,7 +129,6 @@ describe("Multiple Adapters Integration Test", function () {
             busd,
             beltStrategy,
             pksRouter,
-            wbnb,
             "Belt::Vault::BUSD",
             this.authority.address
         );

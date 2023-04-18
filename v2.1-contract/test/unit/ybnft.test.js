@@ -65,7 +65,6 @@ describe("YBNFT Unit Test", function () {
             stakingToken,
             router,
             swapRouter,
-            wbnb,
             name,
             this.authority.address
         );
@@ -87,7 +86,6 @@ describe("YBNFT Unit Test", function () {
             this.stakingToken,
             this.rewardToken,
             this.swapRouter,
-            wbnb,
             "PK::STAKE::SQUAD-ADAPTER",
             this.authority.address
         );
