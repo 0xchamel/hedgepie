@@ -103,6 +103,7 @@ contract HedgepieInvestor is ReentrancyGuard, HedgepieAccessControlled {
      * @notice Withdraw by BNB
      * @param _tokenId  YBNft token id
      */
+    /// #if_succeeds {:msg "Withdraw failed"}  userInfos[_tokenId][msg.sender].amount == 0 && tokenInfos[_tokenId].totalStaked == old(tokenInfos[_tokenId]).totalStaked - old(userInfos[_tokenId][msg.sender]).amount;
     function withdraw(uint256 _tokenId) external nonReentrant onlyValidNFT(_tokenId) whenNotPaused {
         UserInfo memory userInfo = userInfos[_tokenId][msg.sender];
         TokenInfo storage tokenInfo = tokenInfos[_tokenId];
@@ -150,6 +151,7 @@ contract HedgepieInvestor is ReentrancyGuard, HedgepieAccessControlled {
      * @notice Claim
      * @param _tokenId  YBNft token id
      */
+    /// #if_succeeds {:msg "Claim failed"}  userInfos[_tokenId][msg.sender].rewardDebt == 0;
     function claim(uint256 _tokenId) public nonReentrant whenNotPaused onlyValidNFT(_tokenId) {
         TokenInfo storage tokenInfo = tokenInfos[_tokenId];
 
@@ -212,6 +214,7 @@ contract HedgepieInvestor is ReentrancyGuard, HedgepieAccessControlled {
      * @notice Set treasury address
      * @param _treasury new treasury address
      */
+    /// #if_succeeds {:msg "setTreasury failed"}  treasury == _treasury;
     function setTreasury(address _treasury) external onlyGovernor {
         require(_treasury != address(0), "Error: Invalid NFT address");
 
@@ -223,6 +226,7 @@ contract HedgepieInvestor is ReentrancyGuard, HedgepieAccessControlled {
      * @notice Update funds for token id
      * @param _tokenId YBNFT token id
      */
+    /// #if_succeeds {:msg "updateFunds failed"}  tokenInfos[_tokenId].totalStaked == old(tokenInfos[_tokenId]).totalStaked;
     function updateFunds(uint256 _tokenId) external whenNotPaused onlyYBNft {
         IYBNFT.AdapterParam[] memory adapterInfos = IYBNFT(authority.hYBNFT()).getTokenAdapterParams(_tokenId);
 
@@ -247,6 +251,7 @@ contract HedgepieInvestor is ReentrancyGuard, HedgepieAccessControlled {
      * @notice internal function for calc reward
      * @param _tokenId YBNFT token id
      */
+    /// #if_succeeds {:msg "calcReward failed"}  userInfos[_tokenId][msg.sender].userShare == tokenInfos[_tokenId].accRewardShare;
     function _calcReward(uint256 _tokenId) internal {
         UserInfo storage userInfo = userInfos[_tokenId][msg.sender];
         TokenInfo storage tokenInfo = tokenInfos[_tokenId];
@@ -278,6 +283,7 @@ contract HedgepieInvestor is ReentrancyGuard, HedgepieAccessControlled {
      * @notice internal function for withdraw reward
      * @param _tokenId YBNFT token id
      */
+    /// #if_succeeds {:msg "withdrawReward failed"}  userInfos[_tokenId][msg.sender].rewardDebt == 0 && userInfos[_tokenId][msg.sender].userShare == tokenInfos[_tokenId].accRewardShare;
     function _withdrawReward(uint256 _tokenId) internal {
         UserInfo storage userInfo = userInfos[_tokenId][msg.sender];
         TokenInfo memory tokenInfo = tokenInfos[_tokenId];

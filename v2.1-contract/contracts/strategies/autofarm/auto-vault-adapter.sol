@@ -58,6 +58,7 @@ contract AutoVaultAdapterBsc is BaseAdapter {
      * @notice Deposit with Bnb
      * @param _tokenId YBNFT token id
      */
+    /// #if_succeeds {:msg "deposit failed"}  userAdapterInfos[_tokenId].userShare1 == mAdapter.accTokenPerShare1 && mAdapter.totalStaked > old(mAdapter.totalStaked);
     function deposit(uint256 _tokenId) external payable override onlyInvestor returns (uint256 amountOut) {
         UserAdapterInfo storage userInfo = userAdapterInfos[_tokenId];
 
@@ -84,6 +85,7 @@ contract AutoVaultAdapterBsc is BaseAdapter {
      * @param _tokenId YBNFT token id
      * @param _amount amount of staking token to withdraw
      */
+    /// #if_succeeds {:msg "withdraw failed"}  userAdapterInfos[_tokenId].userShare1 == mAdapter.accTokenPerShare1 && userAdapterInfos[_tokenId].rewardDebt1 == 0;
     function withdraw(
         uint256 _tokenId,
         uint256 _amount
@@ -118,6 +120,7 @@ contract AutoVaultAdapterBsc is BaseAdapter {
      * @notice Claim the pending reward
      * @param _tokenId YBNFT token id
      */
+    /// #if_succeeds {:msg "claim failed"}  userAdapterInfos[_tokenId].userShare1 == mAdapter.accTokenPerShare1 && userAdapterInfos[_tokenId].rewardDebt1 == 0;
     function claim(uint256 _tokenId) external payable override onlyInvestor returns (uint256 amountOut) {
         UserAdapterInfo storage userInfo = userAdapterInfos[_tokenId];
 
@@ -214,6 +217,7 @@ contract AutoVaultAdapterBsc is BaseAdapter {
      * @notice Remove funds
      * @param _tokenId YBNFT token id
      */
+    /// #if_succeeds {:msg "removeFunds failed"}  userAdapterInfos[_tokenId].userShare1 == mAdapter.accTokenPerShare1 && userAdapterInfos[_tokenId].amount == 0;
     function removeFunds(uint256 _tokenId) external payable override onlyInvestor returns (uint256 amountOut) {
         UserAdapterInfo storage userInfo = userAdapterInfos[_tokenId];
         if (userInfo.amount == 0) return 0;
@@ -253,6 +257,7 @@ contract AutoVaultAdapterBsc is BaseAdapter {
      * @notice Update funds
      * @param _tokenId YBNFT token id
      */
+    /// #if_succeeds {:msg "updateFunds failed"}  userAdapterInfos[_tokenId].userShare1 == mAdapter.accTokenPerShare1;
     function updateFunds(uint256 _tokenId) external payable override onlyInvestor returns (uint256 amountOut) {
         if (msg.value == 0) return 0;
 
