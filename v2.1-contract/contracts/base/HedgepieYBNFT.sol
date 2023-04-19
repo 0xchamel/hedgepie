@@ -140,6 +140,7 @@ contract YBNFT is ERC721, HedgepieAccessControlled {
      * @param _tokenId  tokenId of NFT
      * @param _performanceFee  address of adapters
      */
+    /// #if_succeeds {:msg "updatePerformanceFee failed"}  performanceFee[_tokenId] == _performanceFee
     function updatePerformanceFee(uint256 _tokenId, uint256 _performanceFee) external onlyNftOwner(_tokenId) {
         require(_performanceFee < 1e3, "Fee should be under 10%");
 
