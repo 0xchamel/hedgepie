@@ -160,7 +160,7 @@ export const adapters = {
             "0x0eD7e52944161450477ee417DE9Cd3a859b14fD0",
             "0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82",
             "0x10ED43C718714eb63d5aA57B78B54704E256024E",
-            "PancakeSwap::Farm::CAKE-WBNB",
+            "PKS::Farm::CAKE-WBNB",
             authority,
         ],
         [
@@ -169,7 +169,7 @@ export const adapters = {
             "0x58F876857a02D6762E0101bb5C46A8c1ED44Dc16",
             "0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82",
             "0x10ED43C718714eb63d5aA57B78B54704E256024E",
-            "PancakeSwap::Farm::BUSD-WBNB",
+            "PKS::Farm::BUSD-WBNB",
             authority,
         ],
         [
@@ -178,7 +178,7 @@ export const adapters = {
             "0x74E4716E431f45807DCF19f284c7aA99F18a4fbc",
             "0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82",
             "0x10ED43C718714eb63d5aA57B78B54704E256024E",
-            "PancakeSwap::Farm::ETH-WBNB",
+            "PKS::Farm::ETH-WBNB",
             authority,
         ],
         [
@@ -187,7 +187,7 @@ export const adapters = {
             "0x61EB789d75A95CAa3fF50ed7E47b96c132fEc082",
             "0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82",
             "0x10ED43C718714eb63d5aA57B78B54704E256024E",
-            "PancakeSwap::Farm::BTCB-WBNB",
+            "PKS::Farm::BTCB-WBNB",
             authority,
         ],
     ],
