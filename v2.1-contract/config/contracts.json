@@ -1,15 +1,42 @@
 {
-    "lib": "0xd2ae4C6646f5c6623a77eFda41908D6696232d8f",
-    "authority": "0xf52996E8c377F05fe13B835479dA62732b39526b",
-    "investor": "0x0861ae642BFa4f17d9Df8e1Ffc6D28fbCF569843",
-    "pathFinder": "0x2609DFDF2B056D4439A98e3b90D6E7C68F2F228f",
-    "ybnft": "0x5AD452e8f2B8c3669B9d904d63060F572dbcab4e",
-    "adapterList": "0x6a82906B362afc24Ee585422Cbf6dCbef75B38be",
+    "lib": "0xCd8AA69E83568f5F73ab3C17ce2b3DCd3cfB88BA",
+    "authority": "0x11E660267f3bdDDfEb26418A2BD149e1e1e7FC33",
+    "investor": "0xFc8c3c03a64E721ff75422804246C7e979b64679",
+    "pathFinder": "0x08ee34bD28ffb2eac2d9F796dEF28EA3Ccc217BE",
+    "ybnft": "0x47c644B4d3b115Db647fE65Af4A8572a65915F1D",
+    "adapterList": "0x5ddE68D5869EfE80428F99fBC9E72E9B60dE4aB9",
     "autofarm": {
-        "AutoFarm::Vault::WBNB-CAKE": "0xC10b2eac9233575Cc4096BaF4C9ef4F9ca051154",
-        "AutoFarm::Vault::WBNB-BUSD": "0x33Bb1aD1Ad475401Ca9A6F874B95524A16d9247B",
-        "AutoFarm::Vault::ADA-WBNB": "0x5aF3Ffd4c78F3997cb34F955cCeF8daF885230F7",
-        "AutoFarm::Vault::DOT-WBNB": "0x905Ec9F27fd48f891B54baFaa7a90d1A5bF93220",
-        "AutoFarm::Vault::BTCB-WBNB": "0xae728da666009d78049D6b978eD0797624aB28aC"
+        "AutoFarm::Vault::WBNB-CAKE": "0x0aCf9Eac907232a5cB725D1fE5990f25fCbbbA76",
+        "AutoFarm::Vault::WBNB-BUSD": "0x2E96ca375D7d103b8355f1C834bB5a7103421300",
+        "AutoFarm::Vault::ADA-WBNB": "0xC48e85477238d8261DEd64Ec03AdC43E3Ef47634",
+        "AutoFarm::Vault::DOT-WBNB": "0x6A9b25A112a8B127AB93A50C1156010C06efe130",
+        "AutoFarm::Vault::BTCB-WBNB": "0x0260A668b0877ed86e17d1d8f2cb60b310517798"
+    },
+    "biswap": {
+        "Biswap::Farm::BSW": "0x5CeA5F456335B8Db727E73ABc2776B19A286EcfD",
+        "Biswap::Farm::USDT-BSW": "0x64EBD8A4366d0ab6C4B4a346c184171AB21F0eD2",
+        "Biswap::Farm::BSW-BNB": "0x4696A0b375e36Cb486e5d97ceB7eF3305890F2B4",
+        "Biswap::Farm::FIL-USDT": "0x39659D0986A1917fe9DA93e6BF1b2B54c1329d10",
+        "Biswap::Farm::USDT-WBNB": "0x28a3250bFBDCa091271CC5a8Ded66d9212479b5A"
+    },
+    "beefy": {
+        "Beefy::Vault::Biswap USDT-BUSD": "0xbc59E987B1E4f6Ea92b8953bbBA94f8FA64D13b8",
+        "Beefy::Vault::PancakeSwap CAKE-BNB": "0xC99607aCDCA0232ae9FA6621732F939F85C18433"
+    },
+    "belt": {
+        "Belt::Vault::BUSD": "0x6e8C97e0E8087dEC75CDcd68dAe09A1F6AA077ac",
+        "Belt::Vault::USDT": "0xF2a07Da123DA3d852685a4DdAE462E5C8b5e46D5",
+        "Belt::Vault::BTC": "0x844146994Fd64b9633d18818C361Ad81440E888f"
+    },
+    "pksFarm": {
+        "PancakeSwap::Farm::CAKE-WBNB": "0x6Fac88fC14B7494b0E7a36d275fb8a08Bc0Ca2b0",
+        "PancakeSwap::Farm::BUSD-WBNB": "0xCF4D618dF34c66aB001B235659C6b410A574791F",
+        "PancakeSwap::Farm::ETH-WBNB": "0x64EAc0014b67B07555bDD19A51b27Bb23F04a25b",
+        "PancakeSwap::Farm::BTCB-WBNB": "0x9f488d8D3764AFb3d33dc4BA0e98d5598887A966"
+    },
+    "pksStake": {
+        "PKS::Stake::ARENA": "0x555CEd4A5Fc082e8D222EAEd33951cfd288Fbfe2",
+        "PKS::Stake::CHAMP": "0x11e2a5A32785b0322DF5C4231461Dc2711b863C8",
+        "PKS::Stake::SQUAD": "0x74e313fb5B58fdA085c7539A6120f9bdF456889b"
     }
 }

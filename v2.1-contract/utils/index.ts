@@ -18,18 +18,14 @@ async function verify({
 }) {
     wait(10000);
 
-    log.info(
-        `Verifying "${contractName}" on network: ${hre.network.name}, address: ${address}`
-    );
+    log.info(`Verifying "${contractName}" on network: ${hre.network.name}, address: ${address}`);
     try {
         await hre.run("verify:verify", {
             address,
             constructorArguments,
             contract: contractPath,
         });
-        log.info(
-            `Verifying "${contractName}" on network: ${hre.network.name}, address: ${address} was succeeded.`
-        );
+        log.info(`Verifying "${contractName}" on network: ${hre.network.name}, address: ${address} was succeeded.`);
     } catch (e) {
         log.error(`Verification error: ${e}`);
     }
@@ -38,45 +34,19 @@ async function verify({
 const deployUsingFactory = async (factory, params, name) => {
     let adapter;
     if (params.length === 4) {
-        adapter = await factory.deploy(
-            params[0],
-            params[1],
-            params[2],
-            params[3]
-        );
+        adapter = await factory.deploy(params[0], params[1], params[2], params[3]);
     }
 
     if (params.length === 5) {
-        adapter = await factory.deploy(
-            params[0],
-            params[1],
-            params[2],
-            params[3],
-            params[4]
-        );
+        adapter = await factory.deploy(params[0], params[1], params[2], params[3], params[4]);
     }
 
     if (params.length === 6) {
-        adapter = await factory.deploy(
-            params[0],
-            params[1],
-            params[2],
-            params[3],
-            params[4],
-            params[5]
-        );
+        adapter = await factory.deploy(params[0], params[1], params[2], params[3], params[4], params[5]);
     }
 
     if (params.length === 7) {
-        adapter = await factory.deploy(
-            params[0],
-            params[1],
-            params[2],
-            params[3],
-            params[4],
-            params[5],
-            params[6]
-        );
+        adapter = await factory.deploy(params[0], params[1], params[2], params[3], params[4], params[5], params[6]);
     }
 
     if (params.length === 8) {
@@ -130,12 +100,7 @@ const deployUsingFactory = async (factory, params, name) => {
             await verify({
                 contractName: params[params.length - 2],
                 address: adapter.address,
-                constructorArguments: [
-                    params[0],
-                    params[1],
-                    params[2],
-                    params[3],
-                ],
+                constructorArguments: [params[0], params[1], params[2], params[3]],
                 contractPath: adapterPaths[name],
             });
         }
@@ -144,13 +109,7 @@ const deployUsingFactory = async (factory, params, name) => {
             await verify({
                 contractName: params[params.length - 2],
                 address: adapter.address,
-                constructorArguments: [
-                    params[0],
-                    params[1],
-                    params[2],
-                    params[3],
-                    params[4],
-                ],
+                constructorArguments: [params[0], params[1], params[2], params[3], params[4]],
                 contractPath: adapterPaths[name],
             });
         }
@@ -159,14 +118,7 @@ const deployUsingFactory = async (factory, params, name) => {
             await verify({
                 contractName: params[params.length - 2],
                 address: adapter.address,
-                constructorArguments: [
-                    params[0],
-                    params[1],
-                    params[2],
-                    params[3],
-                    params[5],
-                    params[6],
-                ],
+                constructorArguments: [params[0], params[1], params[2], params[3], params[4], params[5]],
                 contractPath: adapterPaths[name],
             });
         }
@@ -175,15 +127,7 @@ const deployUsingFactory = async (factory, params, name) => {
             await verify({
                 contractName: params[params.length - 2],
                 address: adapter.address,
-                constructorArguments: [
-                    params[0],
-                    params[1],
-                    params[2],
-                    params[3],
-                    params[4],
-                    params[5],
-                    params[6],
-                ],
+                constructorArguments: [params[0], params[1], params[2], params[3], params[4], params[5], params[6]],
                 contractPath: adapterPaths[name],
             });
         }
@@ -197,6 +141,10 @@ const deployUsingFactory = async (factory, params, name) => {
                     params[1],
                     params[2],
                     params[3],
+                    params[4],
+                    params[5],
+                    params[6],
+                    params[7],
                 ],
                 contractPath: adapterPaths[name],
             });
