@@ -28,6 +28,7 @@ contract PathFinder is HedgepieAccessControlled {
      * @param _router swap router address
      * @param _status router status flag
      */
+    /// #if_succeeds {:msg "setRouter does not update the routers"}  routers[_router] == _status;
     function setRouter(address _router, bool _status) external onlyPathManager {
         require(_router != address(0), "Invalid router address");
         routers[_router] = _status;
@@ -55,6 +56,7 @@ contract PathFinder is HedgepieAccessControlled {
      * @param _outToken token address of outToken
      * @param _path swapping path
      */
+    /// #if_succeeds {:msg "setPath does not update the path"}  paths[_router][_inToken][_outToken].length == _path.length;
     function setPath(
         address _router,
         address _inToken,

@@ -17,7 +17,7 @@ contract YBNFT is ERC721, HedgepieAccessControlled {
 
     struct AdapterParam {
         uint256 allocation; // allocation percent for adapter
-        address addr;  // adapter address
+        address addr; // adapter address
     }
 
     struct AdapterDate {
@@ -26,7 +26,7 @@ contract YBNFT is ERC721, HedgepieAccessControlled {
     }
 
     struct TokenInfo {
-        uint256 tvl;  // total tvl in usd
+        uint256 tvl; // total tvl in usd
         uint256 participant; // total paticipants count
         uint256 traded; // total traded amount in usd
         uint256 profit; // total profit amount in usd
@@ -104,7 +104,7 @@ contract YBNFT is ERC721, HedgepieAccessControlled {
      * @param _performanceFee  performance fee
      * @param _tokenURI  token URI
      */
-    /// #if_succeeds {:msg "Mint failed"} adapterInfo[_tokenIdPointer._value].length == _adapterAllocations.length;
+    /// #if_succeeds {:msg "Mint failed"} getCurrentTokenId() == old(getCurrentTokenId()) + 1;
     function mint(AdapterParam[] memory _adapterParams, uint256 _performanceFee, string memory _tokenURI) external {
         require(_performanceFee < 1e3, "Fee should be less than 10%");
         require(_adapterParams.length != 0, "Mismatched adapters");
@@ -140,6 +140,7 @@ contract YBNFT is ERC721, HedgepieAccessControlled {
      * @param _tokenId  tokenId of NFT
      * @param _performanceFee  address of adapters
      */
+    /// #if_succeeds {:msg "updatePerformanceFee failed"}  performanceFee[_tokenId] == _performanceFee;
     function updatePerformanceFee(uint256 _tokenId, uint256 _performanceFee) external onlyNftOwner(_tokenId) {
         require(_performanceFee < 1e3, "Fee should be under 10%");
 
@@ -179,6 +180,7 @@ contract YBNFT is ERC721, HedgepieAccessControlled {
      * @notice Update TVL, Profit, Participants info
      * @param param  update info param
      */
+    /// #if_succeeds {:msg "updateInfo does not update the info"}  (old(tokenInfos[param.tokenId]).tvl + param.value == tokenInfos[param.tokenId].tvl || old(tokenInfos[param.tokenId]).tvl - param.value == tokenInfos[param.tokenId].tvl) && (old(tokenInfos[param.tokenId]).traded + param.value == tokenInfos[param.tokenId].traded);
     function updateInfo(IYBNFT.UpdateInfo memory param) external onlyInvestor {
         TokenInfo storage tokenInfo = tokenInfos[param.tokenId];
 
@@ -208,6 +210,7 @@ contract YBNFT is ERC721, HedgepieAccessControlled {
      * @param _tokenId  YBNFT tokenID
      * @param _value  amount of profit
      */
+    /// #if_succeeds {:msg "updateProfitInfo does not update the tokenInfos"}  old(tokenInfos[_tokenId]).profit + _value == tokenInfos[_tokenId].profit;
     function updateProfitInfo(uint256 _tokenId, uint256 _value) external onlyInvestor {
         tokenInfos[_tokenId].profit += _value;
         _emitEvent(_tokenId);
@@ -219,6 +222,7 @@ contract YBNFT is ERC721, HedgepieAccessControlled {
      * @param _tokenId  token id
      * @param _tokenURI  token uri
      */
+    /// #if_succeeds {:msg "setTokenURI does not update the tokenURI"}  bytes(_tokenURIs[_tokenId]).length > 0;
     function _setTokenURI(uint256 _tokenId, string memory _tokenURI) internal virtual {
         require(_exists(_tokenId), "Nonexistent token");
         _tokenURIs[_tokenId] = _tokenURI;
@@ -229,6 +233,7 @@ contract YBNFT is ERC721, HedgepieAccessControlled {
      * @param _tokenId  token id
      * @param _adapterParams  adapter parameters
      */
+    /// #if_succeeds {:msg "_setAdapterInfo does not update the adapterParams"}  old(adapterParams[_tokenId].length) + _adapterParams.length == adapterParams[_tokenId].length;
     function _setAdapterInfo(uint256 _tokenId, AdapterParam[] memory _adapterParams) internal {
         bool isExist = adapterParams[_tokenId].length != 0;
         if (!isExist) {
@@ -266,6 +271,7 @@ contract YBNFT is ERC721, HedgepieAccessControlled {
      * @notice Set Modified date for adapter
      * @param _tokenId  token id
      */
+    /// #if_succeeds {:msg "_setModifiedDate does not update the adapterDate"}  adapterDate[_tokenId].modified == uint128(block.timestamp);
     function _setModifiedDate(uint256 _tokenId) internal {
         adapterDate[_tokenId].modified = uint128(block.timestamp);
     }

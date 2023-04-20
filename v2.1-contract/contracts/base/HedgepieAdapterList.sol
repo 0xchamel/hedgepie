@@ -9,7 +9,7 @@ import "./HedgepieAccessControlled.sol";
 contract HedgepieAdapterList is HedgepieAccessControlled {
     struct AdapterInfo {
         address addr; // adapter address
-        string name;  // adapter name
+        string name; // adapter name
         address stakingToken; // staking token of adapter
         bool status; // adapter contract status
     }
@@ -78,7 +78,7 @@ contract HedgepieAdapterList is HedgepieAccessControlled {
      * @notice Add adapters
      * @param _adapters  array of adapter address
      */
-    /// #if_succeeds {:msg "Adapter not set correctly"} adapterList.length == old(adapterInfo.length) + 1;
+    /// #if_succeeds {:msg "addAdapters failed"} _adapters.length > 0 ? (adapterList.length == old(adapterList.length) + _adapters.length && adapterActive[_adapters[_adapters.length - 1]] == true) : true;
     function addAdapters(address[] memory _adapters) external onlyAdapterManager {
         for (uint256 i = 0; i < _adapters.length; i++) {
             require(!adapterActive[_adapters[i]], "Already added");
@@ -103,7 +103,7 @@ contract HedgepieAdapterList is HedgepieAccessControlled {
      * @param _adapterId  array of adapter id
      * @param _status  array of adapter status
      */
-    /// #if_succeeds {:msg "Status not updated"} adapterList[_adapterId].status == _status;
+    /// #if_succeeds {:msg "setAdapters failed"} _status.length > 0 ? (adapterList[_adapterId[_status.length - 1]].status == _status[_status.length - 1]) : true;
     function setAdapters(uint256[] memory _adapterId, bool[] memory _status) external onlyAdapterManager {
         require(_adapterId.length == _status.length, "Invalid array length");
 
