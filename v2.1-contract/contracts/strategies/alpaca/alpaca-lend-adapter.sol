@@ -47,13 +47,21 @@ contract AlpacaLendAdapterBsc is BaseAdapter {
         UserAdapterInfo storage userInfo = userAdapterInfos[_tokenId];
 
         // 1. swap to staking token
-        amountOut = HedgepieLibraryBsc.swapOnRouter(msg.value, address(this), stakingToken, swapRouter);
+        bool isBNB = stakingToken == HedgepieLibraryBsc.WBNB;
+        amountOut = isBNB
+            ? msg.value
+            : HedgepieLibraryBsc.swapOnRouter(msg.value, address(this), stakingToken, swapRouter);
 
         // 2. deposit to vault
         uint256 repayAmt = IERC20(strategy).balanceOf(address(this));
-        IERC20(stakingToken).safeApprove(strategy, 0);
-        IERC20(stakingToken).safeApprove(strategy, amountOut);
-        IStrategy(strategy).deposit(amountOut);
+        if (isBNB) {
+            IStrategy(strategy).deposit{value: amountOut}(amountOut);
+        } else {
+            IERC20(stakingToken).safeApprove(strategy, 0);
+            IERC20(stakingToken).safeApprove(strategy, amountOut);
+            IStrategy(strategy).deposit(amountOut);
+        }
+
         repayAmt = IERC20(strategy).balanceOf(address(this)) - repayAmt;
         require(repayAmt != 0, "Failed to deposit");
 
@@ -79,12 +87,13 @@ contract AlpacaLendAdapterBsc is BaseAdapter {
         UserAdapterInfo storage userInfo = userAdapterInfos[_tokenId];
 
         // 1. withdraw from vault
-        uint256 tokenAmt = IERC20(stakingToken).balanceOf(address(this));
+        bool isBNB = stakingToken == HedgepieLibraryBsc.WBNB;
+        uint256 tokenAmt = isBNB ? address(this).balance : IERC20(stakingToken).balanceOf(address(this));
         IStrategy(strategy).withdraw(_amount);
-        tokenAmt = IERC20(stakingToken).balanceOf(address(this)) - tokenAmt;
+        tokenAmt = (isBNB ? address(this).balance : IERC20(stakingToken).balanceOf(address(this))) - tokenAmt;
 
         // 2. swap withdrawn lp to bnb
-        amountOut = HedgepieLibraryBsc.swapForBnb(tokenAmt, address(this), stakingToken, swapRouter);
+        amountOut = isBNB ? tokenAmt : HedgepieLibraryBsc.swapForBnb(tokenAmt, address(this), stakingToken, swapRouter);
 
         // 3. update userInfo
         userInfo.amount -= _amount;
@@ -126,21 +135,16 @@ contract AlpacaLendAdapterBsc is BaseAdapter {
         }
 
         // 3. withdraw reward from vault
-        uint256 lpOut = IERC20(stakingToken).balanceOf(address(this));
+        bool isBNB = stakingToken == HedgepieLibraryBsc.WBNB;
+        amountOut = isBNB ? address(this).balance : IERC20(stakingToken).balanceOf(address(this));
         IStrategy(strategy).withdraw(wantShare);
-        lpOut = IERC20(stakingToken).balanceOf(address(this)) - lpOut;
-        require(lpOut != 0, "Failed to claim");
+        amountOut = (isBNB ? address(this).balance : IERC20(stakingToken).balanceOf(address(this))) - amountOut;
+        require(amountOut != 0, "Failed to claim");
 
         // 4. swap reward to bnb
-        if (router == address(0)) {
-            amountOut =
-                HedgepieLibraryBsc.swapForBnb(lpOut, address(this), stakingToken, swapRouter) +
-                userInfo.rewardDebt1;
-        } else {
-            amountOut =
-                HedgepieLibraryBsc.withdrawLP(IYBNFT.AdapterParam(0, address(this)), stakingToken, lpOut) +
-                userInfo.rewardDebt1;
-        }
+        if (!isBNB) amountOut = HedgepieLibraryBsc.swapForBnb(amountOut, address(this), stakingToken, swapRouter);
+
+        amountOut += userInfo.rewardDebt1;
 
         // 5. update user info
         userInfo.amount -= wantShare;
@@ -172,9 +176,8 @@ contract AlpacaLendAdapterBsc is BaseAdapter {
             HedgepieLibraryBsc.WBNB
         );
 
-        if (stakingToken != HedgepieLibraryBsc.WBNB)
-            reward = IPancakeRouter(swapRouter).getAmountsOut(wantAmt, pathStake)[pathStake.length - 1];
-
+        bool isBNB = stakingToken == HedgepieLibraryBsc.WBNB;
+        reward = isBNB ? wantAmt : IPancakeRouter(swapRouter).getAmountsOut(wantAmt, pathStake)[pathStake.length - 1];
         reward += userInfo.rewardDebt1;
         withdrawable = reward;
     }
@@ -189,9 +192,10 @@ contract AlpacaLendAdapterBsc is BaseAdapter {
         if (userInfo.amount == 0) return 0;
 
         // 1. withdraw all from Vault
-        amountOut = IERC20(stakingToken).balanceOf(address(this));
+        bool isBNB = stakingToken == HedgepieLibraryBsc.WBNB;
+        amountOut = isBNB ? address(this).balance : IERC20(stakingToken).balanceOf(address(this));
         IStrategy(strategy).withdraw(userInfo.amount);
-        amountOut = IERC20(stakingToken).balanceOf(address(this)) - amountOut;
+        amountOut = (isBNB ? address(this).balance : IERC20(stakingToken).balanceOf(address(this))) - amountOut;
 
         // 2. calc reward
         uint256 rewardPercent = 0;
@@ -200,7 +204,7 @@ contract AlpacaLendAdapterBsc is BaseAdapter {
         }
 
         // 3. swap withdrawn lp to bnb
-        amountOut = HedgepieLibraryBsc.swapForBnb(amountOut, address(this), stakingToken, swapRouter);
+        if (!isBNB) amountOut = HedgepieLibraryBsc.swapForBnb(amountOut, address(this), stakingToken, swapRouter);
 
         // 4. remove userInfo and stake pendingReward to rewardDebt1
         uint256 reward = (amountOut * rewardPercent) / 1e12;
@@ -224,13 +228,21 @@ contract AlpacaLendAdapterBsc is BaseAdapter {
         UserAdapterInfo storage userInfo = userAdapterInfos[_tokenId];
 
         // 1. get LP
-        amountOut = HedgepieLibraryBsc.swapOnRouter(msg.value, address(this), stakingToken, swapRouter);
+        bool isBNB = stakingToken == HedgepieLibraryBsc.WBNB;
+        amountOut = isBNB
+            ? msg.value
+            : HedgepieLibraryBsc.swapOnRouter(msg.value, address(this), stakingToken, swapRouter);
 
         // 2. deposit to vault
         uint256 repayAmt = IERC20(strategy).balanceOf(address(this));
-        IERC20(stakingToken).safeApprove(strategy, 0);
-        IERC20(stakingToken).safeApprove(strategy, amountOut);
-        IStrategy(strategy).deposit(amountOut);
+        if (isBNB) {
+            IStrategy(strategy).deposit{value: amountOut}(amountOut);
+        } else {
+            IERC20(stakingToken).safeApprove(strategy, 0);
+            IERC20(stakingToken).safeApprove(strategy, amountOut);
+            IStrategy(strategy).deposit(amountOut);
+        }
+
         repayAmt = IERC20(strategy).balanceOf(address(this)) - repayAmt;
         require(repayAmt != 0, "Failed to update funds");
 

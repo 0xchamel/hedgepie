@@ -217,6 +217,43 @@ export const adapters = {
             authority,
         ],
     ],
+    alpacaLend: [
+        [
+            '0x7C9e73d4C71dae564d41F78d56439bB4ba87592f',
+            '0xe9e7cea3dedca5984780bafc599bd69add087d56',
+            '0x10ED43C718714eb63d5aA57B78B54704E256024E',
+            "Alpaca::Lend::BUSD",
+            authority
+        ],
+        [
+            '0xbfF4a34A4644a113E8200D7F1D79b3555f723AfE',
+            '0x2170ed0880ac9a755fd29b2688956bd959f933f8',
+            '0x10ED43C718714eb63d5aA57B78B54704E256024E',
+            "Alpaca::Lend::ETH",
+            authority
+        ],
+        [
+            '0xf1bE8ecC990cBcb90e166b71E368299f0116d421',
+            '0x8F0528cE5eF7B51152A59745bEfDD91D97091d2F',
+            '0x10ED43C718714eb63d5aA57B78B54704E256024E',
+            "Alpaca::Lend::ALPACA",
+            authority
+        ],
+        [
+            '0x158Da805682BdC8ee32d52833aD41E74bb951E59',
+            '0x55d398326f99059ff775485246999027b3197955',
+            '0x10ED43C718714eb63d5aA57B78B54704E256024E',
+            "Alpaca::Lend::USDT",
+            authority
+        ],
+        [
+            '0x800933D685E7Dc753758cEb77C8bd34aBF1E26d7',
+            '0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d',
+            '0x10ED43C718714eb63d5aA57B78B54704E256024E',
+            "Alpaca::Lend::USDC",
+            authority
+        ],
+    ]
 };
 
 export const adapterNames = {
@@ -226,6 +263,7 @@ export const adapterNames = {
     belt: "BeltVaultAdapterBsc",
     pksFarm: "PancakeSwapFarmLPAdapterBsc",
     pksStake: "PancakeStakeAdapterBsc",
+    alpacaLend: "AlpacaLendAdapterBsc"
 };
 
 export const adapterPaths = {
@@ -235,4 +273,5 @@ export const adapterPaths = {
     belt: "contracts/strategies/belt/belt-vault-adapter.sol:BeltVaultAdapterBsc",
     pksFarm: "contracts/strategies/pancakeswap/pancake-farm-adapter.sol:PancakeSwapFarmLPAdapterBsc",
     pksStake: "contracts/strategies/pancakeswap/pancake-stake-adapter.sol:PancakeStakeAdapterBsc",
+    alpacaLend: "contracts/strategies/alpaca/alpaca-lend-adapter.sol:AlpacaLendAdapterBsc",
 };
