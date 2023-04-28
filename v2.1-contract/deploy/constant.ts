@@ -283,6 +283,43 @@ export const adapters = {
             authority,
         ],
     ],
+    apeswapLend: [
+        [
+            "0x34878F6a484005AA90E7188a546Ea9E52b538F6f",
+            "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c",
+            "0x10ED43C718714eb63d5aA57B78B54704E256024E",
+            "Apeswap::Lend::BNB",
+            authority,
+        ],
+        [
+            "0x3353f5bcfD7E4b146F2eD8F1e8D875733Cd754a7",
+            "0x0e09fabb73bd3ade0a17ecc321fd13a19e81ce82",
+            "0x10ED43C718714eb63d5aA57B78B54704E256024E",
+            "Apeswap::Lend::CAKE",
+            authority,
+        ],
+        [
+            "0xdBFd516D42743CA3f1C555311F7846095D85F6Fd",
+            "0x55d398326f99059fF775485246999027B3197955",
+            "0x10ED43C718714eb63d5aA57B78B54704E256024E",
+            "Apeswap::Lend::USDT",
+            authority,
+        ],
+        [
+            "0x0096B6B49D13b347033438c4a699df3Afd9d2f96",
+            "0xe9e7cea3dedca5984780bafc599bd69add087d56",
+            "0x10ED43C718714eb63d5aA57B78B54704E256024E",
+            "Apeswap::Lend::BUSD",
+            authority,
+        ],
+        [
+            "0xC2E840BdD02B4a1d970C87A912D8576a7e61D314",
+            "0x603c7f932ED1fc6575303D8Fb018fDCBb0f39a95",
+            "0x10ED43C718714eb63d5aA57B78B54704E256024E",
+            "Apeswap::Lend::BANANA",
+            authority,
+        ],
+    ],
 };
 
 export const adapterNames = {
@@ -293,6 +330,7 @@ export const adapterNames = {
     pksFarm: "PancakeSwapFarmLPAdapterBsc",
     pksStake: "PancakeStakeAdapterBsc",
     alpacaLend: "AlpacaLendAdapterBsc",
+    apeswapLend: "ApeswapLendAdapterBsc",
     venusLend: "VenusLendAdapterBsc",
 };
 
@@ -304,5 +342,6 @@ export const adapterPaths = {
     pksFarm: "contracts/strategies/pancakeswap/pancake-farm-adapter.sol:PancakeSwapFarmLPAdapterBsc",
     pksStake: "contracts/strategies/pancakeswap/pancake-stake-adapter.sol:PancakeStakeAdapterBsc",
     alpacaLend: "contracts/strategies/alpaca/alpaca-lend-adapter.sol:AlpacaLendAdapterBsc",
+    apeswapLend: "contracts/strategies/apeswap/apeswap-lend-adapter.sol:ApeswapLendAdapterBsc",
     venusLend: "contracts/strategies/venus/venus-lend-adapter.sol:VenusLendAdapterBsc",
 };
