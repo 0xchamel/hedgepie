@@ -219,39 +219,68 @@ export const adapters = {
     ],
     alpacaLend: [
         [
-            '0x7C9e73d4C71dae564d41F78d56439bB4ba87592f',
-            '0xe9e7cea3dedca5984780bafc599bd69add087d56',
-            '0x10ED43C718714eb63d5aA57B78B54704E256024E',
+            "0x7C9e73d4C71dae564d41F78d56439bB4ba87592f",
+            "0xe9e7cea3dedca5984780bafc599bd69add087d56",
+            "0x10ED43C718714eb63d5aA57B78B54704E256024E",
             "Alpaca::Lend::BUSD",
-            authority
+            authority,
         ],
         [
-            '0xbfF4a34A4644a113E8200D7F1D79b3555f723AfE',
-            '0x2170ed0880ac9a755fd29b2688956bd959f933f8',
-            '0x10ED43C718714eb63d5aA57B78B54704E256024E',
+            "0xbfF4a34A4644a113E8200D7F1D79b3555f723AfE",
+            "0x2170ed0880ac9a755fd29b2688956bd959f933f8",
+            "0x10ED43C718714eb63d5aA57B78B54704E256024E",
             "Alpaca::Lend::ETH",
-            authority
+            authority,
         ],
         [
-            '0xf1bE8ecC990cBcb90e166b71E368299f0116d421',
-            '0x8F0528cE5eF7B51152A59745bEfDD91D97091d2F',
-            '0x10ED43C718714eb63d5aA57B78B54704E256024E',
+            "0xf1bE8ecC990cBcb90e166b71E368299f0116d421",
+            "0x8F0528cE5eF7B51152A59745bEfDD91D97091d2F",
+            "0x10ED43C718714eb63d5aA57B78B54704E256024E",
             "Alpaca::Lend::ALPACA",
-            authority
+            authority,
         ],
         [
-            '0x158Da805682BdC8ee32d52833aD41E74bb951E59',
-            '0x55d398326f99059ff775485246999027b3197955',
-            '0x10ED43C718714eb63d5aA57B78B54704E256024E',
+            "0x158Da805682BdC8ee32d52833aD41E74bb951E59",
+            "0x55d398326f99059ff775485246999027b3197955",
+            "0x10ED43C718714eb63d5aA57B78B54704E256024E",
             "Alpaca::Lend::USDT",
-            authority
+            authority,
         ],
         [
-            '0x800933D685E7Dc753758cEb77C8bd34aBF1E26d7',
-            '0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d',
-            '0x10ED43C718714eb63d5aA57B78B54704E256024E',
+            "0x800933D685E7Dc753758cEb77C8bd34aBF1E26d7",
+            "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d",
+            "0x10ED43C718714eb63d5aA57B78B54704E256024E",
             "Alpaca::Lend::USDC",
-            authority
+            authority,
+        ],
+    ],
+    venusLend: [
+        [
+            "0x95c78222B3D6e262426483D42CfA53685A67Ab9D",
+            "0x2a914D534715F1A84205fb05d1dc8281F8da6540",
+            "0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56",
+            "0x95c78222B3D6e262426483D42CfA53685A67Ab9D",
+            "0x10ED43C718714eb63d5aA57B78B54704E256024E",
+            "Venus::Lend::BUSD",
+            authority,
+        ],
+        [
+            "0x86aC3974e2BD0d60825230fa6F355fF11409df5c",
+            "0x2a914D534715F1A84205fb05d1dc8281F8da6540",
+            "0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82",
+            "0x86aC3974e2BD0d60825230fa6F355fF11409df5c",
+            "0x10ED43C718714eb63d5aA57B78B54704E256024E",
+            "Venus::Lend::CAKE",
+            authority,
+        ],
+        [
+            "0x61eDcFe8Dd6bA3c891CB9bEc2dc7657B3B422E93",
+            "0x2a914D534715F1A84205fb05d1dc8281F8da6540",
+            "0x85EAC5Ac2F758618dFa09bDbe0cf174e7d574D5B",
+            "0x61eDcFe8Dd6bA3c891CB9bEc2dc7657B3B422E93",
+            "0x10ED43C718714eb63d5aA57B78B54704E256024E",
+            "Venus::Lend::TRX",
+            authority,
         ],
     ],
     apeswapLend: [
@@ -260,37 +289,37 @@ export const adapters = {
             "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c",
             "0x10ED43C718714eb63d5aA57B78B54704E256024E",
             "Apeswap::Lend::BNB",
-            authority
+            authority,
         ],
         [
             "0x3353f5bcfD7E4b146F2eD8F1e8D875733Cd754a7",
             "0x0e09fabb73bd3ade0a17ecc321fd13a19e81ce82",
             "0x10ED43C718714eb63d5aA57B78B54704E256024E",
             "Apeswap::Lend::CAKE",
-            authority
+            authority,
         ],
         [
             "0xdBFd516D42743CA3f1C555311F7846095D85F6Fd",
             "0x55d398326f99059fF775485246999027B3197955",
             "0x10ED43C718714eb63d5aA57B78B54704E256024E",
             "Apeswap::Lend::USDT",
-            authority
+            authority,
         ],
         [
             "0x0096B6B49D13b347033438c4a699df3Afd9d2f96",
             "0xe9e7cea3dedca5984780bafc599bd69add087d56",
             "0x10ED43C718714eb63d5aA57B78B54704E256024E",
             "Apeswap::Lend::BUSD",
-            authority
+            authority,
         ],
         [
             "0xC2E840BdD02B4a1d970C87A912D8576a7e61D314",
             "0x603c7f932ED1fc6575303D8Fb018fDCBb0f39a95",
             "0x10ED43C718714eb63d5aA57B78B54704E256024E",
             "Apeswap::Lend::BANANA",
-            authority
-        ]
-    ]
+            authority,
+        ],
+    ],
 };
 
 export const adapterNames = {
@@ -302,6 +331,7 @@ export const adapterNames = {
     pksStake: "PancakeStakeAdapterBsc",
     alpacaLend: "AlpacaLendAdapterBsc",
     apeswapLend: "ApeswapLendAdapterBsc",
+    venusLend: "VenusLendAdapterBsc",
 };
 
 export const adapterPaths = {
@@ -313,4 +343,5 @@ export const adapterPaths = {
     pksStake: "contracts/strategies/pancakeswap/pancake-stake-adapter.sol:PancakeStakeAdapterBsc",
     alpacaLend: "contracts/strategies/alpaca/alpaca-lend-adapter.sol:AlpacaLendAdapterBsc",
     apeswapLend: "contracts/strategies/apeswap/apeswap-lend-adapter.sol:ApeswapLendAdapterBsc",
+    venusLend: "contracts/strategies/venus/venus-lend-adapter.sol:VenusLendAdapterBsc",
 };
