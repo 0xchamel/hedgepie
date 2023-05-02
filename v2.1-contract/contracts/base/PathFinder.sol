@@ -81,9 +81,10 @@ contract PathFinder is HedgepieAccessControlled {
             else cPath.push(_path[i]);
         }
 
+        uint256 cPathLength = cPath.length;
         // remove deprecated path token info after new path is updated
-        if (cPath.length > _path.length) {
-            for (i = 0; i < cPath.length - _path.length; i++) cPath.pop();
+        if (cPathLength > _path.length) {
+            for (i = 0; i < cPathLength - _path.length; i++) cPath.pop();
         }
     }
 }
