@@ -38,5 +38,17 @@
         "PKS::Stake::ARENA": "0x555CEd4A5Fc082e8D222EAEd33951cfd288Fbfe2",
         "PKS::Stake::CHAMP": "0x11e2a5A32785b0322DF5C4231461Dc2711b863C8",
         "PKS::Stake::SQUAD": "0x74e313fb5B58fdA085c7539A6120f9bdF456889b"
+    },
+    "alpacaLend": {
+        "Alpaca::Lend::BUSD": "0x1DfE5B5BeaF1fBbe46b88326A80aDa94886d5ed9",
+        "Alpaca::Lend::ETH": "0xC4fb43A6F3A5a8DDaC813A29b1a17dc57A30c23F",
+        "Alpaca::Lend::ALPACA": "0x7544B67c46bf49Aa38ab43Aac5c60533Ccd64e33",
+        "Alpaca::Lend::USDT": "0xc4Ff05f52C08c2568Bb6D4e71191629d10a8ca1e",
+        "Alpaca::Lend::USDC": "0xE944E21965b816dD0B578Aec66eFaBEDe0e74689"
+    },
+    "venusLend": {
+        "Venus::Lend::BUSD": "0x045Daf5C49924B6340B1fA487F928b6cF4b8F829",
+        "Venus::Lend::CAKE": "0xdEeB9FC3b309447f47c2149397c11D2AAA2e8d57",
+        "Venus::Lend::TRX": "0xDf1eb3905055628e3fe3A1Cde604dd7b7DB3F213"
     }
 }
