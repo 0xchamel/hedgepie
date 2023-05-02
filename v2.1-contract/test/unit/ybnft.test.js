@@ -1,11 +1,7 @@
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
 const { forkBNBNetwork, setPath } = require("../shared/utilities");
-const {
-    mintNFT,
-    setupHedgepie,
-    setupBscAdapterWithLib,
-} = require("../shared/setup");
+const { mintNFT, setupHedgepie, setupBscAdapterWithLib } = require("../shared/setup");
 
 const BigNumber = ethers.BigNumber;
 
@@ -27,14 +23,7 @@ describe("YBNFT Unit Test", function () {
         ] = await ethers.getSigners();
 
         // Get base contracts
-        [
-            this.investor,
-            this.authority,
-            this.ybNft,
-            this.adapterList,
-            this.pathFinder,
-            this.lib,
-        ] = await setupHedgepie(
+        [this.investor, this.authority, this.ybNft, this.adapterList, this.pathFinder, this.lib] = await setupHedgepie(
             this.governor,
             this.pathManager,
             this.adapterManager,
@@ -55,11 +44,8 @@ describe("YBNFT Unit Test", function () {
         this.accRewardShare = BigNumber.from(0);
 
         // Deploy BeefyVaultAdapterBsc contract
-        const BeefyVaultAdapter = await setupBscAdapterWithLib(
-            "BeefyVaultAdapterBsc",
-            this.lib
-        );
-        this.adapter = [0, 0];
+        const BeefyVaultAdapter = await setupBscAdapterWithLib("BeefyVaultAdapterBsc", this.lib);
+        this.adapter = [0, 0, 0];
         this.adapter[0] = await BeefyVaultAdapter.deploy(
             strategy,
             stakingToken,
@@ -71,10 +57,7 @@ describe("YBNFT Unit Test", function () {
         await this.adapter[0].deployed();
 
         // Deploy PancakeStakeAdapterBsc contract
-        const PancakeStakeAdapterBsc = await setupBscAdapterWithLib(
-            "PancakeStakeAdapterBsc",
-            this.lib
-        );
+        const PancakeStakeAdapterBsc = await setupBscAdapterWithLib("PancakeStakeAdapterBsc", this.lib);
 
         this.bnbPrice = BigNumber.from(await this.lib.getBNBPrice());
         this.strategy = "0x08C9d626a2F0CC1ed9BD07eBEdeF8929F45B83d3";
@@ -89,29 +72,25 @@ describe("YBNFT Unit Test", function () {
             "PK::STAKE::SQUAD-ADAPTER",
             this.authority.address
         );
-
         await this.adapter[1].deployed();
 
-        // register path to pathFinder contract
-        await setPath(this.pathFinder, this.pathManager, this.swapRouter, [
-            wbnb,
-            cake,
-        ]);
-        await setPath(this.pathFinder, this.pathManager, this.swapRouter, [
-            wbnb,
-            cake,
+        this.adapter[2] = await PancakeStakeAdapterBsc.deploy(
+            this.strategy,
+            this.stakingToken,
             this.rewardToken,
-        ]);
+            this.swapRouter,
+            "PK::STAKE::SQUAD-ADAPTER",
+            this.authority.address
+        );
+        await this.adapter[2].deployed();
+
+        // register path to pathFinder contract
+        await setPath(this.pathFinder, this.pathManager, this.swapRouter, [wbnb, cake]);
+        await setPath(this.pathFinder, this.pathManager, this.swapRouter, [wbnb, cake, this.rewardToken]);
         await setPath(this.pathFinder, this.pathManager, router, [wbnb, USDT]);
         await setPath(this.pathFinder, this.pathManager, router, [wbnb, BUSD]);
-        await setPath(this.pathFinder, this.pathManager, swapRouter, [
-            wbnb,
-            USDT,
-        ]);
-        await setPath(this.pathFinder, this.pathManager, swapRouter, [
-            wbnb,
-            BUSD,
-        ]);
+        await setPath(this.pathFinder, this.pathManager, swapRouter, [wbnb, USDT]);
+        await setPath(this.pathFinder, this.pathManager, swapRouter, [wbnb, BUSD]);
 
         // add adapters to adapterList
         await this.adapterList
@@ -119,11 +98,7 @@ describe("YBNFT Unit Test", function () {
             .addAdapters([this.adapter[0].address, this.adapter[1].address]);
 
         // mint ybnft
-        await mintNFT(
-            this.ybNft,
-            [this.adapter[0].address, this.adapter[1].address],
-            this.performanceFee
-        );
+        await mintNFT(this.ybNft, [this.adapter[0].address, this.adapter[1].address], this.performanceFee);
 
         console.log("Lib: ", this.lib.address);
         console.log("YBNFT: ", this.ybNft.address);
@@ -141,12 +116,8 @@ describe("YBNFT Unit Test", function () {
         });
 
         it("(2) check performance fee", async function () {
-            expect(await this.ybNft.performanceFee(1)).to.eq(
-                this.performanceFee
-            ) &&
-                expect(await this.ybNft.performanceFee(2)).to.eq(
-                    this.performanceFee
-                );
+            expect(await this.ybNft.performanceFee(1)).to.eq(this.performanceFee) &&
+                expect(await this.ybNft.performanceFee(2)).to.eq(this.performanceFee);
         });
 
         it("(3) check adaper param information", async function () {
@@ -195,9 +166,9 @@ describe("YBNFT Unit Test", function () {
         });
 
         it("(2) test adapterParam length validation", async function () {
-            await expect(
-                this.ybNft.mint([], this.performanceFee, "test tokenURI1")
-            ).to.be.revertedWith("Mismatched adapters");
+            await expect(this.ybNft.mint([], this.performanceFee, "test tokenURI1")).to.be.revertedWith(
+                "Mismatched adapters"
+            );
         });
 
         it("(3) test allocation validation", async function () {
@@ -216,15 +187,13 @@ describe("YBNFT Unit Test", function () {
 
     describe("Check update performance fee", function () {
         it("(1) revert when performance fee is bigger than 10%", async function () {
-            await expect(
-                this.ybNft.updatePerformanceFee(1, 10001)
-            ).to.be.revertedWith("Fee should be under 10%");
+            await expect(this.ybNft.updatePerformanceFee(1, 10001)).to.be.revertedWith("Fee should be under 10%");
         });
 
         it("(2) revert when performance fee isn't being updated from owner", async function () {
-            await expect(
-                this.ybNft.connect(this.bob).updatePerformanceFee(1, 900)
-            ).to.be.revertedWith("Invalid NFT Owner");
+            await expect(this.ybNft.connect(this.bob).updatePerformanceFee(1, 900)).to.be.revertedWith(
+                "Invalid NFT Owner"
+            );
         });
 
         it("(3) test updating performance fee", async function () {
@@ -236,9 +205,7 @@ describe("YBNFT Unit Test", function () {
 
     describe("Check update token URI", function () {
         it("(1) revert when performance fee isn't being updated from owner", async function () {
-            await expect(
-                this.ybNft.connect(this.bob).updateTokenURI(1, "URI")
-            ).to.be.revertedWith("Invalid NFT Owner");
+            await expect(this.ybNft.connect(this.bob).updateTokenURI(1, "URI")).to.be.revertedWith("Invalid NFT Owner");
         });
 
         it("(2) test updating token URI", async function () {
@@ -259,11 +226,9 @@ describe("YBNFT Unit Test", function () {
         });
 
         it("(2) revert when adapter length is mismatch", async function () {
-            await expect(
-                this.ybNft.updateAllocations(1, [
-                    [9000, this.adapter[1].address],
-                ])
-            ).to.be.revertedWith("Invalid allocation length");
+            await expect(this.ybNft.updateAllocations(1, [[9000, this.adapter[1].address]])).to.be.revertedWith(
+                "Invalid allocation length"
+            );
         });
 
         it("(3) revert when allocaion is not fully set", async function () {
@@ -275,33 +240,45 @@ describe("YBNFT Unit Test", function () {
             ).to.be.revertedWith("Incorrect adapter allocation");
         });
 
-        it("(4) test updating allocation", async function () {
+        it("(4) revert when adding adapter not listed", async function () {
+            await expect(
+                this.ybNft.updateAllocations(1, [
+                    [1000, this.adapter[0].address],
+                    [2000, this.adapter[1].address],
+                    [7000, this.adapter[2].address],
+                ])
+            ).to.be.revertedWith("Adapter address mismatch");
+        });
+
+        it("(5) test updating allocation", async function () {
+            // add adapters to adapterList
+            await this.adapterList.connect(this.adapterManager).addAdapters([this.adapter[2].address]);
+
             await this.ybNft.updateAllocations(1, [
                 [1000, this.adapter[0].address],
-                [9000, this.adapter[1].address],
+                [2000, this.adapter[1].address],
+                [7000, this.adapter[2].address],
             ]);
 
             const param10 = await this.ybNft.adapterParams(1, 0);
             const param11 = await this.ybNft.adapterParams(1, 1);
+            const param21 = await this.ybNft.adapterParams(1, 2);
 
             expect(param10.allocation).to.eq(1000) &&
-                expect(param11.allocation).to.eq(9000);
+                expect(param11.allocation).to.eq(2000) &&
+                expect(param21.allocation).to.eq(7000);
         });
     });
 
     describe("Check onlyInvestor function validations", function () {
         it("(1) revert updateProfitInfo call not from investor", async function () {
-            await expect(
-                this.ybNft.connect(this.bob).updateProfitInfo(1, 1000)
-            ).to.be.revertedWith("UNAUTHORIZED");
+            await expect(this.ybNft.connect(this.bob).updateProfitInfo(1, 1000)).to.be.revertedWith("UNAUTHORIZED");
         });
 
         it("(2) revert updateInfo call not from investor", async function () {
-            await expect(
-                this.ybNft
-                    .connect(this.bob)
-                    .updateInfo([1, 1, this.bob.address, 0])
-            ).to.be.revertedWith("UNAUTHORIZED");
+            await expect(this.ybNft.connect(this.bob).updateInfo([1, 1, this.bob.address, 0])).to.be.revertedWith(
+                "UNAUTHORIZED"
+            );
         });
     });
 });
