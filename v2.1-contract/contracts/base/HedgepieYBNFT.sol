@@ -113,14 +113,9 @@ contract YBNFT is ERC721, HedgepieAccessControlled {
         _checkPercent(_adapterParams);
 
         // check if adapters are listed and active
-        for (uint256 i; i < _adapterParams.length; i++) {
-            (address adapterAddr, , , bool status) = IHedgepieAdapterList(authority.hAdapterList()).getAdapterInfo(
-                _adapterParams[i].addr
-            );
-            require(_adapterParams[i].addr == adapterAddr, "Adapter address mismatch");
-            require(status, "Adapter is inactive");
-        }
+        _validate(_adapterParams);
 
+        // increase nft token id
         _tokenIdPointer.increment();
 
         // update performance fee
@@ -154,7 +149,7 @@ contract YBNFT is ERC721, HedgepieAccessControlled {
      * @param _adapterParams  parameters of adapters
      */
     function updateAllocations(uint256 _tokenId, AdapterParam[] memory _adapterParams) external onlyNftOwner(_tokenId) {
-        require(_adapterParams.length == adapterParams[_tokenId].length, "Invalid allocation length");
+        require(_adapterParams.length >= adapterParams[_tokenId].length, "Invalid allocation length");
         require(authority.hInvestor() != address(0), "Invalid investor address");
 
         // update storage adapter allocation info
@@ -237,18 +232,41 @@ contract YBNFT is ERC721, HedgepieAccessControlled {
     function _setAdapterInfo(uint256 _tokenId, AdapterParam[] memory _adapterParams) internal {
         bool isExist = adapterParams[_tokenId].length != 0;
         if (!isExist) {
-            for (uint256 i = 0; i < _adapterParams.length; i++) {
+            for (uint256 i; i < _adapterParams.length; ) {
                 adapterParams[_tokenId].push(
                     AdapterParam({allocation: _adapterParams[i].allocation, addr: _adapterParams[i].addr})
                 );
+
+                unchecked {
+                    ++i;
+                }
             }
             adapterDate[_tokenId] = AdapterDate({
                 created: uint128(block.timestamp),
                 modified: uint128(block.timestamp)
             });
         } else {
-            for (uint256 i = 0; i < _adapterParams.length; i++)
-                adapterParams[_tokenId][i].allocation = _adapterParams[i].allocation;
+            uint256 curLen = adapterParams[_tokenId].length;
+            for (uint256 i; i < _adapterParams.length; ) {
+                if (i >= curLen) {
+                    // validate adapter params
+                    (address adapterAddr, , , bool status) = IHedgepieAdapterList(authority.hAdapterList())
+                        .getAdapterInfo(_adapterParams[i].addr);
+                    require(_adapterParams[i].addr == adapterAddr, "Adapter address mismatch");
+                    require(status, "Adapter is inactive");
+
+                    // push new adapter
+                    adapterParams[_tokenId].push(
+                        AdapterParam({allocation: _adapterParams[i].allocation, addr: _adapterParams[i].addr})
+                    );
+                } else {
+                    adapterParams[_tokenId][i].allocation = _adapterParams[i].allocation;
+                }
+
+                unchecked {
+                    ++i;
+                }
+            }
 
             _setModifiedDate(_tokenId);
         }
@@ -265,6 +283,24 @@ contract YBNFT is ERC721, HedgepieAccessControlled {
         }
 
         require(totalAlloc == 1e4, "Incorrect adapter allocation");
+    }
+
+    /**
+     * @notice Check if adpaterParams are valid
+     * @param _adapterParams  parameters of adapters
+     */
+    function _validate(AdapterParam[] memory _adapterParams) internal {
+        uint256 length = _adapterParams.length;
+        for (uint256 i; i < length; ) {
+            (address adapterAddr, , , bool status) = IHedgepieAdapterList(authority.hAdapterList()).getAdapterInfo(
+                _adapterParams[i].addr
+            );
+            require(_adapterParams[i].addr == adapterAddr, "Adapter address mismatch");
+            require(status, "Adapter is inactive");
+            unchecked {
+                ++i;
+            }
+        }
     }
 
     /**
