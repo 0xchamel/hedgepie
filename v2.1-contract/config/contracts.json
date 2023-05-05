@@ -1,9 +1,9 @@
 {
     "lib": "0xCd8AA69E83568f5F73ab3C17ce2b3DCd3cfB88BA",
     "authority": "0x11E660267f3bdDDfEb26418A2BD149e1e1e7FC33",
-    "investor": "0xFc8c3c03a64E721ff75422804246C7e979b64679",
+    "investor": "0xD19085d3f7e352eF744ae299920627155153Fead",
     "pathFinder": "0x08ee34bD28ffb2eac2d9F796dEF28EA3Ccc217BE",
-    "ybnft": "0x0736691e809675cce7CDBbf4837d563104d551f8",
+    "ybnft": "0xBe7ad17e01FaD9C16500b531bE5143212aD73d1d",
     "adapterList": "0x5ddE68D5869EfE80428F99fBC9E72E9B60dE4aB9",
     "autofarm": {
         "AutoFarm::Vault::WBNB-CAKE": "0x0aCf9Eac907232a5cB725D1fE5990f25fCbbbA76",
