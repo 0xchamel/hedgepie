@@ -1,5 +1,6 @@
 import "@nomiclabs/hardhat-ethers";
 import fs from "fs";
+import hre from "hardhat";
 import * as path from "path";
 import contracts from "../config/contracts.json";
 
@@ -30,6 +31,14 @@ async function deploy(name: string) {
             [name]: dAddrs,
         })
     );
+
+    // add adapters to adapterList
+    let params: string[] = [];
+    Object.keys(dAddrs).forEach((key) => {
+        params.push(dAddrs[key]);
+    });
+    const adapterList = await hre.ethers.getContractAt("HedgepieAdapterList", contracts.adapterList);
+    await adapterList.addAdapters(params);
 }
 
 async function main() {

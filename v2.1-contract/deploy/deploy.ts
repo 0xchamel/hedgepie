@@ -4,14 +4,11 @@ import fs from "fs";
 import * as path from "path";
 
 import { verify } from "../utils";
+import { paths } from "./constant";
 
 async function deploy() {
-    const HedgepieAdapterList = await hre.ethers.getContractFactory(
-        "HedgepieAdapterList"
-    );
-    const HedgepieAuthority = await hre.ethers.getContractFactory(
-        "HedgepieAuthority"
-    );
+    const HedgepieAdapterList = await hre.ethers.getContractFactory("HedgepieAdapterList");
+    const HedgepieAuthority = await hre.ethers.getContractFactory("HedgepieAuthority");
     const Lib = await hre.ethers.getContractFactory("HedgepieLibraryBsc");
     const YBNFT = await hre.ethers.getContractFactory("YBNFT");
     const PathFinder = await hre.ethers.getContractFactory("PathFinder");
@@ -41,18 +38,12 @@ async function deploy() {
     await lib.deployed();
     console.log("LIB: ", lib.address);
 
-    const HedgepieInvestor = await hre.ethers.getContractFactory(
-        "HedgepieInvestor",
-        {
-            libraries: {
-                HedgepieLibraryBsc: lib.address,
-            },
-        }
-    );
-    const investor = await HedgepieInvestor.deploy(
-        process.env.TREASURY || "",
-        authority.address
-    );
+    const HedgepieInvestor = await hre.ethers.getContractFactory("HedgepieInvestor", {
+        libraries: {
+            HedgepieLibraryBsc: lib.address,
+        },
+    });
+    const investor = await HedgepieInvestor.deploy(process.env.TREASURY || "", authority.address);
     await investor.deployed();
     console.log("Investor: ", investor.address);
 
@@ -76,6 +67,20 @@ async function deploy() {
         })
     );
 
+    // add paths to pathFinder
+    for (let i = 0; i < paths.length; i++) {
+        const path1 = [...paths[i]].shift() || [];
+        let path2 = [...(path1 as string[])];
+
+        if (path2 && path2?.length > 0) {
+            const tmp = path2[0];
+            path2[0] = path2[path2.length - 1];
+            path2[path2.length - 1] = tmp;
+        }
+        await pathFinder.setPath(paths[i][0], paths[i][1], paths[i][paths[i].length - 1], path1 as string[]);
+        await pathFinder.setPath(paths[i][0], paths[i][paths[i].length - 1], paths[i][1], path2 as string[]);
+    }
+
     // verify base contracts
     await verify({
         contractName: "HedgepieAuthority",
@@ -91,8 +96,7 @@ async function deploy() {
         contractName: "HedgepieAdapterList",
         address: adapterList.address,
         constructorArguments: [authority.address],
-        contractPath:
-            "contracts/base/HedgepieAdapterList.sol:HedgepieAdapterList",
+        contractPath: "contracts/base/HedgepieAdapterList.sol:HedgepieAdapterList",
     });
     await verify({
         contractName: "YBNFT",
@@ -116,8 +120,7 @@ async function deploy() {
         contractName: "HedgepieLibraryBsc",
         address: lib.address,
         constructorArguments: [],
-        contractPath:
-            "contracts/libraries/HedgepieLibraryBsc.sol:HedgepieLibraryBsc",
+        contractPath: "contracts/libraries/HedgepieLibraryBsc.sol:HedgepieLibraryBsc",
     });
 }
 
