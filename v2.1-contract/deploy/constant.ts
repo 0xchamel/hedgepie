@@ -345,3 +345,44 @@ export const adapterPaths = {
     apeswapLend: "contracts/strategies/apeswap/apeswap-lend-adapter.sol:ApeswapLendAdapterBsc",
     venusLend: "contracts/strategies/venus/venus-lend-adapter.sol:VenusLendAdapterBsc",
 };
+
+const pks = "0x10ED43C718714eb63d5aA57B78B54704E256024E";
+const biswap = "0x3a6d8cA21D1CF76F653A67577FA0D27453350dD8";
+
+const wbnb = "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c";
+const usdt = "0x55d398326f99059fF775485246999027B3197955";
+const usdc = "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d";
+const busd = "0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56";
+const eth = "0x2170Ed0880ac9A755fd29B2688956BD959F933F8";
+const cake = "0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82";
+const ada = "0x3EE2200Efb3400fAbB9AacF31297cBdD1d435D47";
+const dot = "0x7083609fCE4d1d8Dc0C979AAb8c869Ea2C873402";
+const btc = "0x7130d2A12B9BCbFAe4f2634d864A1Ee1Ce3Ead9c";
+const bsw = "0x965f527d9159dce6288a2219db51fc6eef120dd1";
+const fil = "0x0d8ce2a99bb6e3b7db580ed848240e4a0f9ae153";
+const trx = "0x85EAC5Ac2F758618dFa09bDbe0cf174e7d574D5B";
+const arena = "0xCfFD4D3B517b77BE32C76DA768634dE6C738889B";
+const champ = "0x7e9AB560d37E62883E882474b096643caB234B65";
+const squad = "0x724A32dFFF9769A0a0e1F0515c0012d1fB14c3bd";
+const xvs = "0xcF6BB5389c92Bdda8a3747Ddb454cB7a64626C63";
+
+export const paths = [
+    [pks, wbnb, usdt],
+    [pks, wbnb, usdc],
+    [pks, wbnb, busd],
+    [pks, wbnb, eth],
+    [pks, wbnb, cake],
+    [pks, wbnb, ada],
+    [pks, wbnb, dot],
+    [pks, wbnb, btc],
+    [pks, wbnb, bsw],
+    [pks, wbnb, fil],
+    [pks, wbnb, busd, trx],
+    [pks, wbnb, cake, arena],
+    [pks, wbnb, busd, champ],
+    [pks, wbnb, cake, squad],
+    [pks, wbnb, xvs],
+    [biswap, wbnb, usdt],
+    [biswap, wbnb, bsw],
+    [biswap, wbnb, fil],
+];
