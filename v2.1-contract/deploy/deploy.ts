@@ -1,4 +1,4 @@
-import hre from "hardhat";
+import hre, { ethers } from "hardhat";
 import "@nomiclabs/hardhat-ethers";
 import fs from "fs";
 import * as path from "path";
@@ -69,16 +69,26 @@ async function deploy() {
 
     // add paths to pathFinder
     for (let i = 0; i < paths.length; i++) {
-        const path1 = [...paths[i]].shift() || [];
-        let path2 = [...(path1 as string[])];
+        const path1 = [...paths[i]];
+        path1.shift();
+        let path2 = [...path1];
 
         if (path2 && path2?.length > 0) {
             const tmp = path2[0];
             path2[0] = path2[path2.length - 1];
             path2[path2.length - 1] = tmp;
         }
-        await pathFinder.setPath(paths[i][0], paths[i][1], paths[i][paths[i].length - 1], path1 as string[]);
-        await pathFinder.setPath(paths[i][0], paths[i][paths[i].length - 1], paths[i][1], path2 as string[]);
+
+        // add router
+        const isExist = await pathFinder.routers(paths[i][0]);
+        if (!isExist) {
+            const tx = await pathFinder.setRouter(paths[i][0], true);
+            await tx.wait(5);
+        }
+
+        // add path
+        await (await pathFinder.setPath(paths[i][0], paths[i][1], paths[i][paths[i].length - 1], [...path1])).wait(5);
+        await (await pathFinder.setPath(paths[i][0], paths[i][paths[i].length - 1], paths[i][1], [...path2])).wait(5);
     }
 
     // verify base contracts
