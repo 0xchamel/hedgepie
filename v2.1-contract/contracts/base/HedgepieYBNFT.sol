@@ -47,6 +47,8 @@ contract YBNFT is ERC721, HedgepieAccessControlled {
     mapping(uint256 => mapping(address => bool)) public participants;
     // tokenId => performanceFee
     mapping(uint256 => uint256) public performanceFee;
+    // tokenId => adapter address => boolean for existance
+    mapping(uint256 => mapping(address => bool)) public isExist;
 
     /// @dev events
     event Mint(address indexed minter, uint256 indexed tokenId);
@@ -230,12 +232,14 @@ contract YBNFT is ERC721, HedgepieAccessControlled {
      */
     /// #if_succeeds {:msg "_setAdapterInfo does not update the adapterParams"}  old(adapterParams[_tokenId].length) + _adapterParams.length == adapterParams[_tokenId].length;
     function _setAdapterInfo(uint256 _tokenId, AdapterParam[] memory _adapterParams) internal {
-        bool isExist = adapterParams[_tokenId].length != 0;
-        if (!isExist) {
+        if (adapterParams[_tokenId].length == 0) {
             for (uint256 i; i < _adapterParams.length; ) {
+                require(!isExist[_tokenId][_adapterParams[i].addr], "Adapter already added");
+
                 adapterParams[_tokenId].push(
                     AdapterParam({allocation: _adapterParams[i].allocation, addr: _adapterParams[i].addr})
                 );
+                isExist[_tokenId][_adapterParams[i].addr] = true;
 
                 unchecked {
                     ++i;
@@ -249,6 +253,8 @@ contract YBNFT is ERC721, HedgepieAccessControlled {
             uint256 curLen = adapterParams[_tokenId].length;
             for (uint256 i; i < _adapterParams.length; ) {
                 if (i >= curLen) {
+                    require(!isExist[_tokenId][_adapterParams[i].addr], "Adapter already added");
+
                     // validate adapter params
                     (address adapterAddr, , , bool status) = IHedgepieAdapterList(authority.hAdapterList())
                         .getAdapterInfo(_adapterParams[i].addr);
@@ -259,6 +265,7 @@ contract YBNFT is ERC721, HedgepieAccessControlled {
                     adapterParams[_tokenId].push(
                         AdapterParam({allocation: _adapterParams[i].allocation, addr: _adapterParams[i].addr})
                     );
+                    isExist[_tokenId][adapterAddr] = true;
                 } else {
                     adapterParams[_tokenId][i].allocation = _adapterParams[i].allocation;
                 }

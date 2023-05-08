@@ -171,7 +171,21 @@ describe("YBNFT Unit Test", function () {
             );
         });
 
-        it("(3) test allocation validation", async function () {
+        it("(3) test adapterParam duplication validation", async function () {
+            await expect(
+                this.ybNft.mint(
+                    [
+                        [5000, this.adapter[0].address],
+                        [2500, this.adapter[1].address],
+                        [2500, this.adapter[1].address],
+                    ],
+                    900,
+                    "test tokenURI1"
+                )
+            ).to.be.revertedWith("Adapter already added");
+        });
+
+        it("(4) test allocation validation", async function () {
             await expect(
                 this.ybNft.mint(
                     [
@@ -250,10 +264,20 @@ describe("YBNFT Unit Test", function () {
             ).to.be.revertedWith("Adapter address mismatch");
         });
 
-        it("(5) test updating allocation", async function () {
+        it("(5) revert when adding the duplicated adapter", async function () {
             // add adapters to adapterList
             await this.adapterList.connect(this.adapterManager).addAdapters([this.adapter[2].address]);
 
+            await expect(
+                this.ybNft.updateAllocations(1, [
+                    [1000, this.adapter[0].address],
+                    [2000, this.adapter[1].address],
+                    [7000, this.adapter[0].address],
+                ])
+            ).to.be.revertedWith("Adapter already added");
+        });
+
+        it("(6) test updating allocation", async function () {
             await this.ybNft.updateAllocations(1, [
                 [1000, this.adapter[0].address],
                 [2000, this.adapter[1].address],
