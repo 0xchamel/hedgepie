@@ -23,7 +23,7 @@ async function forkBNBNetwork(blockNumber = -1) {
             {
                 forking: {
                     jsonRpcUrl: "https://rpc.ankr.com/bsc",
-                    blockNumber: blockNumber === -1 ? 27500000 : blockNumber,
+                    blockNumber: blockNumber === -1 ? 27000000 : blockNumber,
                 },
             },
         ],
