@@ -8,7 +8,7 @@ const BigNumber = ethers.BigNumber;
 
 describe("RadiantV2 Adapters Integration Test", function () {
     before("Deploy contract", async function () {
-        await forkBNBNetwork();
+        await forkBNBNetwork(28149870);
 
         [
             this.governor,
