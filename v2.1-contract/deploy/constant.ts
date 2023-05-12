@@ -320,6 +320,58 @@ export const adapters = {
             authority,
         ],
     ],
+    radiant: [
+        [
+            "0xd50Cf00b6e600Dd036Ba8eF475677d816d6c4281",
+            "0x55d398326f99059fF775485246999027B3197955",
+            "0xf7DE7E8A6bd59ED41a4b5fe50278b3B7f31384dF",
+            "0x4Ff2DD7c6435789E0BB56B0553142Ad00878a004",
+            "0x10ED43C718714eb63d5aA57B78B54704E256024E",
+            "0x8fe962Dd1f322780f2Cb0264eA1eDc8a1504C367",
+            "Radiant::Market::USDT",
+            authority,
+        ],
+        [
+            "0xd50Cf00b6e600Dd036Ba8eF475677d816d6c4281",
+            "0x7130d2A12B9BCbFAe4f2634d864A1Ee1Ce3Ead9c",
+            "0xf7DE7E8A6bd59ED41a4b5fe50278b3B7f31384dF",
+            "0x34d4F4459c1b529BEbE1c426F1e584151BE2C1e5",
+            "0x10ED43C718714eb63d5aA57B78B54704E256024E",
+            "0x8fe962Dd1f322780f2Cb0264eA1eDc8a1504C367",
+            "Radiant::Market::BTCB",
+            authority,
+        ],
+        [
+            "0xd50Cf00b6e600Dd036Ba8eF475677d816d6c4281",
+            "0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56",
+            "0xf7DE7E8A6bd59ED41a4b5fe50278b3B7f31384dF",
+            "0x89d763e8532D256a3e3e60c1C218Ac71E71cF664",
+            "0x10ED43C718714eb63d5aA57B78B54704E256024E",
+            "0x8fe962Dd1f322780f2Cb0264eA1eDc8a1504C367",
+            "Radiant::Market::BUSD",
+            authority,
+        ],
+        [
+            "0xd50Cf00b6e600Dd036Ba8eF475677d816d6c4281",
+            "0x2170Ed0880ac9A755fd29B2688956BD959F933F8",
+            "0xf7DE7E8A6bd59ED41a4b5fe50278b3B7f31384dF",
+            "0x455a281D508B4e34d55b31AC2e4579BD9b77cA8E",
+            "0x10ED43C718714eb63d5aA57B78B54704E256024E",
+            "0x8fe962Dd1f322780f2Cb0264eA1eDc8a1504C367",
+            "Radiant::Market::ETH",
+            authority,
+        ],
+        [
+            "0xd50Cf00b6e600Dd036Ba8eF475677d816d6c4281",
+            "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c",
+            "0xf7DE7E8A6bd59ED41a4b5fe50278b3B7f31384dF",
+            "0x58b0BB56CFDfc5192989461dD43568bcfB2797Db",
+            "0x10ED43C718714eb63d5aA57B78B54704E256024E",
+            "0x8fe962Dd1f322780f2Cb0264eA1eDc8a1504C367",
+            "Radiant::Market::BNB",
+            authority,
+        ],
+    ],
 };
 
 export const adapterNames = {
@@ -332,6 +384,7 @@ export const adapterNames = {
     alpacaLend: "AlpacaLendAdapterBsc",
     apeswapLend: "ApeswapLendAdapterBsc",
     venusLend: "VenusLendAdapterBsc",
+    radiant: "RadiantV2Bsc",
 };
 
 export const adapterPaths = {
@@ -344,6 +397,7 @@ export const adapterPaths = {
     alpacaLend: "contracts/strategies/alpaca/alpaca-lend-adapter.sol:AlpacaLendAdapterBsc",
     apeswapLend: "contracts/strategies/apeswap/apeswap-lend-adapter.sol:ApeswapLendAdapterBsc",
     venusLend: "contracts/strategies/venus/venus-lend-adapter.sol:VenusLendAdapterBsc",
+    radiant: "contracts/strategies/venus/radiant-v2-adapter.sol:RadiantV2Bsc",
 };
 
 const pks = "0x10ED43C718714eb63d5aA57B78B54704E256024E";
@@ -365,6 +419,7 @@ const arena = "0xCfFD4D3B517b77BE32C76DA768634dE6C738889B";
 const champ = "0x7e9AB560d37E62883E882474b096643caB234B65";
 const squad = "0x724A32dFFF9769A0a0e1F0515c0012d1fB14c3bd";
 const xvs = "0xcF6BB5389c92Bdda8a3747Ddb454cB7a64626C63";
+const rdnt = "0xf7DE7E8A6bd59ED41a4b5fe50278b3B7f31384dF";
 
 export const paths = [
     [pks, wbnb, usdt],
@@ -382,6 +437,7 @@ export const paths = [
     [pks, wbnb, busd, champ],
     [pks, wbnb, cake, squad],
     [pks, wbnb, xvs],
+    [pks, wbnb, rdnt],
     [biswap, wbnb, usdt],
     [biswap, wbnb, bsw],
     [biswap, wbnb, fil],
