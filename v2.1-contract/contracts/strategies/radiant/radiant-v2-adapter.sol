@@ -6,13 +6,15 @@ import "../../libraries/HedgepieLibraryBsc.sol";
 interface IStrategy {
     function deposit(address, uint256, address, uint16) external;
 
-    function withdraw(address, uint256, address) external;
+    function withdraw(address, uint256, address) external returns (uint256);
 }
 
 interface ICompounder {
     function selfCompound() external;
 
     function viewPendingRewards(address) external view returns (address[] memory tokens, uint256[] memory amts);
+
+    function userEligibleForCompound(address) external view returns (bool);
 }
 
 contract RadiantV2Bsc is BaseAdapter {
@@ -73,12 +75,16 @@ contract RadiantV2Bsc is BaseAdapter {
         IERC20(stakingToken).safeApprove(strategy, amountOut);
         IStrategy(strategy).deposit(stakingToken, amountOut, address(this), 0);
 
-        repayAmt = IERC20(strategy).balanceOf(address(this)) - repayAmt;
+        repayAmt = IERC20(repayToken).balanceOf(address(this)) - repayAmt;
         require(repayAmt != 0, "Failed to deposit");
 
         // 3. update user info
-        userInfo.amount += repayAmt;
-        userInfo.invested += amountOut;
+        unchecked {
+            mAdapter.totalStaked += repayAmt;
+
+            userInfo.amount += repayAmt;
+            userInfo.invested += amountOut;
+        }
     }
 
     /**
@@ -96,42 +102,43 @@ contract RadiantV2Bsc is BaseAdapter {
         UserAdapterInfo storage userInfo = userAdapterInfos[_tokenId];
 
         // 1. withdraw from vault
-        uint256 tokenAmt = IERC20(stakingToken).balanceOf(address(this));
-        IStrategy(strategy).withdraw(stakingToken, _amount, address(this));
-        tokenAmt = IERC20(stakingToken).balanceOf(address(this)) - tokenAmt;
+        amountOut = IStrategy(strategy).withdraw(stakingToken, _amount, address(this));
 
         // 2. swap withdrawn lp to bnb
-        amountOut = HedgepieLibraryBsc.swapForBnb(tokenAmt, address(this), stakingToken, swapRouter);
+        amountOut = HedgepieLibraryBsc.swapForBnb(amountOut, address(this), stakingToken, swapRouter);
 
         // 3. update userInfo
-        userInfo.amount -= _amount;
-        if (tokenAmt >= userInfo.invested) userInfo.invested = 0;
-        else userInfo.invested -= tokenAmt;
+        unchecked {
+            mAdapter.totalStaked -= _amount;
+            userInfo.amount -= _amount;
+            userInfo.invested = userInfo.invested > amountOut ? userInfo.invested - amountOut : 0;
+            userInfo.rewardDebt1 = 0;
+            userInfo.rewardDebt2 = 0;
+        }
 
         // 4. send withdrawn bnb to investor
-        if (amountOut != 0) {
-            (bool success, ) = payable(msg.sender).call{value: amountOut}("");
-            require(success, "Failed to send bnb");
-        }
+        if (amountOut != 0) _chargeFeeAndSendToInvestor(_tokenId, amountOut, 0);
     }
 
     /**
      * @notice calculate RDNT & supply rewards
      */
     function _calcReward() internal {
-        // 1. compound from compounder
-        uint256 rewardAmt1 = IERC20(rewardToken1).balanceOf(address(this));
-        uint256 rewardAmt2 = IERC20(rewardToken2).balanceOf(address(this));
-        ICompounder(compounder).selfCompound();
+        if (ICompounder(compounder).userEligibleForCompound(address(this))) {
+            // 1. compound from compounder
+            uint256 rewardAmt1 = IERC20(rewardToken1).balanceOf(address(this));
+            uint256 rewardAmt2 = IERC20(rewardToken2).balanceOf(address(this));
+            ICompounder(compounder).selfCompound();
 
-        unchecked {
-            rewardAmt1 = IERC20(rewardToken1).balanceOf(address(this)) - rewardAmt1;
-            rewardAmt2 = IERC20(rewardToken2).balanceOf(address(this)) - rewardAmt2;
+            unchecked {
+                rewardAmt1 = IERC20(rewardToken1).balanceOf(address(this)) - rewardAmt1;
+                rewardAmt2 = IERC20(rewardToken2).balanceOf(address(this)) - rewardAmt2;
 
-            if (mAdapter.totalStaked != 0) {
-                if (rewardAmt1 != 0) mAdapter.accTokenPerShare1 += (rewardAmt1 * 1e12) / mAdapter.totalStaked;
+                if (mAdapter.totalStaked != 0) {
+                    if (rewardAmt1 != 0) mAdapter.accTokenPerShare1 += (rewardAmt1 * 1e12) / mAdapter.totalStaked;
 
-                if (rewardAmt2 != 0) mAdapter.accTokenPerShare2 += (rewardAmt2 * 1e12) / mAdapter.totalStaked;
+                    if (rewardAmt2 != 0) mAdapter.accTokenPerShare2 += (rewardAmt2 * 1e12) / mAdapter.totalStaked;
+                }
             }
         }
     }
@@ -173,49 +180,51 @@ contract RadiantV2Bsc is BaseAdapter {
      * @param _tokenId YBNFT token id
      */
     function pendingReward(uint256 _tokenId) external view override returns (uint256 reward, uint256 withdrawable) {
-        UserAdapterInfo memory userInfo = userAdapterInfos[_tokenId];
+        if (ICompounder(compounder).userEligibleForCompound(address(this))) {
+            UserAdapterInfo memory userInfo = userAdapterInfos[_tokenId];
 
-        // 1. calc want amount
-        (address[] memory tokens, uint256[] memory amts) = ICompounder(compounder).viewPendingRewards(msg.sender);
+            // 1. calc want amount
+            (address[] memory tokens, uint256[] memory amts) = ICompounder(compounder).viewPendingRewards(msg.sender);
 
-        uint256 rewardAmt1;
-        uint256 rewardAmt2;
-        for (uint8 i; i < tokens.length; ++i) {
-            if (amts[i] != 0) {
-                if (tokens[i] == rewardToken1) rewardAmt1 = amts[i];
-                else if (tokens[i] == rewardToken2) rewardAmt2 = amts[i];
+            uint256 rewardAmt1;
+            uint256 rewardAmt2;
+            for (uint8 i; i < tokens.length; ++i) {
+                if (amts[i] != 0) {
+                    if (tokens[i] == rewardToken1) rewardAmt1 = amts[i];
+                    else if (tokens[i] == rewardToken2) rewardAmt2 = amts[i];
+                }
             }
+
+            // 1. calc updatedAccTokenPerShares
+            uint256 updatedAccTokenPerShare1 = mAdapter.accTokenPerShare1;
+            uint256 updatedAccTokenPerShare2 = mAdapter.accTokenPerShare2;
+
+            if (mAdapter.totalStaked != 0) {
+                updatedAccTokenPerShare1 += (rewardAmt1 * 1e12) / mAdapter.totalStaked;
+
+                updatedAccTokenPerShare2 += (rewardAmt2 * 1e12) / mAdapter.totalStaked;
+            }
+
+            // 2. calc rewards from updatedAccTokenPerShare
+            uint256 tokenRewards1 = ((updatedAccTokenPerShare1 - userInfo.userShare1) * userInfo.amount) /
+                1e12 +
+                userInfo.rewardDebt1;
+
+            uint256 tokenRewards2 = ((updatedAccTokenPerShare2 - userInfo.userShare2) * userInfo.amount) /
+                1e12 +
+                userInfo.rewardDebt2;
+
+            if (tokenRewards1 != 0) {
+                reward = _getAmountOut(rewardToken1, tokenRewards1);
+            }
+
+            if (tokenRewards2 != 0) {
+                reward += _getAmountOut(rewardToken2, tokenRewards2);
+            }
+
+            reward += userInfo.rewardDebt1;
+            withdrawable = reward;
         }
-
-        // 1. calc updatedAccTokenPerShares
-        uint256 updatedAccTokenPerShare1 = mAdapter.accTokenPerShare1;
-        uint256 updatedAccTokenPerShare2 = mAdapter.accTokenPerShare2;
-
-        if (mAdapter.totalStaked != 0) {
-            updatedAccTokenPerShare1 += (rewardAmt1 * 1e12) / mAdapter.totalStaked;
-
-            updatedAccTokenPerShare2 += (rewardAmt2 * 1e12) / mAdapter.totalStaked;
-        }
-
-        // 2. calc rewards from updatedAccTokenPerShare
-        uint256 tokenRewards1 = ((updatedAccTokenPerShare1 - userInfo.userShare1) * userInfo.amount) /
-            1e12 +
-            userInfo.rewardDebt1;
-
-        uint256 tokenRewards2 = ((updatedAccTokenPerShare2 - userInfo.userShare2) * userInfo.amount) /
-            1e12 +
-            userInfo.rewardDebt2;
-
-        if (tokenRewards1 != 0) {
-            reward = _getAmountOut(rewardToken1, tokenRewards1);
-        }
-
-        if (tokenRewards2 != 0) {
-            reward += _getAmountOut(rewardToken2, tokenRewards2);
-        }
-
-        reward += userInfo.rewardDebt1;
-        withdrawable = reward;
     }
 
     function _getAmountOut(address _token, uint256 _amt) internal view returns (uint256 amountOut) {
@@ -244,13 +253,10 @@ contract RadiantV2Bsc is BaseAdapter {
         _calcReward();
 
         // 1. withdraw all from Vault
-        amountOut = IERC20(stakingToken).balanceOf(address(this));
-        IStrategy(strategy).withdraw(stakingToken, type(uint256).max, address(this));
+        amountOut = IStrategy(strategy).withdraw(stakingToken, type(uint256).max, address(this));
 
+        // 2. update user rewardDebt value
         unchecked {
-            amountOut = IERC20(stakingToken).balanceOf(address(this)) - amountOut;
-
-            // 2. update user rewardDebt value
             if (userInfo.amount != 0) {
                 userInfo.rewardDebt1 += (userInfo.amount * (mAdapter.accTokenPerShare1 - userInfo.userShare1)) / 1e12;
                 userInfo.rewardDebt2 += (userInfo.amount * (mAdapter.accTokenPerShare2 - userInfo.userShare2)) / 1e12;
@@ -261,15 +267,16 @@ contract RadiantV2Bsc is BaseAdapter {
         amountOut = HedgepieLibraryBsc.swapForBnb(amountOut, address(this), stakingToken, swapRouter);
 
         // 4. update invested information for token id
-        mAdapter.totalStaked -= userInfo.amount;
-        userInfo.amount = 0;
-        userInfo.invested = 0;
-        userInfo.userShare1 = mAdapter.accTokenPerShare1;
-        userInfo.userShare2 = mAdapter.accTokenPerShare2;
+        unchecked {
+            mAdapter.totalStaked -= userInfo.amount;
+            userInfo.amount = 0;
+            userInfo.invested = 0;
+            userInfo.userShare1 = mAdapter.accTokenPerShare1;
+            userInfo.userShare2 = mAdapter.accTokenPerShare2;
+        }
 
         // 5. send withdrawn bnb to investor
-        (bool success, ) = payable(authority.hInvestor()).call{value: amountOut}("");
-        require(success, "Failed to send bnb to investor");
+        if (amountOut != 0) _chargeFeeAndSendToInvestor(_tokenId, amountOut, 0);
     }
 
     /**
@@ -288,17 +295,23 @@ contract RadiantV2Bsc is BaseAdapter {
             : HedgepieLibraryBsc.swapOnRouter(msg.value, address(this), stakingToken, swapRouter);
 
         // 2. deposit to vault
-        uint256 repayAmt = IERC20(strategy).balanceOf(address(this));
+        uint256 repayAmt = IERC20(repayToken).balanceOf(address(this));
 
         IERC20(stakingToken).safeApprove(strategy, 0);
         IERC20(stakingToken).safeApprove(strategy, amountOut);
         IStrategy(strategy).deposit(stakingToken, amountOut, address(this), 0);
 
-        repayAmt = IERC20(strategy).balanceOf(address(this)) - repayAmt;
+        repayAmt = IERC20(repayToken).balanceOf(address(this)) - repayAmt;
         require(repayAmt != 0, "Failed to update funds");
 
         // 3. update user info
-        userInfo.amount = repayAmt;
-        userInfo.invested = amountOut;
+        unchecked {
+            mAdapter.totalStaked += repayAmt;
+
+            userInfo.amount = repayAmt;
+            userInfo.invested = amountOut;
+            userInfo.userShare1 = mAdapter.accTokenPerShare1;
+            userInfo.userShare2 = mAdapter.accTokenPerShare2;
+        }
     }
 }
