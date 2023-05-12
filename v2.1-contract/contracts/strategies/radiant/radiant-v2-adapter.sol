@@ -101,13 +101,16 @@ contract RadiantV2Bsc is BaseAdapter {
 
         UserAdapterInfo storage userInfo = userAdapterInfos[_tokenId];
 
-        // 1. withdraw from vault
+        // 1. remove rewards first
+        _calcReward();
+
+        // 2. withdraw from vault
         amountOut = IStrategy(strategy).withdraw(stakingToken, _amount, address(this));
 
-        // 2. swap withdrawn lp to bnb
+        // 3. swap withdrawn lp to bnb
         amountOut = HedgepieLibraryBsc.swapForBnb(amountOut, address(this), stakingToken, swapRouter);
 
-        // 3. update userInfo
+        // 4. update userInfo
         unchecked {
             mAdapter.totalStaked -= _amount;
             userInfo.amount -= _amount;
