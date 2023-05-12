@@ -371,6 +371,16 @@ export const adapters = {
             "Radiant::Market::BNB",
             authority,
         ],
+        [
+            "0xd50Cf00b6e600Dd036Ba8eF475677d816d6c4281",
+            "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d",
+            "0xf7DE7E8A6bd59ED41a4b5fe50278b3B7f31384dF",
+            "0x3bDCEf9e656fD9D03eA98605946b4fbF362C342b",
+            "0x10ED43C718714eb63d5aA57B78B54704E256024E",
+            "0x8fe962Dd1f322780f2Cb0264eA1eDc8a1504C367",
+            "Radiant::Market::USDC",
+            authority,
+        ],
     ],
 };
 
