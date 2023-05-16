@@ -68,8 +68,6 @@ contract AlpacaLendAdapterBsc is BaseAdapter {
         // 3. update user info
         userInfo.amount += repayAmt;
         userInfo.invested += amountOut;
-
-        return msg.value;
     }
 
     /**
@@ -101,10 +99,7 @@ contract AlpacaLendAdapterBsc is BaseAdapter {
         else userInfo.invested -= tokenAmt;
 
         // 4. send withdrawn bnb to investor
-        if (amountOut != 0) {
-            (bool success, ) = payable(msg.sender).call{value: amountOut}("");
-            require(success, "Failed to send bnb");
-        }
+        if (amountOut != 0) _chargeFeeAndSendToInvestor(_tokenId, amountOut, 0);
     }
 
     /**
@@ -213,8 +208,7 @@ contract AlpacaLendAdapterBsc is BaseAdapter {
         userInfo.rewardDebt1 += reward;
 
         // 5. send withdrawn bnb to investor
-        (bool success, ) = payable(authority.hInvestor()).call{value: amountOut - reward}("");
-        require(success, "Failed to send bnb to investor");
+        if (amountOut != 0) _chargeFeeAndSendToInvestor(_tokenId, amountOut - reward, 0);
     }
 
     /**
@@ -249,7 +243,5 @@ contract AlpacaLendAdapterBsc is BaseAdapter {
         // 3. update user info
         userInfo.amount = repayAmt;
         userInfo.invested = amountOut;
-
-        return msg.value;
     }
 }

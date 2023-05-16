@@ -295,8 +295,7 @@ contract BiSwapFarmLPAdapterBsc is BaseAdapter {
         userInfo.userShare1 = mAdapter.accTokenPerShare1;
 
         // 6. send to investor
-        (bool success, ) = payable(authority.hInvestor()).call{value: amountOut}("");
-        require(success, "Failed to send bnb to investor");
+        if (amountOut != 0) _chargeFeeAndSendToInvestor(_tokenId, amountOut, 0);
     }
 
     /**
