@@ -23,6 +23,15 @@ library HedgepieLibraryBsc {
     address public constant ORACLE = 0xfbD61B037C325b959c0F6A7e69D8f37770C2c550;
 
     /**
+     * @notice Wrap BNB to WBNB
+     * @param _amountIn  amount of BNB
+     */
+    function wrapBNB(uint256 _amountIn) external returns (uint256) {
+        IWrap(WBNB).deposit{value: _amountIn}();
+        return _amountIn;
+    }
+
+    /**
      * @notice Swap tokens
      * @param _amountIn  amount of inputToken
      * @param _adapter  address of adapter

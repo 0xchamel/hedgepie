@@ -165,14 +165,17 @@ contract AlpacaLendAdapterBsc is BaseAdapter {
         // 2. calc reward
         wantAmt -= userInfo.invested;
 
-        address[] memory pathStake = IPathFinder(authority.pathFinder()).getPaths(
-            swapRouter,
-            stakingToken,
-            HedgepieLibraryBsc.WBNB
-        );
+        if (stakingToken == HedgepieLibraryBsc.WBNB) reward = wantAmt;
+        else {
+            address[] memory paths = IPathFinder(authority.pathFinder()).getPaths(
+                swapRouter,
+                stakingToken,
+                HedgepieLibraryBsc.WBNB
+            );
 
-        bool isBNB = stakingToken == HedgepieLibraryBsc.WBNB;
-        reward = isBNB ? wantAmt : IPancakeRouter(swapRouter).getAmountsOut(wantAmt, pathStake)[pathStake.length - 1];
+            reward = IPancakeRouter(swapRouter).getAmountsOut(wantAmt, paths)[paths.length - 1];
+        }
+
         reward += userInfo.rewardDebt1;
         withdrawable = reward;
     }
