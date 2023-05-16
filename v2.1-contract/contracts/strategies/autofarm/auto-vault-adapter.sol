@@ -76,8 +76,6 @@ contract AutoVaultAdapterBsc is BaseAdapter {
         // 3. update user info
         userInfo.amount += afterShare - beforeShare;
         userInfo.invested += amountOut;
-
-        return msg.value;
     }
 
     /**
@@ -110,10 +108,7 @@ contract AutoVaultAdapterBsc is BaseAdapter {
         else userInfo.invested -= lpOut;
 
         // 4. send withdrawn bnb to investor
-        if (amountOut != 0) {
-            (bool success, ) = payable(msg.sender).call{value: amountOut}("");
-            require(success, "Failed to send bnb");
-        }
+        if (amountOut != 0) _chargeFeeAndSendToInvestor(_tokenId, amountOut, 0);
     }
 
     /**
@@ -249,8 +244,7 @@ contract AutoVaultAdapterBsc is BaseAdapter {
         userInfo.rewardDebt1 += reward;
 
         // 5. send withdrawn bnb to investor
-        (bool success, ) = payable(authority.hInvestor()).call{value: amountOut - reward}("");
-        require(success, "Failed to send bnb to investor");
+        if (amountOut != 0) _chargeFeeAndSendToInvestor(_tokenId, amountOut - reward, 0);
     }
 
     /**
@@ -277,7 +271,5 @@ contract AutoVaultAdapterBsc is BaseAdapter {
         // 3. update user info
         userInfo.amount = afterShare - beforeShare;
         userInfo.invested = amountOut;
-
-        return msg.value;
     }
 }

@@ -6,6 +6,8 @@ import "../../interfaces/IVBep20.sol";
 import "../../libraries/HedgepieLibraryBsc.sol";
 
 interface IStrategy {
+    function mint() external payable;
+
     function mint(uint256 amount) external returns (uint256);
 
     function redeem(uint256 amount) external returns (uint256);
@@ -44,7 +46,7 @@ contract VenusLendAdapterBsc is BaseAdapter {
         address _authority
     ) BaseAdapter(_authority) {
         require(IVBep20(_strategy).isVToken(), "Error: Invalid vToken address");
-        require(IVBep20(_strategy).underlying() != address(0), "Error: Invalid underlying address");
+        // require(IVBep20(_strategy).underlying() != address(0), "Error: Invalid underlying address");
 
         strategy = _strategy;
         venusLens = IVenusLens(_venusLens);
@@ -73,22 +75,29 @@ contract VenusLendAdapterBsc is BaseAdapter {
         UserAdapterInfo storage userInfo = userAdapterInfos[_tokenId];
 
         // 1. get staking token
-        amountOut = HedgepieLibraryBsc.swapOnRouter(_amountIn, address(this), stakingToken, swapRouter);
+        bool isBNB = stakingToken == HedgepieLibraryBsc.WBNB;
+        amountOut = isBNB
+            ? msg.value
+            : HedgepieLibraryBsc.swapOnRouter(_amountIn, address(this), stakingToken, swapRouter);
 
         uint256 repayAmt = IERC20(repayToken).balanceOf(address(this));
-        IERC20(stakingToken).approve(strategy, amountOut);
-        require(IStrategy(strategy).mint(amountOut) == 0, "Error: Venus internal error");
-        repayAmt = IERC20(repayToken).balanceOf(address(this)) - repayAmt;
+
+        if (isBNB) {
+            IStrategy(strategy).mint{value: amountOut}();
+        } else {
+            IERC20(stakingToken).approve(strategy, amountOut);
+            require(IStrategy(strategy).mint(amountOut) == 0, "Error: Venus internal error");
+        }
 
         unchecked {
+            repayAmt = IERC20(repayToken).balanceOf(address(this)) - repayAmt;
+
             // 2. update mAdapter & userInfo
             mAdapter.totalStaked += repayAmt;
 
             userInfo.amount += repayAmt;
             userInfo.invested += amountOut;
         }
-
-        return _amountIn;
     }
 
     /**
@@ -108,26 +117,29 @@ contract VenusLendAdapterBsc is BaseAdapter {
         require(_amount <= userInfo.amount, "Not enough balance to withdraw");
 
         // 1. calc reward and withdraw from adapter
-        amountOut = IERC20(stakingToken).balanceOf(address(this));
+        bool isBNB = stakingToken == HedgepieLibraryBsc.WBNB;
+        uint256 tokenAmt = isBNB ? address(this).balance : IERC20(stakingToken).balanceOf(address(this));
         uint256 repayAmt = IERC20(repayToken).balanceOf(address(this));
         IERC20(repayToken).approve(strategy, _amount);
         require(IStrategy(strategy).redeem(_amount) == 0, "Error: Venus internal error");
-        repayAmt = repayAmt - IERC20(repayToken).balanceOf(address(this));
-        amountOut = IERC20(stakingToken).balanceOf(address(this)) - amountOut;
-        require(repayAmt == _amount, "Error: Redeem failed");
 
-        // 2. swap withdrawn staking tokens to bnb
-        if (router == address(0)) {
-            amountOut = HedgepieLibraryBsc.swapForBnb(amountOut, address(this), stakingToken, swapRouter);
-        } else {
-            amountOut = HedgepieLibraryBsc.withdrawLP(IYBNFT.AdapterParam(0, address(this)), stakingToken, amountOut);
+        unchecked {
+            repayAmt = repayAmt - IERC20(repayToken).balanceOf(address(this));
+            tokenAmt = (isBNB ? address(this).balance : IERC20(stakingToken).balanceOf(address(this))) - tokenAmt;
+            require(repayAmt == _amount, "Error: Redeem failed");
         }
 
+        // 2. swap withdrawn staking tokens to bnb
+        amountOut = isBNB ? tokenAmt : HedgepieLibraryBsc.swapForBnb(tokenAmt, address(this), stakingToken, swapRouter);
+
         // 3. update mAdapter & user Info
-        mAdapter.totalStaked -= _amount;
-        userInfo.amount -= _amount;
-        userInfo.invested -= amountOut;
-        userInfo.rewardDebt1 = 0;
+        unchecked {
+            mAdapter.totalStaked -= _amount;
+            userInfo.amount -= _amount;
+            if (tokenAmt >= userInfo.invested) userInfo.invested = 0;
+            else userInfo.invested -= tokenAmt;
+            userInfo.rewardDebt1 = 0;
+        }
 
         // 4. charge fee and send BNB to investor
         if (amountOut != 0) _chargeFeeAndSendToInvestor(_tokenId, amountOut, 0);
@@ -167,24 +179,26 @@ contract VenusLendAdapterBsc is BaseAdapter {
 
         // 3. calc pending reward in bnb
         if (tokenRewards1 != 0) {
-            address[] memory paths1 = IPathFinder(authority.pathFinder()).getPaths(
-                swapRouter,
-                rewardToken1,
-                HedgepieLibraryBsc.WBNB
-            );
-            reward = stakingToken == HedgepieLibraryBsc.WBNB
-                ? tokenRewards1
-                : IPancakeRouter(swapRouter).getAmountsOut(tokenRewards1, paths1)[paths1.length - 1];
+            if (rewardToken1 == HedgepieLibraryBsc.WBNB) reward = tokenRewards1;
+            else {
+                address[] memory paths1 = IPathFinder(authority.pathFinder()).getPaths(
+                    swapRouter,
+                    rewardToken1,
+                    HedgepieLibraryBsc.WBNB
+                );
+                reward = IPancakeRouter(swapRouter).getAmountsOut(tokenRewards1, paths1)[paths1.length - 1];
+            }
         }
         if (tokenRewards2 != 0) {
-            address[] memory paths2 = IPathFinder(authority.pathFinder()).getPaths(
-                swapRouter,
-                stakingToken,
-                HedgepieLibraryBsc.WBNB
-            );
-            reward += stakingToken == HedgepieLibraryBsc.WBNB
-                ? tokenRewards2
-                : IPancakeRouter(swapRouter).getAmountsOut(tokenRewards2, paths2)[paths2.length - 1];
+            if (rewardToken2 == HedgepieLibraryBsc.WBNB) reward += tokenRewards2;
+            else {
+                address[] memory paths2 = IPathFinder(authority.pathFinder()).getPaths(
+                    swapRouter,
+                    stakingToken,
+                    HedgepieLibraryBsc.WBNB
+                );
+                reward += IPancakeRouter(swapRouter).getAmountsOut(tokenRewards2, paths2)[paths2.length - 1];
+            }
         }
 
         withdrawable = reward;
@@ -211,13 +225,19 @@ contract VenusLendAdapterBsc is BaseAdapter {
 
         // 4. swap reward to bnb and send to investor
         if (reward1 != 0) {
-            amountOut = HedgepieLibraryBsc.swapForBnb(reward1, address(this), rewardToken1, swapRouter);
-            if (reward2 != 0)
-                amountOut += HedgepieLibraryBsc.swapForBnb(reward2, address(this), rewardToken2, swapRouter);
-
-            // 5. charge fee and send BNB to investor
-            _chargeFeeAndSendToInvestor(_tokenId, amountOut, amountOut);
+            amountOut = rewardToken1 == HedgepieLibraryBsc.WBNB
+                ? reward1
+                : HedgepieLibraryBsc.swapForBnb(reward1, address(this), rewardToken1, swapRouter);
         }
+
+        if (reward2 != 0) {
+            amountOut += rewardToken2 == HedgepieLibraryBsc.WBNB
+                ? reward2
+                : HedgepieLibraryBsc.swapForBnb(reward2, address(this), rewardToken2, swapRouter);
+        }
+
+        // 5. charge fee and send BNB to investor
+        if (amountOut != 0) _chargeFeeAndSendToInvestor(_tokenId, amountOut, amountOut);
     }
 
     /**
@@ -237,11 +257,12 @@ contract VenusLendAdapterBsc is BaseAdapter {
         }
 
         if ((userInfo.amount * _exchangeRate) / 1e18 > userInfo.invested) {
-            uint256 rewardAmt2 = IERC20(rewardToken2).balanceOf(address(this));
+            bool isBNB = rewardToken2 == HedgepieLibraryBsc.WBNB;
+            uint256 rewardAmt2 = isBNB ? address(this).balance : IERC20(rewardToken2).balanceOf(address(this));
             uint256 withdrawAmt = (((userInfo.amount * _exchangeRate) / 1e18 - userInfo.invested) * 1e18) /
                 _exchangeRate;
             require(IStrategy(strategy).redeem(withdrawAmt) == 0, "Error: Venus internal error");
-            rewardAmt2 = IERC20(rewardToken2).balanceOf(address(this)) - rewardAmt2;
+            rewardAmt2 = (isBNB ? address(this).balance : IERC20(rewardToken2).balanceOf(address(this))) - rewardAmt2;
 
             if (rewardAmt2 != 0 && mAdapter.totalStaked != 0) {
                 mAdapter.accTokenPerShare2 += (rewardAmt2 * 1e12) / mAdapter.totalStaked;
@@ -263,9 +284,10 @@ contract VenusLendAdapterBsc is BaseAdapter {
         // 1. update reward infor after withdraw all staking tokens
         _calcReward(_tokenId, IVToken(repayToken).exchangeRateCurrent());
 
-        amountOut = IERC20(stakingToken).balanceOf(address(this));
+        bool isBNB = stakingToken == HedgepieLibraryBsc.WBNB;
+        amountOut = isBNB ? address(this).balance : IERC20(stakingToken).balanceOf(address(this));
         require(IStrategy(strategy).redeem(userInfo.amount) == 0, "Error: Venus internal error");
-        amountOut = IERC20(stakingToken).balanceOf(address(this)) - amountOut;
+        amountOut = (isBNB ? address(this).balance : IERC20(stakingToken).balanceOf(address(this))) - amountOut;
         require(amountOut != 0, "Failed to remove funds");
 
         // 2. update user rewardDebt value
@@ -275,11 +297,7 @@ contract VenusLendAdapterBsc is BaseAdapter {
         }
 
         // 4. swap withdrawn lp to bnb
-        if (router == address(0)) {
-            amountOut = HedgepieLibraryBsc.swapForBnb(amountOut, address(this), stakingToken, swapRouter);
-        } else {
-            amountOut = HedgepieLibraryBsc.withdrawLP(IYBNFT.AdapterParam(0, address(this)), stakingToken, amountOut);
-        }
+        if (!isBNB) amountOut = HedgepieLibraryBsc.swapForBnb(amountOut, address(this), stakingToken, swapRouter);
 
         // 5. update invested information for token id
         mAdapter.totalStaked -= userInfo.amount;
@@ -289,8 +307,7 @@ contract VenusLendAdapterBsc is BaseAdapter {
         userInfo.userShare2 = mAdapter.accTokenPerShare2;
 
         // 6. send to investor
-        (bool success, ) = payable(authority.hInvestor()).call{value: amountOut}("");
-        require(success, "Failed to send bnb to investor");
+        if (amountOut != 0) _chargeFeeAndSendToInvestor(_tokenId, amountOut, 0);
     }
 
     /**
@@ -304,22 +321,26 @@ contract VenusLendAdapterBsc is BaseAdapter {
         UserAdapterInfo storage userInfo = userAdapterInfos[_tokenId];
 
         // 1. swap bnb to staking token
-        if (router == address(0)) {
-            amountOut = HedgepieLibraryBsc.swapOnRouter(msg.value, address(this), stakingToken, swapRouter);
-        } else {
-            amountOut = HedgepieLibraryBsc.getLP(IYBNFT.AdapterParam(0, address(this)), stakingToken, msg.value);
-        }
+        bool isBNB = stakingToken == HedgepieLibraryBsc.WBNB;
+        amountOut = isBNB
+            ? msg.value
+            : HedgepieLibraryBsc.swapOnRouter(msg.value, address(this), stakingToken, swapRouter);
 
         // 2. get reward amount after deposit
         _calcReward(_tokenId, IVToken(repayToken).exchangeRateCurrent());
 
         // 3. supply staking token
         uint256 repayAmt = IERC20(repayToken).balanceOf(address(this));
-        IERC20(stakingToken).approve(strategy, amountOut);
-        require(IStrategy(strategy).mint(amountOut) == 0, "Error: Venus internal error");
-        repayAmt = IERC20(repayToken).balanceOf(address(this)) - repayAmt;
+        if (isBNB) {
+            IStrategy(strategy).mint{value: amountOut}();
+        } else {
+            IERC20(stakingToken).approve(strategy, amountOut);
+            require(IStrategy(strategy).mint(amountOut) == 0, "Error: Venus internal error");
+        }
 
         unchecked {
+            repayAmt = IERC20(repayToken).balanceOf(address(this)) - repayAmt;
+
             // 4. update mAdapter & userInfo
             mAdapter.totalStaked += repayAmt;
 
@@ -328,7 +349,5 @@ contract VenusLendAdapterBsc is BaseAdapter {
             userInfo.userShare1 = mAdapter.accTokenPerShare1;
             userInfo.userShare2 = mAdapter.accTokenPerShare2;
         }
-
-        return msg.value;
     }
 }

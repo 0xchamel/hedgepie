@@ -6,11 +6,15 @@ import "../../libraries/HedgepieLibraryBsc.sol";
 interface IStrategy {
     function deposit(uint256) external;
 
+    function depositBNB() external payable;
+
     function withdraw(uint256) external;
 
-    function balance() external view returns (uint256);
+    function withdrawBNB(uint256) external;
 
-    function totalSupply() external view returns (uint256);
+    function withdrawAll() external;
+
+    function withdrawAllBNB() external;
 
     function getPricePerFullShare() external view returns (uint256);
 }
@@ -55,25 +59,33 @@ contract BeefyVaultAdapterBsc is BaseAdapter {
         UserAdapterInfo storage userInfo = userAdapterInfos[_tokenId];
 
         // 1. get stakingToken
+        bool isBNB = stakingToken == HedgepieLibraryBsc.WBNB;
         if (router == address(0)) {
-            amountOut = HedgepieLibraryBsc.swapOnRouter(msg.value, address(this), stakingToken, swapRouter);
+            amountOut = isBNB
+                ? msg.value
+                : HedgepieLibraryBsc.swapOnRouter(msg.value, address(this), stakingToken, swapRouter);
         } else {
             amountOut = HedgepieLibraryBsc.getLP(IYBNFT.AdapterParam(0, address(this)), stakingToken, msg.value);
         }
 
         // 2. deposit to vault
         uint256 repayAmt = IERC20(repayToken).balanceOf(address(this));
-        IERC20(stakingToken).safeApprove(strategy, 0);
-        IERC20(stakingToken).safeApprove(strategy, amountOut);
-        IStrategy(strategy).deposit(amountOut);
-        repayAmt = IERC20(repayToken).balanceOf(address(this)) - repayAmt;
-        require(repayAmt != 0, "Failed to deposit");
+        if (isBNB) {
+            IStrategy(strategy).depositBNB{value: amountOut}();
+        } else {
+            IERC20(stakingToken).safeApprove(strategy, 0);
+            IERC20(stakingToken).safeApprove(strategy, amountOut);
+            IStrategy(strategy).deposit(amountOut);
+        }
+
+        unchecked {
+            repayAmt = IERC20(repayToken).balanceOf(address(this)) - repayAmt;
+            require(repayAmt != 0, "Failed to deposit");
+        }
 
         // 3. update user info
         userInfo.amount += repayAmt;
         userInfo.invested += amountOut;
-
-        return msg.value;
     }
 
     /**
@@ -91,34 +103,41 @@ contract BeefyVaultAdapterBsc is BaseAdapter {
         UserAdapterInfo storage userInfo = userAdapterInfos[_tokenId];
 
         // 1. withdraw from vault
-        uint256 lpOut = IERC20(stakingToken).balanceOf(address(this));
-        IStrategy(strategy).withdraw(_amount);
-        lpOut = IERC20(stakingToken).balanceOf(address(this)) - lpOut;
+        bool isBNB = stakingToken == HedgepieLibraryBsc.WBNB;
+        uint256 tokenAmt = isBNB ? address(this).balance : IERC20(stakingToken).balanceOf(address(this));
+
+        if (isBNB) IStrategy(strategy).withdrawBNB(_amount);
+        else IStrategy(strategy).withdraw(_amount);
+
+        unchecked {
+            tokenAmt = (isBNB ? address(this).balance : IERC20(stakingToken).balanceOf(address(this))) - tokenAmt;
+        }
 
         // 2. swap withdrawn lp to bnb
         if (router == address(0)) {
-            amountOut = HedgepieLibraryBsc.swapForBnb(lpOut, address(this), stakingToken, swapRouter);
+            amountOut = isBNB
+                ? tokenAmt
+                : HedgepieLibraryBsc.swapForBnb(tokenAmt, address(this), stakingToken, swapRouter);
         } else {
-            amountOut = HedgepieLibraryBsc.withdrawLP(IYBNFT.AdapterParam(0, address(this)), stakingToken, lpOut);
+            amountOut = HedgepieLibraryBsc.withdrawLP(IYBNFT.AdapterParam(0, address(this)), stakingToken, tokenAmt);
         }
 
         // 3. update userInfo
-        userInfo.amount -= _amount;
-        if (lpOut >= userInfo.invested) userInfo.invested = 0;
-        else userInfo.invested -= lpOut;
+        unchecked {
+            userInfo.amount -= _amount;
+
+            if (tokenAmt >= userInfo.invested) userInfo.invested = 0;
+            else userInfo.invested -= tokenAmt;
+        }
 
         // 4. send withdrawn bnb to investor
-        if (amountOut != 0) {
-            (bool success, ) = payable(msg.sender).call{value: amountOut}("");
-            require(success, "Failed to send bnb");
-        }
+        if (amountOut != 0) _chargeFeeAndSendToInvestor(_tokenId, amountOut, 0);
     }
 
     /**
      * @notice Claim the pending reward
      * @param _tokenId YBNFT token id
      */
-
     /// #if_succeeds {:msg "withdraw failed"}  userAdapterInfos[_tokenId].userShare1 == mAdapter.accTokenPerShare1 && userAdapterInfos[_tokenId].rewardDebt1 == 0;
     function claim(uint256 _tokenId) external payable override onlyInvestor returns (uint256 amountOut) {
         UserAdapterInfo storage userInfo = userAdapterInfos[_tokenId];
@@ -181,42 +200,46 @@ contract BeefyVaultAdapterBsc is BaseAdapter {
         wantAmt -= userInfo.invested;
 
         if (router == address(0)) {
-            address[] memory pathStake = IPathFinder(authority.pathFinder()).getPaths(
-                swapRouter,
-                stakingToken,
-                HedgepieLibraryBsc.WBNB
-            );
+            if (stakingToken == HedgepieLibraryBsc.WBNB) reward = wantAmt;
+            else {
+                address[] memory paths = IPathFinder(authority.pathFinder()).getPaths(
+                    swapRouter,
+                    stakingToken,
+                    HedgepieLibraryBsc.WBNB
+                );
 
-            if (stakingToken != HedgepieLibraryBsc.WBNB)
-                reward += wantAmt == 0
-                    ? 0
-                    : IPancakeRouter(swapRouter).getAmountsOut(wantAmt, pathStake)[pathStake.length - 1];
+                reward = IPancakeRouter(swapRouter).getAmountsOut(wantAmt, paths)[paths.length - 1];
+            }
         } else {
             address token0 = IPancakePair(stakingToken).token0();
             address token1 = IPancakePair(stakingToken).token1();
-            address[] memory path0 = IPathFinder(authority.pathFinder()).getPaths(
-                swapRouter,
-                token0,
-                HedgepieLibraryBsc.WBNB
-            );
-            address[] memory path1 = IPathFinder(authority.pathFinder()).getPaths(
-                swapRouter,
-                token1,
-                HedgepieLibraryBsc.WBNB
-            );
 
             (uint112 reserve0, uint112 reserve1, ) = IPancakePair(stakingToken).getReserves();
 
             uint256 amount0 = (reserve0 * wantAmt) / IPancakePair(stakingToken).totalSupply();
             uint256 amount1 = (reserve1 * wantAmt) / IPancakePair(stakingToken).totalSupply();
 
-            if (token0 == HedgepieLibraryBsc.WBNB) reward += amount0;
-            else
-                reward += amount0 == 0 ? 0 : IPancakeRouter(swapRouter).getAmountsOut(amount0, path0)[path0.length - 1];
+            if (token0 == HedgepieLibraryBsc.WBNB) reward = amount0;
+            else {
+                address[] memory path0 = IPathFinder(authority.pathFinder()).getPaths(
+                    swapRouter,
+                    token0,
+                    HedgepieLibraryBsc.WBNB
+                );
+
+                reward = IPancakeRouter(swapRouter).getAmountsOut(amount0, path0)[path0.length - 1];
+            }
 
             if (token1 == HedgepieLibraryBsc.WBNB) reward += amount1;
-            else
-                reward += amount1 == 0 ? 0 : IPancakeRouter(swapRouter).getAmountsOut(amount1, path1)[path1.length - 1];
+            else {
+                address[] memory path1 = IPathFinder(authority.pathFinder()).getPaths(
+                    swapRouter,
+                    token1,
+                    HedgepieLibraryBsc.WBNB
+                );
+
+                reward += IPancakeRouter(swapRouter).getAmountsOut(amount1, path1)[path1.length - 1];
+            }
         }
 
         reward += userInfo.rewardDebt1;
@@ -233,19 +256,27 @@ contract BeefyVaultAdapterBsc is BaseAdapter {
         if (userInfo.amount == 0) return 0;
 
         // 1. withdraw all from Vault
-        amountOut = IERC20(stakingToken).balanceOf(address(this));
-        IStrategy(strategy).withdraw(userInfo.amount);
-        amountOut = IERC20(stakingToken).balanceOf(address(this)) - amountOut;
+        bool isBNB = stakingToken == HedgepieLibraryBsc.WBNB;
+        amountOut = isBNB ? address(this).balance : IERC20(stakingToken).balanceOf(address(this));
+
+        if (isBNB) IStrategy(strategy).withdrawAllBNB();
+        else IStrategy(strategy).withdrawAll();
+
+        unchecked {
+            amountOut = (isBNB ? address(this).balance : IERC20(stakingToken).balanceOf(address(this))) - amountOut;
+        }
 
         // 2. calc reward
         uint256 rewardPercent = 0;
         if (amountOut > userInfo.invested) {
-            rewardPercent = ((amountOut - userInfo.invested) * 1e12) / amountOut;
+            unchecked {
+                rewardPercent = ((amountOut - userInfo.invested) * 1e12) / amountOut;
+            }
         }
 
         // 3. swap withdrawn lp to bnb
         if (router == address(0)) {
-            amountOut = HedgepieLibraryBsc.swapForBnb(amountOut, address(this), stakingToken, swapRouter);
+            if (!isBNB) amountOut = HedgepieLibraryBsc.swapForBnb(amountOut, address(this), stakingToken, swapRouter);
         } else {
             amountOut = HedgepieLibraryBsc.withdrawLP(IYBNFT.AdapterParam(0, address(this)), stakingToken, amountOut);
         }
@@ -257,8 +288,7 @@ contract BeefyVaultAdapterBsc is BaseAdapter {
         userInfo.rewardDebt1 += reward;
 
         // 5. send withdrawn bnb to investor
-        (bool success, ) = payable(authority.hInvestor()).call{value: amountOut - reward}("");
-        require(success, "Failed to send bnb to investor");
+        if (amountOut != 0) _chargeFeeAndSendToInvestor(_tokenId, amountOut - reward, 0);
     }
 
     /**
@@ -271,25 +301,33 @@ contract BeefyVaultAdapterBsc is BaseAdapter {
 
         UserAdapterInfo storage userInfo = userAdapterInfos[_tokenId];
 
-        // 1. get LP
+        // 1. get stakingToken
+        bool isBNB = stakingToken == HedgepieLibraryBsc.WBNB;
         if (router == address(0)) {
-            amountOut = HedgepieLibraryBsc.swapOnRouter(msg.value, address(this), stakingToken, swapRouter);
+            amountOut = isBNB
+                ? msg.value
+                : HedgepieLibraryBsc.swapOnRouter(msg.value, address(this), stakingToken, swapRouter);
         } else {
             amountOut = HedgepieLibraryBsc.getLP(IYBNFT.AdapterParam(0, address(this)), stakingToken, msg.value);
         }
 
         // 2. deposit to vault
         uint256 repayAmt = IERC20(repayToken).balanceOf(address(this));
-        IERC20(stakingToken).safeApprove(strategy, 0);
-        IERC20(stakingToken).safeApprove(strategy, amountOut);
-        IStrategy(strategy).deposit(amountOut);
-        repayAmt = IERC20(repayToken).balanceOf(address(this)) - repayAmt;
-        require(repayAmt != 0, "Failed to update funds");
+        if (isBNB) {
+            IStrategy(strategy).depositBNB{value: amountOut}();
+        } else {
+            IERC20(stakingToken).safeApprove(strategy, 0);
+            IERC20(stakingToken).safeApprove(strategy, amountOut);
+            IStrategy(strategy).deposit(amountOut);
+        }
+
+        unchecked {
+            repayAmt = IERC20(repayToken).balanceOf(address(this)) - repayAmt;
+            require(repayAmt != 0, "Failed to update funds");
+        }
 
         // 3. update user info
         userInfo.amount = repayAmt;
         userInfo.invested = amountOut;
-
-        return msg.value;
     }
 }

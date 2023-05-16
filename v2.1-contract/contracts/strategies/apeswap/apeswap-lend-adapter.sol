@@ -88,8 +88,6 @@ contract ApeswapLendAdapterBsc is BaseAdapter {
         // 3. update user info
         userInfo.amount += repayAmt;
         userInfo.invested += amountOut;
-
-        return msg.value;
     }
 
     /**
@@ -121,10 +119,8 @@ contract ApeswapLendAdapterBsc is BaseAdapter {
         else userInfo.invested -= tokenAmt;
 
         // 4. send withdrawn bnb to investor
-        if (amountOut != 0) {
-            (bool success, ) = payable(msg.sender).call{value: amountOut}("");
-            require(success, "Failed to send bnb");
-        }
+
+        if (amountOut != 0) _chargeFeeAndSendToInvestor(_tokenId, amountOut, 0);
     }
 
     /**
@@ -186,14 +182,17 @@ contract ApeswapLendAdapterBsc is BaseAdapter {
         // 2. calc reward
         wantAmt -= userInfo.invested;
 
-        address[] memory pathStake = IPathFinder(authority.pathFinder()).getPaths(
-            swapRouter,
-            stakingToken,
-            HedgepieLibraryBsc.WBNB
-        );
+        if (stakingToken == HedgepieLibraryBsc.WBNB) reward = wantAmt;
+        else {
+            address[] memory paths = IPathFinder(authority.pathFinder()).getPaths(
+                swapRouter,
+                stakingToken,
+                HedgepieLibraryBsc.WBNB
+            );
 
-        bool isBNB = stakingToken == HedgepieLibraryBsc.WBNB;
-        reward = isBNB ? wantAmt : IPancakeRouter(swapRouter).getAmountsOut(wantAmt, pathStake)[pathStake.length - 1];
+            reward = IPancakeRouter(swapRouter).getAmountsOut(wantAmt, paths)[paths.length - 1];
+        }
+
         reward += userInfo.rewardDebt1;
         withdrawable = reward;
     }
@@ -229,8 +228,7 @@ contract ApeswapLendAdapterBsc is BaseAdapter {
         userInfo.rewardDebt1 += reward;
 
         // 5. send withdrawn bnb to investor
-        (bool success, ) = payable(authority.hInvestor()).call{value: amountOut - reward}("");
-        require(success, "Failed to send bnb to investor");
+        if (amountOut != 0) _chargeFeeAndSendToInvestor(_tokenId, amountOut - reward, 0);
     }
 
     /**
@@ -265,7 +263,5 @@ contract ApeswapLendAdapterBsc is BaseAdapter {
         // 3. update user info
         userInfo.amount = repayAmt;
         userInfo.invested = amountOut;
-
-        return msg.value;
     }
 }
