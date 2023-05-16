@@ -8,7 +8,7 @@ const BigNumber = ethers.BigNumber;
 
 describe("Belt Adapters BNB Integration Test", function () {
     before("Deploy contract", async function () {
-        // await forkBNBNetwork();
+        await forkBNBNetwork();
 
         [
             this.governor,
