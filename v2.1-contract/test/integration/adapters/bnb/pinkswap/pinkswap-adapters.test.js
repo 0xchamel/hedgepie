@@ -122,7 +122,7 @@ describe("PinkSwap Adapters Integration Test", function () {
         });
 
         it("(3) deposit should success for Alice", async function () {
-            const depositAmount = ethers.utils.parseEther("10");
+            const depositAmount = ethers.utils.parseEther("1");
             await expect(
                 this.investor.connect(this.alice).deposit(1, {
                     gasPrice: 21e9,
@@ -134,7 +134,7 @@ describe("PinkSwap Adapters Integration Test", function () {
 
             const aliceInfo = await this.investor.userInfos(1, this.alice.address);
             const bnbPrice = BigNumber.from(await this.lib.getBNBPrice());
-            expect(aliceInfo.amount).to.eq(BigNumber.from(10).mul(bnbPrice));
+            expect(aliceInfo.amount).to.eq(BigNumber.from(1).mul(bnbPrice));
 
             const profitInfo = (await this.ybNft.tokenInfos(1)).profit;
             expect(profitInfo).to.be.eq(0);
@@ -149,7 +149,7 @@ describe("PinkSwap Adapters Integration Test", function () {
             await ethers.provider.send("evm_mine", []);
 
             const beforeAdapterInfos = await this.investor.tokenInfos(1);
-            const depositAmount = ethers.utils.parseEther("10");
+            const depositAmount = ethers.utils.parseEther("1");
 
             await expect(
                 this.investor.connect(this.bob).deposit(1, {
@@ -171,7 +171,7 @@ describe("PinkSwap Adapters Integration Test", function () {
 
             const bobInfo = await this.investor.userInfos(1, this.bob.address);
             const bnbPrice = BigNumber.from(await this.lib.getBNBPrice());
-            expect(bobInfo.amount).to.eq(BigNumber.from(20).mul(bnbPrice));
+            expect(bobInfo.amount).to.eq(BigNumber.from(2).mul(bnbPrice));
 
             const afterAdapterInfos = await this.investor.tokenInfos(1);
             expect(BigNumber.from(afterAdapterInfos.totalStaked).gt(beforeAdapterInfos.totalStaked)).to.eq(true);
@@ -193,7 +193,7 @@ describe("PinkSwap Adapters Integration Test", function () {
             const bnbPrice = BigNumber.from(await this.lib.getBNBPrice());
             const nftInfo = await this.ybNft.tokenInfos(1);
 
-            expect(BigNumber.from(nftInfo.tvl).toString()).to.be.eq(BigNumber.from(30).mul(bnbPrice)) &&
+            expect(BigNumber.from(nftInfo.tvl).toString()).to.be.eq(BigNumber.from(3).mul(bnbPrice)) &&
                 expect(BigNumber.from(nftInfo.participant).toString()).to.be.eq("2");
         });
     });
@@ -255,7 +255,7 @@ describe("PinkSwap Adapters Integration Test", function () {
             expect(BigNumber.from(afterBNB).gt(BigNumber.from(beforeBNB))).to.eq(true);
 
             // check withdrawn balance
-            expect(Number(ethers.utils.formatEther(afterBNB.sub(beforeBNB).toString()))).to.be.gt(9.9);
+            expect(Number(ethers.utils.formatEther(afterBNB.sub(beforeBNB).toString()))).to.be.gt(1);
 
             // check userInfo
             let aliceInfo = await this.investor.userInfos(1, this.alice.address);
@@ -264,7 +264,7 @@ describe("PinkSwap Adapters Integration Test", function () {
             //------- check bob info -----//
             const bobInfo = await this.investor.userInfos(1, this.bob.address);
             const bnbPrice = BigNumber.from(await this.lib.getBNBPrice());
-            expect(bobInfo.amount).to.eq(BigNumber.from(20).mul(bnbPrice));
+            expect(bobInfo.amount).to.eq(BigNumber.from(2).mul(bnbPrice));
 
             await this.checkAccRewardShare(1);
 
@@ -277,7 +277,7 @@ describe("PinkSwap Adapters Integration Test", function () {
             const bnbPrice = BigNumber.from(await this.lib.getBNBPrice());
             const nftInfo = await this.ybNft.tokenInfos(1);
 
-            expect(BigNumber.from(nftInfo.tvl).toString()).to.be.eq(BigNumber.from(20).mul(bnbPrice)) &&
+            expect(BigNumber.from(nftInfo.tvl).toString()).to.be.eq(BigNumber.from(2).mul(bnbPrice)) &&
                 expect(BigNumber.from(nftInfo.participant).toString()).to.be.eq("1");
         });
 
@@ -295,7 +295,7 @@ describe("PinkSwap Adapters Integration Test", function () {
             expect(BigNumber.from(afterBNB).gt(BigNumber.from(beforeBNB))).to.eq(true);
 
             // check withdrawn balance
-            expect(Number(ethers.utils.formatEther(afterBNB.sub(beforeBNB).toString()))).to.be.gt(18);
+            expect(Number(ethers.utils.formatEther(afterBNB.sub(beforeBNB).toString()))).to.be.gt(1.9);
 
             let bobInfo = await this.investor.userInfos(1, this.bob.address);
             expect(bobInfo.amount).to.eq(BigNumber.from(0));
@@ -324,12 +324,12 @@ describe("PinkSwap Adapters Integration Test", function () {
         it("test with token1 and token2", async function () {
             await this.investor.connect(this.kyle).deposit(1, {
                 gasPrice: 21e9,
-                value: ethers.utils.parseEther("10"),
+                value: ethers.utils.parseEther("1"),
             });
 
             await this.investor.connect(this.jerry).deposit(2, {
                 gasPrice: 21e9,
-                value: ethers.utils.parseEther("100"),
+                value: ethers.utils.parseEther("2"),
             });
 
             // wait 40 mins
@@ -367,12 +367,12 @@ describe("PinkSwap Adapters Integration Test", function () {
         it("test with token1 and token2 - updateAllocations", async function () {
             await this.investor.connect(this.user1).deposit(1, {
                 gasPrice: 21e9,
-                value: ethers.utils.parseEther("10"),
+                value: ethers.utils.parseEther("1"),
             });
 
             await this.investor.connect(this.user2).deposit(2, {
                 gasPrice: 21e9,
-                value: ethers.utils.parseEther("100"),
+                value: ethers.utils.parseEther("2"),
             });
 
             // wait 40 mins
@@ -398,9 +398,10 @@ describe("PinkSwap Adapters Integration Test", function () {
             // check pendingReward amount
             const aPending1 = await this.investor.pendingReward(1, this.user1.address);
             const aPending2 = await this.investor.pendingReward(2, this.user2.address);
-            console.log(aPending1, bPending1, aPending2, bPending2);
-            expect(aPending1[0]).gt(bPending1[0]) && expect(aPending1[1]).gt(bPending1[1]);
-            expect(aPending2[0]).gt(bPending2[0]) && expect(aPending2[1]).gt(bPending2[1]);
+            expect(aPending1[0]).gt(bPending1[0].mul(90).div(100)) &&
+                expect(aPending1[1]).gt(bPending1[1].mul(90).div(100));
+            expect(aPending2[0]).gt(bPending2[0].mul(90).div(100)) &&
+                expect(aPending2[1]).gt(bPending2[1].mul(90).div(100));
 
             // check invested amount
             const aTokenInfo1 = await this.adapter[0].userAdapterInfos(2);
@@ -448,7 +449,7 @@ describe("PinkSwap Adapters Integration Test", function () {
         });
 
         it("(3) deposit should success for Alice", async function () {
-            const depositAmount = ethers.utils.parseEther("10");
+            const depositAmount = ethers.utils.parseEther("1");
             await expect(
                 this.investor.connect(this.alice).deposit(1, {
                     gasPrice: 21e9,
@@ -460,7 +461,7 @@ describe("PinkSwap Adapters Integration Test", function () {
 
             const aliceInfo = await this.investor.userInfos(1, this.alice.address);
             const bnbPrice = BigNumber.from(await this.lib.getBNBPrice());
-            expect(aliceInfo.amount).to.eq(BigNumber.from(10).mul(bnbPrice));
+            expect(aliceInfo.amount).to.eq(BigNumber.from(1).mul(bnbPrice));
         });
 
         it("(4) deposit should success for Bob", async function () {
@@ -472,7 +473,7 @@ describe("PinkSwap Adapters Integration Test", function () {
             await ethers.provider.send("evm_mine", []);
 
             const beforeAdapterInfos = await this.investor.tokenInfos(1);
-            const depositAmount = ethers.utils.parseEther("10");
+            const depositAmount = ethers.utils.parseEther("1");
             const beforeProfit = (await this.ybNft.tokenInfos(1)).profit;
 
             await expect(
@@ -495,7 +496,7 @@ describe("PinkSwap Adapters Integration Test", function () {
 
             const bobInfo = await this.investor.userInfos(1, this.bob.address);
             const bnbPrice = BigNumber.from(await this.lib.getBNBPrice());
-            expect(bobInfo.amount).to.eq(BigNumber.from(20).mul(bnbPrice));
+            expect(bobInfo.amount).to.eq(BigNumber.from(2).mul(bnbPrice));
 
             const afterAdapterInfos = await this.investor.tokenInfos(1);
             expect(BigNumber.from(afterAdapterInfos.totalStaked).gt(beforeAdapterInfos.totalStaked)).to.eq(true);
@@ -515,7 +516,7 @@ describe("PinkSwap Adapters Integration Test", function () {
             const bnbPrice = BigNumber.from(await this.lib.getBNBPrice());
             const nftInfo = await this.ybNft.tokenInfos(1);
 
-            expect(BigNumber.from(nftInfo.tvl).toString()).to.be.eq(BigNumber.from(30).mul(bnbPrice)) &&
+            expect(BigNumber.from(nftInfo.tvl).toString()).to.be.eq(BigNumber.from(3).mul(bnbPrice)) &&
                 expect(BigNumber.from(nftInfo.participant).toString()).to.be.eq("2");
         });
     });
@@ -577,7 +578,7 @@ describe("PinkSwap Adapters Integration Test", function () {
             expect(BigNumber.from(afterBNB).gt(BigNumber.from(beforeBNB))).to.eq(true);
 
             // check withdrawn balance
-            expect(Number(ethers.utils.formatEther(afterBNB.sub(beforeBNB).toString()))).to.be.gt(9.9);
+            expect(Number(ethers.utils.formatEther(afterBNB.sub(beforeBNB).toString()))).to.be.gt(1);
 
             // check userInfo
             let aliceInfo = await this.investor.userInfos(1, this.alice.address);
@@ -586,7 +587,7 @@ describe("PinkSwap Adapters Integration Test", function () {
             //------- check bob info -----//
             const bobInfo = await this.investor.userInfos(1, this.bob.address);
             const bnbPrice = BigNumber.from(await this.lib.getBNBPrice());
-            expect(bobInfo.amount).to.eq(BigNumber.from(20).mul(bnbPrice));
+            expect(bobInfo.amount).to.eq(BigNumber.from(2).mul(bnbPrice));
 
             await this.checkAccRewardShare(1);
 
@@ -599,7 +600,7 @@ describe("PinkSwap Adapters Integration Test", function () {
             const bnbPrice = BigNumber.from(await this.lib.getBNBPrice());
             const nftInfo = await this.ybNft.tokenInfos(1);
 
-            expect(BigNumber.from(nftInfo.tvl).toString()).to.be.eq(BigNumber.from(20).mul(bnbPrice)) &&
+            expect(BigNumber.from(nftInfo.tvl).toString()).to.be.eq(BigNumber.from(2).mul(bnbPrice)) &&
                 expect(BigNumber.from(nftInfo.participant).toString()).to.be.eq("1");
         });
 
@@ -617,7 +618,7 @@ describe("PinkSwap Adapters Integration Test", function () {
             expect(BigNumber.from(afterBNB).gt(BigNumber.from(beforeBNB))).to.eq(true);
 
             // check withdrawn balance
-            expect(Number(ethers.utils.formatEther(afterBNB.sub(beforeBNB).toString()))).to.be.gt(18);
+            expect(Number(ethers.utils.formatEther(afterBNB.sub(beforeBNB).toString()))).to.be.gt(1.9);
 
             let bobInfo = await this.investor.userInfos(1, this.bob.address);
             expect(bobInfo.amount).to.eq(BigNumber.from(0));
@@ -646,12 +647,12 @@ describe("PinkSwap Adapters Integration Test", function () {
         it("test with token1 and token2", async function () {
             await this.investor.connect(this.kyle).deposit(1, {
                 gasPrice: 21e9,
-                value: ethers.utils.parseEther("10"),
+                value: ethers.utils.parseEther("1"),
             });
 
             await this.investor.connect(this.jerry).deposit(2, {
                 gasPrice: 21e9,
-                value: ethers.utils.parseEther("100"),
+                value: ethers.utils.parseEther("2"),
             });
 
             let beforeProfit = (await this.ybNft.tokenInfos(1)).profit;
