@@ -1508,6 +1508,70 @@ export const adapters = {
             "0x10ED43C718714eb63d5aA57B78B54704E256024E",
             "0x8fe962Dd1f322780f2Cb0264eA1eDc8a1504C367",
             "Radiant::Market::USDC",
+        ],
+    ],
+    pinkSwap: [
+        [
+            0,
+            "0xe981676633dcf0256aa512f4923a7e8da180c595",
+            "0x61c960D0337f1EfE46BC7B1110bA8C4e60DD2017",
+            "0x702b3f41772e321aacCdea91e1FCEF682D21125D",
+            "0x319ef69a98c8e8aab36aea561daba0bf3d0fa3ac",
+            "PinkSwap::Farm::PINKS-BNB",
+            authority,
+        ],
+        [
+            1,
+            "0xe981676633dcf0256aa512f4923a7e8da180c595",
+            "0x2E4BaE64Cc33eC8A7608930E8Bd32f592E8a9968",
+            "0x702b3f41772e321aacCdea91e1FCEF682D21125D",
+            "0x319ef69a98c8e8aab36aea561daba0bf3d0fa3ac",
+            "PinkSwap::Farm::BNB-BUSD",
+            authority,
+        ],
+        [
+            2,
+            "0xe981676633dcf0256aa512f4923a7e8da180c595",
+            "0xB9eFbD2Bb41f7A2136BF2B21e8B26641651adef9",
+            "0x702b3f41772e321aacCdea91e1FCEF682D21125D",
+            "0x319ef69a98c8e8aab36aea561daba0bf3d0fa3ac",
+            "PinkSwap::Farm::PINKE-BNB",
+            authority,
+        ],
+        [
+            3,
+            "0xe981676633dcf0256aa512f4923a7e8da180c595",
+            "0xefd49d669d73Acf4dF4dF7C677F689Fc6ca6ecaB",
+            "0x702b3f41772e321aacCdea91e1FCEF682D21125D",
+            "0x319ef69a98c8e8aab36aea561daba0bf3d0fa3ac",
+            "PinkSwap::Farm::USDT-BUSD",
+            authority,
+        ],
+        [
+            4,
+            "0xe981676633dcf0256aa512f4923a7e8da180c595",
+            "0x5aB38077E9C5f9980bbabf68679B7E34137a51Af",
+            "0x702b3f41772e321aacCdea91e1FCEF682D21125D",
+            "0x319ef69a98c8e8aab36aea561daba0bf3d0fa3ac",
+            "PinkSwap::Farm::ETH-BNB",
+            authority,
+        ],
+        [
+            5,
+            "0xe981676633dcf0256aa512f4923a7e8da180c595",
+            "0xC4dBFe8860bd39F0F8281B7DE8eE53730c9a44e1",
+            "0x702b3f41772e321aacCdea91e1FCEF682D21125D",
+            "0x319ef69a98c8e8aab36aea561daba0bf3d0fa3ac",
+            "PinkSwap::Farm::BTCB-BNB",
+            authority,
+        ],
+        [
+            6,
+            "0xe981676633dcf0256aa512f4923a7e8da180c595",
+            "0xb390F799ba5f75e0BB15014A9a34a0dEC6760E1E",
+            "0x702b3f41772e321aacCdea91e1FCEF682D21125D",
+            "0x319ef69a98c8e8aab36aea561daba0bf3d0fa3ac",
+            "PinkSwap::Farm::USDT-BNB",
             authority,
         ],
     ],
@@ -1524,6 +1588,7 @@ export const adapterNames = {
     apeswapLend: "ApeswapLendAdapterBsc",
     venusLend: "VenusLendAdapterBsc",
     radiant: "RadiantV2Bsc",
+    pinkSwap: "PinkSwapFarmLPAdapterBsc",
 };
 
 export const adapterPaths = {
@@ -1537,11 +1602,13 @@ export const adapterPaths = {
     apeswapLend: "contracts/strategies/apeswap/apeswap-lend-adapter.sol:ApeswapLendAdapterBsc",
     venusLend: "contracts/strategies/venus/venus-lend-adapter.sol:VenusLendAdapterBsc",
     radiant: "contracts/strategies/venus/radiant-v2-adapter.sol:RadiantV2Bsc",
+    pinkSwap: "contracts/strategies/pinkswap/pinkswap-farm-adapter.sol:PinkSwapFarmLPAdapterBsc",
 };
 
 const pks = "0x10ED43C718714eb63d5aA57B78B54704E256024E";
 const biswap = "0x3a6d8cA21D1CF76F653A67577FA0D27453350dD8";
 const mdex = "0x8fe32329C4dbE8d29B9c8874Ef0F52CcD8c7D3F0";
+const pinkswap = "0x319ef69a98c8e8aab36aea561daba0bf3d0fa3ac";
 
 const wbnb = "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c";
 const usdt = "0x55d398326f99059fF775485246999027B3197955";
@@ -1600,6 +1667,8 @@ const belt = "0xE0e514c71282b6f4e823703a39374Cf58dc3eA4f";
 const c98 = "0xaEC945e04baF28b135Fa7c640f624f8D90F1C3a6";
 const chr = "0xf9CeC8d50f6c8ad3Fb6dcCEC577e05aA32B224FE";
 const sol = "0x570A5D26f7765Ecb712C0924E4De545B89fD43dF";
+const pinks = "0x702b3f41772e321aacCdea91e1FCEF682D21125D";
+const pinke = "0x8DA0F18e4deB7Ba81dBD061DF57325a894014B5a";
 
 export const paths = [
     [pks, wbnb, usdt],
@@ -1682,4 +1751,11 @@ export const paths = [
     [pks, wbnb, c98],
     [pks, wbnb, busd, chr],
     [pks, wbnb, uni],
+
+    [pinkswap, wbnb, pinks],
+    [pinkswap, wbnb, pinke],
+    [pinkswap, wbnb, eth],
+    [pinkswap, wbnb, btc],
+    [pinkswap, wbnb, busd],
+    [pinkswap, wbnb, usdt],
 ];
