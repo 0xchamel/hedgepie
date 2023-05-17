@@ -1608,6 +1608,7 @@ export const adapterPaths = {
 const pks = "0x10ED43C718714eb63d5aA57B78B54704E256024E";
 const biswap = "0x3a6d8cA21D1CF76F653A67577FA0D27453350dD8";
 const mdex = "0x8fe32329C4dbE8d29B9c8874Ef0F52CcD8c7D3F0";
+const pinkswap = "0x319ef69a98c8e8aab36aea561daba0bf3d0fa3ac";
 
 const wbnb = "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c";
 const usdt = "0x55d398326f99059fF775485246999027B3197955";
@@ -1666,6 +1667,8 @@ const belt = "0xE0e514c71282b6f4e823703a39374Cf58dc3eA4f";
 const c98 = "0xaEC945e04baF28b135Fa7c640f624f8D90F1C3a6";
 const chr = "0xf9CeC8d50f6c8ad3Fb6dcCEC577e05aA32B224FE";
 const sol = "0x570A5D26f7765Ecb712C0924E4De545B89fD43dF";
+const pinks = "0x702b3f41772e321aacCdea91e1FCEF682D21125D";
+const pinke = "0x8DA0F18e4deB7Ba81dBD061DF57325a894014B5a";
 
 export const paths = [
     [pks, wbnb, usdt],
@@ -1748,4 +1751,11 @@ export const paths = [
     [pks, wbnb, c98],
     [pks, wbnb, busd, chr],
     [pks, wbnb, uni],
+
+    [pinkswap, wbnb, pinks],
+    [pinkswap, wbnb, pinke],
+    [pinkswap, wbnb, eth],
+    [pinkswap, wbnb, btc],
+    [pinkswap, wbnb, busd],
+    [pinkswap, wbnb, usdt],
 ];
