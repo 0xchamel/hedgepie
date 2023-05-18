@@ -1601,7 +1601,7 @@ export const adapterPaths = {
     alpacaLend: "contracts/strategies/alpaca/alpaca-lend-adapter.sol:AlpacaLendAdapterBsc",
     apeswapLend: "contracts/strategies/apeswap/apeswap-lend-adapter.sol:ApeswapLendAdapterBsc",
     venusLend: "contracts/strategies/venus/venus-lend-adapter.sol:VenusLendAdapterBsc",
-    radiant: "contracts/strategies/venus/radiant-v2-adapter.sol:RadiantV2Bsc",
+    radiant: "contracts/strategies/radiant/radiant-v2-adapter.sol:RadiantV2Bsc",
     pinkSwap: "contracts/strategies/pinkswap/pinkswap-farm-adapter.sol:PinkSwapFarmLPAdapterBsc",
 };
 

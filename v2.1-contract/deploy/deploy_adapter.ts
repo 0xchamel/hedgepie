@@ -2,14 +2,21 @@ import "@nomiclabs/hardhat-ethers";
 import fs from "fs";
 import hre from "hardhat";
 import * as path from "path";
-import contracts from "../config/contracts.json";
+import prodContracts from "../config/contracts.json";
+import stgContracts from "../config/contracts_stg.json";
 
 import { deployUsingFactory } from "../utils";
-import { lib, adapterNames, adapters } from "./constant";
+import { lib as prodLib, adapterNames, adapters as prodAdapters } from "./constant";
+import { lib as stgLib, adapters as stgAdapters } from "./constant_stg";
 
 const { setupBscAdapterWithLib } = require("../test/shared/setup");
 
 async function deploy(name: string) {
+    const isStaging = process.env.ENV && process.env.ENV === "STG";
+    const contracts = isStaging ? stgContracts : prodContracts;
+    const lib = isStaging ? stgLib : prodLib;
+    const adapters = isStaging ? stgAdapters : prodAdapters;
+
     if (!adapters[name] || adapters[name].length === 0) {
         console.log("Adapter parameters are not existing.");
         return;
@@ -23,7 +30,7 @@ async function deploy(name: string) {
     }
 
     // update config file
-    const configPath = path.join(__dirname, "../config", "contracts.json");
+    const configPath = path.join(__dirname, "../config", isStaging ? "contracts_stg.json" : "contracts.json");
     fs.writeFileSync(
         configPath,
         JSON.stringify({
