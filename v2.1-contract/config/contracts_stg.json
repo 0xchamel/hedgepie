@@ -1,0 +1,25 @@
+{
+    "lib": "0xFd2349Ab7dA0708a09F6b0Cb61d4aAB874d3010F",
+    "authority": "0xA2F2932cC4638D794004b71b710D08b031083eB2",
+    "investor": "0x6D220b25cA490b742394f9DbaCeaAAFb35Ea15c6",
+    "pathFinder": "0x5C114c9966992459e47a159A475400D63215f519",
+    "ybnft": "0xEfF77A765548e053C6332cff8c47Aa7746f649d4",
+    "adapterList": "0xF1c1DaC9a3C99389827FD490ccbD6e7C6d7d6D07",
+    "radiant": {
+        "Radiant::Market::USDT": "0xE30AdA2e897c6722C8D7B7D9c9115cc08Cf4FF87",
+        "Radiant::Market::BTCB": "0x0Fec3ef28b037Cf7FE7EA8EA424b5A42B3619309",
+        "Radiant::Market::BUSD": "0x50b8e68386B1fedba1b9b6a14b9854E27ab4Ea08",
+        "Radiant::Market::ETH": "0xbc3a07B928fC2E2A2c32013626247e39f1eb24Bf",
+        "Radiant::Market::BNB": "0xb28dDB093C2c9Bd01d51e2504Cb149410F2227d9",
+        "Radiant::Market::USDC": "0x182a6632937350df8547412e8046ddE7F80B231c"
+    },
+    "pinkSwap": {
+        "PinkSwap::Farm::PINKS-BNB": "0x4E1592dE974e76b0de6B07a6A8d319036Bc4d976",
+        "PinkSwap::Farm::BNB-BUSD": "0x58fBCb8D4c50eEAE24F0efb0eB7ce68cD8045d67",
+        "PinkSwap::Farm::PINKE-BNB": "0xaB85710d11bBA952B149De97724ab03aa31A7A44",
+        "PinkSwap::Farm::USDT-BUSD": "0x03FFE2BF09045C5A34E41b3d281bf18f8Ca8c012",
+        "PinkSwap::Farm::ETH-BNB": "0x3A17cfd5370fc085E61633D7e47E9c9eB2555E81",
+        "PinkSwap::Farm::BTCB-BNB": "0x76595BfEE82Db97FAC05ceE866f7f6A919eaD48C",
+        "PinkSwap::Farm::USDT-BNB": "0x1CB0EC06d7e71f0Cdb1B896E602f9A4Cc6FcA2Cb"
+    }
+}

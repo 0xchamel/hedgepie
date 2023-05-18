@@ -4,9 +4,12 @@ import fs from "fs";
 import * as path from "path";
 
 import { verify } from "../utils";
-import { paths } from "./constant";
+import { paths as prodPaths } from "./constant";
+import { paths as stgPaths } from "./constant_stg";
 
 async function deploy() {
+    const isStaging = process.env.ENV && process.env.ENV === "STG";
+    const paths = isStaging ? stgPaths : prodPaths;
     const HedgepieAdapterList = await hre.ethers.getContractFactory("HedgepieAdapterList");
     const HedgepieAuthority = await hre.ethers.getContractFactory("HedgepieAuthority");
     const Lib = await hre.ethers.getContractFactory("HedgepieLibraryBsc");
@@ -54,7 +57,7 @@ async function deploy() {
     await authority.setPathFinder(pathFinder.address);
 
     // update config file
-    const configPath = path.join(__dirname, "../config", "contracts.json");
+    const configPath = path.join(__dirname, "../config", isStaging ? "contracts_stg.json" : "contracts.json");
     fs.writeFileSync(
         configPath,
         JSON.stringify({

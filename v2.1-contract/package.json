@@ -7,6 +7,8 @@
         "build": "npx hardhat compile",
         "test": "npx hardhat test --network hardhat",
         "code:size": "npx hardhat size-contracts",
+        "deploy:network-stg": "ENV=STG npx hardhat run deploy/deploy.ts --network",
+        "deploy-adapter:network-stg": "ENV=STG npx hardhat run deploy/deploy_adapter.ts --network",
         "deploy:network": "npx hardhat run deploy/deploy.ts --network",
         "deploy-adapter:network": "npx hardhat run deploy/deploy_adapter.ts --network",
         "verify:network": "npx hardhat verify --network",
