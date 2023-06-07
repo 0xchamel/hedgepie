@@ -3,28 +3,34 @@ pragma solidity ^0.8.4;
 
 import "../interfaces/IHedgepieAuthority.sol";
 
-abstract contract HedgepieAccessControlled {
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+
+abstract contract HedgepieAccessControlled is Initializable {
     /* ========== EVENTS ========== */
 
     event AuthorityUpdated(IHedgepieAuthority indexed authority);
 
     // unauthorized error message
-    string private _unauthorized = "UNAUTHORIZED"; // save gas
+    string private _unauthorized; // save gas
 
     // paused error message
-    string private _paused = "PAUSED"; // save gas
+    string private _paused; // save gas
 
     /* ========== STATE VARIABLES ========== */
 
     IHedgepieAuthority public authority;
 
-    /* ========== Constructor ========== */
+    /* ========== Initialize ========== */
     /**
-     * @notice Constructor
+     * @notice Initialize
      * @param _authority address of authority
      */
-    constructor(IHedgepieAuthority _authority) {
+
+    function __HedgepieAccessControlled_init(IHedgepieAuthority _authority) internal onlyInitializing {
         authority = _authority;
+        _unauthorized = "UNAUTHORIZED";
+        _paused = "PAUSED";
+
         emit AuthorityUpdated(_authority);
     }
 

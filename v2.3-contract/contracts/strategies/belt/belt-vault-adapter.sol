@@ -19,24 +19,26 @@ contract BeltVaultAdapterBsc is BaseAdapter {
     using SafeERC20 for IERC20;
 
     /**
-     * @notice Constructor
+     * @notice Initializer
      * @param _strategy  address of strategy
      * @param _stakingToken  address of staking token
      * @param _repayToken  address of reward token
      * @param _swapRouter  address of swap router
      * @param _name  adatper name
      */
-    constructor(
+    function initialize(
         address _strategy,
         address _stakingToken,
         address _repayToken,
         address _swapRouter,
         string memory _name,
         address _authority
-    ) BaseAdapter(_authority) {
+    ) external initializer {
         require(_repayToken != address(0), "Invalid reward token");
         require(_stakingToken != address(0), "Invalid staking token");
         require(_strategy != address(0), "Invalid strategy address");
+
+        __BaseAdapter__init(_authority);
 
         stakingToken = _stakingToken;
         repayToken = _repayToken;

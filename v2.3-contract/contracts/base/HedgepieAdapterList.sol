@@ -26,10 +26,12 @@ contract HedgepieAdapterList is HedgepieAccessControlled {
     event AdapterDeactivated(address indexed strategy);
 
     /**
-     * @notice Construct
+     * @notice initialize
      * @param _hedgepieAuthority HedgepieAuthority address
      */
-    constructor(address _hedgepieAuthority) HedgepieAccessControlled(IHedgepieAuthority(_hedgepieAuthority)) {}
+    function initialize(address _hedgepieAuthority) external initializer {
+        __HedgepieAccessControlled_init(IHedgepieAuthority(_hedgepieAuthority));
+    }
 
     /// @dev modifier for active adapters
     modifier onlyActiveAdapter(address _adapter) {
