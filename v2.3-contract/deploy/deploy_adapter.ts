@@ -1,6 +1,6 @@
 import "@nomiclabs/hardhat-ethers";
 import fs from "fs";
-import hre from "hardhat";
+import hre, { upgrades } from "hardhat";
 import * as path from "path";
 import prodContracts from "../config/contracts.json";
 import stgContracts from "../config/contracts_stg.json";
@@ -24,8 +24,13 @@ async function deploy(name: string) {
 
     const Adapter = await setupBscAdapterWithLib(adapterNames[name], lib);
     let dAddrs = {};
+
+    const beacon = await upgrades.deployBeacon(Adapter, { unsafeAllowLinkedLibraries: true });
+    await beacon.deployed();
+    console.log("Beacon deployed to:", beacon.address);
+
     for (let i = 0; i < adapters[name].length; i++) {
-        const res = await deployUsingFactory(Adapter, adapters[name][i], name);
+        const res = await deployUsingFactory(beacon, Adapter, adapters[name][i], name, i == 0);
         dAddrs[res.name] = res.address;
     }
 
