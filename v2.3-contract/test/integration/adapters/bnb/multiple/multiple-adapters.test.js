@@ -49,7 +49,9 @@ describe("Multiple Adapters Integration Test", function () {
         const pksMasterChef = "0xa5f8C5Dbd5F286960b9d90548680aE5ebFf07652"; // MasterChef v2 pks
         const pksLpToken = "0x0eD7e52944161450477ee417DE9Cd3a859b14fD0"; // WBNB-CAKE LP
         const PancakeSwapFarmLPAdapterBsc = await setupBscAdapterWithLib("PancakeSwapFarmLPAdapterBsc", this.lib);
-        this.adapter[0] = await PancakeSwapFarmLPAdapterBsc.deploy(
+        this.adapter[0] = await PancakeSwapFarmLPAdapterBsc.deploy();
+        await this.adapter[0].deployed();
+        await this.adapter[0].initialize(
             2, // pid
             pksMasterChef,
             pksLpToken,
@@ -58,13 +60,14 @@ describe("Multiple Adapters Integration Test", function () {
             "PancakeSwap::Farm::CAKE-WBNB",
             this.authority.address
         );
-        await this.adapter[0].deployed();
 
         // Deploy PancakeStakeAdapterBsc contract
         const pksStakeStrategy = "0x08C9d626a2F0CC1ed9BD07eBEdeF8929F45B83d3";
         const pksStakeReward = "0x724A32dFFF9769A0a0e1F0515c0012d1fB14c3bd"; // SQUAD
         const PancakeStakeAdapterBsc = await setupBscAdapterWithLib("PancakeStakeAdapterBsc", this.lib);
-        this.adapter[1] = await PancakeStakeAdapterBsc.deploy(
+        this.adapter[1] = await PancakeStakeAdapterBsc.deploy();
+        await this.adapter[1].deployed();
+        await this.adapter[1].initialize(
             pksStakeStrategy,
             cake,
             pksStakeReward,
@@ -72,13 +75,14 @@ describe("Multiple Adapters Integration Test", function () {
             "PK::STAKE::SQUAD-ADAPTER",
             this.authority.address
         );
-        await this.adapter[1].deployed();
 
         // Deploy BiswapFarmLPAdapterBsc contract
         const biswapStrategy = "0xDbc1A13490deeF9c3C12b44FE77b503c1B061739"; // MasterChef Biswap
         const biswapLpToken = "0x2b30c317ceDFb554Ec525F85E79538D59970BEb0"; // USDT-BSW LP
         const BiswapFarmLPAdapterBsc = await setupBscAdapterWithLib("BiSwapFarmLPAdapterBsc", this.lib);
-        this.adapter[2] = await BiswapFarmLPAdapterBsc.deploy(
+        this.adapter[2] = await BiswapFarmLPAdapterBsc.deploy();
+        await this.adapter[2].deployed();
+        await this.adapter[2].initialize(
             9, // pid
             biswapStrategy,
             biswapLpToken,
@@ -88,11 +92,12 @@ describe("Multiple Adapters Integration Test", function () {
             "Biswap::Farm::USDT-BSW",
             this.authority.address
         );
-        await this.adapter[2].deployed();
 
         // Deploy BiswapBSWPoolAdapterBsc contract
         const BiswapBSWPoolAdapterBsc = await setupBscAdapterWithLib("BiSwapFarmLPAdapterBsc", this.lib);
-        this.adapter[3] = await BiswapBSWPoolAdapterBsc.deploy(
+        this.adapter[3] = await BiswapBSWPoolAdapterBsc.deploy();
+        await this.adapter[3].deployed();
+        await this.adapter[3].initialize(
             0, // pid
             biswapStrategy,
             bsw,
@@ -102,14 +107,15 @@ describe("Multiple Adapters Integration Test", function () {
             "Biswap::Pool::BSW",
             this.authority.address
         );
-        await this.adapter[3].deployed();
 
         // Deploy AutoVaultAdapterBsc contract
         const autofarmStrategy = "0x0895196562C7868C5Be92459FaE7f877ED450452"; // MasterChef
         const autofarmVStrategy = "0xcFF7815e0e85a447b0C21C94D25434d1D0F718D1"; // vStrategy of vault
         const autofarmStaking = "0x0ed7e52944161450477ee417de9cd3a859b14fd0"; // WBNB-Cake LP
         const AutoFarmAdapter = await setupBscAdapterWithLib("AutoVaultAdapterBsc", this.lib);
-        this.adapter[4] = await AutoFarmAdapter.deploy(
+        this.adapter[4] = await AutoFarmAdapter.deploy();
+        await this.adapter[4].deployed();
+        await this.adapter[4].initialize(
             619,
             autofarmStrategy,
             autofarmVStrategy,
@@ -119,12 +125,13 @@ describe("Multiple Adapters Integration Test", function () {
             "AutoFarm::Vault::WBNB-CAKE",
             this.authority.address
         );
-        await this.adapter[4].deployed();
 
         // Deploy BeltVaultAdapterBsc contract
         const beltStrategy = "0x9171Bf7c050aC8B4cf7835e51F7b4841DFB2cCD0"; // beltBUSD
         const BeltVaultAdapter = await setupBscAdapterWithLib("BeltVaultAdapterBsc", this.lib);
-        this.adapter[5] = await BeltVaultAdapter.deploy(
+        this.adapter[5] = await BeltVaultAdapter.deploy();
+        await this.adapter[5].deployed();
+        await this.adapter[5].initialize(
             beltStrategy,
             busd,
             beltStrategy,
@@ -132,13 +139,14 @@ describe("Multiple Adapters Integration Test", function () {
             "Belt::Vault::BUSD",
             this.authority.address
         );
-        await this.adapter[5].deployed();
 
         // Deploy BeefyVaultAdapterBsc contract
         const beefyStrategy = "0x164fb78cAf2730eFD63380c2a645c32eBa1C52bc"; // Moo BiSwap USDT-BUSD
         const beefyStaking = "0xDA8ceb724A06819c0A5cDb4304ea0cB27F8304cF"; // Biswap USDT-BUSD LP
         const BeefyVaultAdapter = await setupBscAdapterWithLib("BeefyVaultAdapterBsc", this.lib);
-        this.adapter[6] = await BeefyVaultAdapter.deploy(
+        this.adapter[6] = await BeefyVaultAdapter.deploy();
+        await this.adapter[6].deployed();
+        await this.adapter[6].initialize(
             beefyStrategy,
             beefyStaking,
             biswapRouter,
@@ -146,7 +154,6 @@ describe("Multiple Adapters Integration Test", function () {
             "Beefy::Vault::Biswap USDT-BUSD",
             this.authority.address
         );
-        await this.adapter[6].deployed();
 
         // setPath for PKS adapters
         await setPath(this.pathFinder, this.pathManager, pksRouter, [wbnb, cake]);

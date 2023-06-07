@@ -44,7 +44,9 @@ describe("PinkSwap Adapters Integration Test", function () {
         // Deploy PinkSwapFarmLPAdapterBsc contract
         const PinkSwapFarmLPAdapterBsc = await setupBscAdapterWithLib("PinkSwapFarmLPAdapterBsc", this.lib);
         this.adapter = [0, 0];
-        this.adapter[0] = await PinkSwapFarmLPAdapterBsc.deploy(
+        this.adapter[0] = await PinkSwapFarmLPAdapterBsc.deploy();
+        await this.adapter[0].deployed();
+        await this.adapter[0].initialize(
             poolID, // pid
             strategy,
             lpToken,
@@ -53,11 +55,12 @@ describe("PinkSwap Adapters Integration Test", function () {
             "PinkSwap::Farm::PINK-WBNB",
             this.authority.address
         );
-        await this.adapter[0].deployed();
 
         // Deploy second adapter
         const stakingToken = "0x2E4BaE64Cc33eC8A7608930E8Bd32f592E8a9968"; // BUSD-WBNB
-        this.adapter[1] = await PinkSwapFarmLPAdapterBsc.deploy(
+        this.adapter[1] = await PinkSwapFarmLPAdapterBsc.deploy();
+        await this.adapter[1].deployed();
+        await this.adapter[1].initialize(
             1,
             strategy,
             stakingToken,
@@ -66,7 +69,6 @@ describe("PinkSwap Adapters Integration Test", function () {
             "PinkSwap::Farm::BUSD-WBNB",
             this.authority.address
         );
-        await this.adapter[1].deployed();
 
         // register path to pathFinder contract
         await setPath(this.pathFinder, this.pathManager, pinkRouter, [wbnb, pink]);

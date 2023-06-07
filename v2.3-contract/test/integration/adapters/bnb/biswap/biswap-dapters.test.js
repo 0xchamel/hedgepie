@@ -45,7 +45,9 @@ describe("Biswap Adapters Integration Test", function () {
         // Deploy BiswapFarmLPAdapterBsc contract
         const BiswapFarmLPAdapterBsc = await setupBscAdapterWithLib("BiSwapFarmLPAdapterBsc", this.lib);
         this.adapter = [0, 0];
-        this.adapter[0] = await BiswapFarmLPAdapterBsc.deploy(
+        this.adapter[0] = await BiswapFarmLPAdapterBsc.deploy();
+        await this.adapter[0].deployed();
+        await this.adapter[0].initialize(
             poolID, // pid
             strategy,
             lpToken,
@@ -55,11 +57,12 @@ describe("Biswap Adapters Integration Test", function () {
             "Biswap::Farm::USDT-BSW",
             this.authority.address
         );
-        await this.adapter[0].deployed();
 
         // Deploy BiswapBSWPoolAdapterBsc contract
         const BiswapBSWPoolAdapterBsc = await setupBscAdapterWithLib("BiSwapFarmLPAdapterBsc", this.lib);
-        this.adapter[1] = await BiswapBSWPoolAdapterBsc.deploy(
+        this.adapter[1] = await BiswapBSWPoolAdapterBsc.deploy();
+        await this.adapter[1].deployed();
+        await this.adapter[1].initialize(
             0, // pid
             strategy,
             bsw,
@@ -69,7 +72,6 @@ describe("Biswap Adapters Integration Test", function () {
             "Biswap::Pool::BSW",
             this.authority.address
         );
-        await this.adapter[1].deployed();
 
         // register path to pathFinder contract
         await setPath(this.pathFinder, this.pathManager, biswapRouter, [wbnb, bsw]);

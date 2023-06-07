@@ -49,15 +49,9 @@ describe("Belt Adapters Integration Test", function () {
         // Deploy BeltVaultAdapterBsc contract
         const BeltVaultAdapter = await setupBscAdapterWithLib("BeltVaultAdapterBsc", this.lib);
         this.adapter = [0, 0];
-        this.adapter[0] = await BeltVaultAdapter.deploy(
-            strategy,
-            stakingToken,
-            strategy,
-            swapRouter,
-            name,
-            this.authority.address
-        );
+        this.adapter[0] = await BeltVaultAdapter.deploy();
         await this.adapter[0].deployed();
+        await this.adapter[0].initialize(strategy, stakingToken, strategy, swapRouter, name, this.authority.address);
 
         // Deploy PancakeStakeAdapterBsc contract
         const PancakeStakeAdapterBsc = await setupBscAdapterWithLib("PancakeStakeAdapterBsc", this.lib);
@@ -67,7 +61,9 @@ describe("Belt Adapters Integration Test", function () {
         this.stakingToken = "0x0e09fabb73bd3ade0a17ecc321fd13a19e81ce82"; // CAKE
         this.rewardToken = "0x724A32dFFF9769A0a0e1F0515c0012d1fB14c3bd"; // SQUAD
         this.swapRouter = "0x10ED43C718714eb63d5aA57B78B54704E256024E";
-        this.adapter[1] = await PancakeStakeAdapterBsc.deploy(
+        this.adapter[1] = await PancakeStakeAdapterBsc.deploy();
+        await this.adapter[1].deployed();
+        await this.adapter[1].initialize(
             this.strategy,
             this.stakingToken,
             this.rewardToken,
@@ -75,8 +71,6 @@ describe("Belt Adapters Integration Test", function () {
             "PK::STAKE::SQUAD-ADAPTER",
             this.authority.address
         );
-
-        await this.adapter[1].deployed();
 
         // register path to pathFinder contract
         await setPath(this.pathFinder, this.pathManager, this.swapRouter, [wbnb, cake]);
