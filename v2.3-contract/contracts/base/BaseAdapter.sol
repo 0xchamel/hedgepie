@@ -61,10 +61,13 @@ abstract contract BaseAdapter is HedgepieAccessControlled {
     // nft id => UserAdapterInfo
     mapping(uint256 => UserAdapterInfo) public userAdapterInfos;
 
-    /** @notice Constructor
-     * @param _hedgepieAuthority  address of authority
+    /**
+     * @notice initialize
+     * @param _hedgepieAuthority HedgepieAuthority address
      */
-    constructor(address _hedgepieAuthority) HedgepieAccessControlled(IHedgepieAuthority(_hedgepieAuthority)) {}
+    function __BaseAdapter__init(address _hedgepieAuthority) internal onlyInitializing {
+        __HedgepieAccessControlled_init(IHedgepieAuthority(_hedgepieAuthority));
+    }
 
     /** @notice get user staked amount */
     function getUserAmount(uint256 _tokenId) external view returns (uint256 amount) {

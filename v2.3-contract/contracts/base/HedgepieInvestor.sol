@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.4;
 
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
@@ -12,7 +13,7 @@ import "../interfaces/IHedgepieAuthority.sol";
 
 import "./HedgepieAccessControlled.sol";
 
-contract HedgepieInvestor is ReentrancyGuard, HedgepieAccessControlled {
+contract HedgepieInvestor is ReentrancyGuardUpgradeable, HedgepieAccessControlled {
     using SafeERC20 for IERC20;
 
     struct UserInfo {
@@ -52,15 +53,15 @@ contract HedgepieInvestor is ReentrancyGuard, HedgepieAccessControlled {
     }
 
     /**
-     * @notice Construct
+     * @notice initialize
      * @param _treasury  address of treasury
      * @param _hedgepieAuthority HedgepieAuthority address
      */
-    constructor(
-        address _treasury,
-        address _hedgepieAuthority
-    ) HedgepieAccessControlled(IHedgepieAuthority(_hedgepieAuthority)) {
+    function initialize(address _treasury, address _hedgepieAuthority) external initializer {
         require(_treasury != address(0), "Error: treasury address missing");
+
+        __ReentrancyGuard_init();
+        __HedgepieAccessControlled_init(IHedgepieAuthority(_hedgepieAuthority));
 
         treasury = _treasury;
     }

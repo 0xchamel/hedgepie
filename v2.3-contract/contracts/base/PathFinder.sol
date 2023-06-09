@@ -18,10 +18,12 @@ contract PathFinder is HedgepieAccessControlled {
     event RouterRemoved(address indexed router, bool status);
 
     /**
-     * @notice Construct
+     * @notice initialize
      * @param _hedgepieAuthority HedgepieAuthority address
      */
-    constructor(address _hedgepieAuthority) HedgepieAccessControlled(IHedgepieAuthority(_hedgepieAuthority)) {}
+    function initialize(address _hedgepieAuthority) external initializer {
+        __HedgepieAccessControlled_init(IHedgepieAuthority(_hedgepieAuthority));
+    }
 
     /**
      * @notice Set swap router

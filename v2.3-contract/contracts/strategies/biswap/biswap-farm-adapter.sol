@@ -19,7 +19,7 @@ contract BiSwapFarmLPAdapterBsc is BaseAdapter {
     using SafeERC20 for IERC20;
 
     /**
-     * @notice Constructor
+     * @notice Initializer
      * @param _strategy  address of strategy
      * @param _stakingToken  address of staking token
      * @param _rewardToken  address of reward token
@@ -28,7 +28,7 @@ contract BiSwapFarmLPAdapterBsc is BaseAdapter {
      * @param _name  adatper name
      * @param _authority  hedgepieAuthority address
      */
-    constructor(
+    function initialize(
         uint256 _pid,
         address _strategy,
         address _stakingToken,
@@ -37,10 +37,12 @@ contract BiSwapFarmLPAdapterBsc is BaseAdapter {
         address _swapRouter,
         string memory _name,
         address _authority
-    ) BaseAdapter(_authority) {
+    ) external initializer {
         require(_rewardToken != address(0), "Invalid reward token");
         require(_stakingToken != address(0), "Invalid staking token");
         require(_strategy != address(0), "Invalid strategy address");
+
+        __BaseAdapter__init(_authority);
 
         pid = _pid;
         stakingToken = _stakingToken;

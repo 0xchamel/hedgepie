@@ -46,15 +46,9 @@ describe("YBNFT Unit Test", function () {
         // Deploy BeefyVaultAdapterBsc contract
         const BeefyVaultAdapter = await setupBscAdapterWithLib("BeefyVaultAdapterBsc", this.lib);
         this.adapter = [0, 0, 0];
-        this.adapter[0] = await BeefyVaultAdapter.deploy(
-            strategy,
-            stakingToken,
-            router,
-            swapRouter,
-            name,
-            this.authority.address
-        );
+        this.adapter[0] = await BeefyVaultAdapter.deploy();
         await this.adapter[0].deployed();
+        await this.adapter[0].initialize(strategy, stakingToken, router, swapRouter, name, this.authority.address);
 
         // Deploy PancakeStakeAdapterBsc contract
         const PancakeStakeAdapterBsc = await setupBscAdapterWithLib("PancakeStakeAdapterBsc", this.lib);
@@ -64,17 +58,9 @@ describe("YBNFT Unit Test", function () {
         this.stakingToken = "0x0e09fabb73bd3ade0a17ecc321fd13a19e81ce82"; // CAKE
         this.rewardToken = "0x724A32dFFF9769A0a0e1F0515c0012d1fB14c3bd"; // SQUAD
         this.swapRouter = "0x10ED43C718714eb63d5aA57B78B54704E256024E";
-        this.adapter[1] = await PancakeStakeAdapterBsc.deploy(
-            this.strategy,
-            this.stakingToken,
-            this.rewardToken,
-            this.swapRouter,
-            "PK::STAKE::SQUAD-ADAPTER",
-            this.authority.address
-        );
+        this.adapter[1] = await PancakeStakeAdapterBsc.deploy();
         await this.adapter[1].deployed();
-
-        this.adapter[2] = await PancakeStakeAdapterBsc.deploy(
+        await this.adapter[1].initialize(
             this.strategy,
             this.stakingToken,
             this.rewardToken,
@@ -82,7 +68,17 @@ describe("YBNFT Unit Test", function () {
             "PK::STAKE::SQUAD-ADAPTER",
             this.authority.address
         );
+
+        this.adapter[2] = await PancakeStakeAdapterBsc.deploy();
         await this.adapter[2].deployed();
+        await this.adapter[2].initialize(
+            this.strategy,
+            this.stakingToken,
+            this.rewardToken,
+            this.swapRouter,
+            "PK::STAKE::SQUAD-ADAPTER",
+            this.authority.address
+        );
 
         // register path to pathFinder contract
         await setPath(this.pathFinder, this.pathManager, this.swapRouter, [wbnb, cake]);

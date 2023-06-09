@@ -18,10 +18,10 @@ contract AutoVaultAdapterBsc is BaseAdapter {
     using SafeERC20 for IERC20;
 
     // vStrategy address of vault
-    address public immutable vStrategy;
+    address public vStrategy;
 
     /**
-     * @notice Constructor
+     * @notice Initializer
      * @param _pid pool id of strategy
      * @param _strategy  address of strategy
      * @param _vStrategy  address of vault strategy
@@ -31,7 +31,7 @@ contract AutoVaultAdapterBsc is BaseAdapter {
      * @param _name  adatper name
      * @param _authority HedgepieAuthority address
      */
-    constructor(
+    function initialize(
         uint256 _pid,
         address _strategy,
         address _vStrategy,
@@ -40,10 +40,12 @@ contract AutoVaultAdapterBsc is BaseAdapter {
         address _swapRouter,
         string memory _name,
         address _authority
-    ) BaseAdapter(_authority) {
+    ) external initializer {
         require(_stakingToken != address(0), "Invalid staking token");
         require(_strategy != address(0), "Invalid strategy address");
         require(_vStrategy != address(0), "Invalid vStrategy address");
+
+        __BaseAdapter__init(_authority);
 
         pid = _pid;
         strategy = _strategy;

@@ -40,18 +40,15 @@ contract HedgepieAuthority is IHedgepieAuthority, HedgepieAccessControlled {
     // to check protocol is paused or not
     bool public override paused;
 
-    /* ========== Constructor ========== */
     /**
-     * @notice Constructor
+     * @notice initialize
      * @param _governor  address of Governor
      * @param _pathManager  address of path manager
      * @param _adapterManager  address of adapter manager
      */
-    constructor(
-        address _governor,
-        address _pathManager,
-        address _adapterManager
-    ) HedgepieAccessControlled(IHedgepieAuthority(address(this))) {
+    function initialize(address _governor, address _pathManager, address _adapterManager) external initializer {
+        __HedgepieAccessControlled_init(IHedgepieAuthority(address(this)));
+
         governor = _governor;
         emit GovernorPushed(address(0), governor, true);
         pathManager = _pathManager;

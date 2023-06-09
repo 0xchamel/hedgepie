@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 pragma solidity ^0.8.4;
 
-import "@openzeppelin/contracts/utils/Counters.sol";
-import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
+import "@openzeppelin/contracts-upgradeable/token/ERC721/ERC721Upgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/CountersUpgradeable.sol";
+import "@openzeppelin/contracts-upgradeable/utils/StringsUpgradeable.sol";
 
 import "../interfaces/IHedgepieAdapterList.sol";
 import "../interfaces/IHedgepieInvestor.sol";
@@ -11,9 +12,9 @@ import "../interfaces/IHedgepieAuthority.sol";
 
 import "./HedgepieAccessControlled.sol";
 
-contract YBNFT is ERC721, HedgepieAccessControlled {
-    using Counters for Counters.Counter;
-    using Strings for uint256;
+contract YBNFT is ERC721Upgradeable, HedgepieAccessControlled {
+    using CountersUpgradeable for CountersUpgradeable.Counter;
+    using StringsUpgradeable for uint256;
 
     struct AdapterParam {
         uint256 allocation; // allocation percent for adapter
@@ -33,7 +34,7 @@ contract YBNFT is ERC721, HedgepieAccessControlled {
     }
 
     // current max tokenId
-    Counters.Counter private _tokenIdPointer;
+    CountersUpgradeable.Counter private _tokenIdPointer;
 
     // tokenId => token uri
     mapping(uint256 => string) private _tokenURIs;
@@ -60,12 +61,13 @@ contract YBNFT is ERC721, HedgepieAccessControlled {
     }
 
     /**
-     * @notice Construct
+     * @notice initialize
      * @param _hedgepieAuthority HedgepieAuthority address
      */
-    constructor(
-        address _hedgepieAuthority
-    ) ERC721("Hedgepie YBNFT", "YBNFT") HedgepieAccessControlled(IHedgepieAuthority(_hedgepieAuthority)) {}
+    function initialize(address _hedgepieAuthority) external initializer {
+        __HedgepieAccessControlled_init(IHedgepieAuthority(_hedgepieAuthority));
+        __ERC721_init("Hedgepie YBNFT", "YBNFT");
+    }
 
     /* ========== View ========== */
     /**

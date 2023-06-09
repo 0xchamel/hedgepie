@@ -1,4 +1,4 @@
-import hre from "hardhat";
+import hre, { upgrades } from "hardhat";
 import { Logger } from "tslog";
 import { wait } from "../utils/time";
 import { adapterPaths } from "../deploy/constant";
@@ -31,20 +31,23 @@ async function verify({
     }
 }
 
-const deployUsingFactory = async (factory, params, name) => {
-    let adapter = await factory.deploy(...params);
+const deployUsingFactory = async (beacon, factory, params, name, isVerify = false) => {
+    // let adapter = await factory.deploy(...params);
+    let adapter = await upgrades.deployBeaconProxy(beacon, factory, [...params]);
 
     if (adapter) {
         await adapter.deployed();
         console.log(`${params[params.length - 2]} :`, adapter.address);
 
-        // verify contracts
-        await verify({
-            contractName: params[params.length - 2],
-            address: adapter.address,
-            constructorArguments: [...params],
-            contractPath: adapterPaths[name],
-        });
+        if (isVerify) {
+            // verify contracts
+            await verify({
+                contractName: params[params.length - 2],
+                address: await beacon.implementation(),
+                constructorArguments: [],
+                contractPath: adapterPaths[name],
+            });
+        }
     }
 
     return { name: params[params.length - 2], address: adapter.address };

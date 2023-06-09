@@ -21,13 +21,13 @@ interface IVenusLens {
 
 contract VenusLendAdapterBsc is BaseAdapter {
     // venus lends address
-    IVenusLens immutable venusLens;
+    IVenusLens public venusLens;
 
     // venus comptroller address
     address private comptroller;
 
     /**
-     * @notice Construct
+     * @notice Initializer
      * @param _strategy  address of strategy
      * @param _venusLens  address of venus lens
      * @param _stakingToken  address of staking token
@@ -36,7 +36,7 @@ contract VenusLendAdapterBsc is BaseAdapter {
      * @param _name  adatper name
      * @param _authority  hedgepieAuthority address
      */
-    constructor(
+    function initialize(
         address _strategy,
         address _venusLens,
         address _stakingToken,
@@ -44,9 +44,11 @@ contract VenusLendAdapterBsc is BaseAdapter {
         address _swapRouter,
         string memory _name,
         address _authority
-    ) BaseAdapter(_authority) {
+    ) external initializer {
         require(IVBep20(_strategy).isVToken(), "Error: Invalid vToken address");
         // require(IVBep20(_strategy).underlying() != address(0), "Error: Invalid underlying address");
+
+        __BaseAdapter__init(_authority);
 
         strategy = _strategy;
         venusLens = IVenusLens(_venusLens);

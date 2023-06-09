@@ -23,7 +23,7 @@ contract RadiantV2Bsc is BaseAdapter {
     address public compounder;
 
     /**
-     * @notice Constructor
+     * @notice Initializer
      * @param _strategy  address of strategy
      * @param _stakingToken  address of staking token
      * @param _rewardToken  address of reward token
@@ -33,7 +33,7 @@ contract RadiantV2Bsc is BaseAdapter {
      * @param _name  adatper name
      * @param _authority  hedgepieAuthority address
      */
-    constructor(
+    function initialize(
         address _strategy,
         address _stakingToken,
         address _rewardToken,
@@ -42,9 +42,11 @@ contract RadiantV2Bsc is BaseAdapter {
         address _compounder,
         string memory _name,
         address _authority
-    ) BaseAdapter(_authority) {
+    ) external initializer {
         require(_stakingToken != address(0), "Invalid staking token");
         require(_strategy != address(0), "Invalid strategy address");
+
+        __BaseAdapter__init(_authority);
 
         stakingToken = _stakingToken;
         strategy = _strategy;

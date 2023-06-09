@@ -50,7 +50,9 @@ describe("RadiantV2 Adapters Integration Test", function () {
         // Deploy RadiantV2AdapterBsc contract
         const RadiantV2AdapterBsc = await setupBscAdapterWithLib("RadiantV2Bsc", this.lib);
         this.adapter = [0, 0];
-        this.adapter[0] = await RadiantV2AdapterBsc.deploy(
+        this.adapter[0] = await RadiantV2AdapterBsc.deploy();
+        await this.adapter[0].deployed();
+        await this.adapter[0].initialize(
             strategy,
             USDT,
             RDNT,
@@ -60,7 +62,6 @@ describe("RadiantV2 Adapters Integration Test", function () {
             name,
             this.authority.address
         );
-        await this.adapter[0].deployed();
 
         // Deploy PancakeStakeAdapterBsc contract
         const PancakeStakeAdapterBsc = await setupBscAdapterWithLib("PancakeStakeAdapterBsc", this.lib);
@@ -71,7 +72,9 @@ describe("RadiantV2 Adapters Integration Test", function () {
         this.rewardToken = "0x724A32dFFF9769A0a0e1F0515c0012d1fB14c3bd"; // SQUAD
         this.swapRouter = "0x10ED43C718714eb63d5aA57B78B54704E256024E";
         const cake = this.stakingToken;
-        this.adapter[1] = await PancakeStakeAdapterBsc.deploy(
+        this.adapter[1] = await PancakeStakeAdapterBsc.deploy();
+        await this.adapter[1].deployed();
+        await this.adapter[1].initialize(
             this.strategy,
             this.stakingToken,
             this.rewardToken,
@@ -79,8 +82,6 @@ describe("RadiantV2 Adapters Integration Test", function () {
             "PK::STAKE::SQUAD-ADAPTER",
             this.authority.address
         );
-
-        await this.adapter[1].deployed();
 
         // register path to pathFinder contract
         await setPath(this.pathFinder, this.pathManager, swapRouter, [wbnb, USDT]);
