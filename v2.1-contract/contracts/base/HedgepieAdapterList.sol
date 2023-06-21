@@ -38,10 +38,33 @@ contract HedgepieAdapterList is HedgepieAccessControlled {
     }
 
     /**
-     * @notice Get a list of adapters
+     * @notice Get a list of active adapters
      */
-    function getAdapterList() external view returns (AdapterInfo[] memory) {
-        return adapterList;
+    function getAdapterList() external view returns (AdapterInfo[] memory activeAdapters) {
+        activeAdapters = new AdapterInfo[](adapterList.length);
+
+        uint256 adaterCnt;
+        for (uint256 i; i < adapterList.length; ++i) {
+            if (!adapterList[i].status) continue;
+
+            activeAdapters[adaterCnt] = adapterList[i];
+            ++adaterCnt;
+        }
+    }
+
+    /**
+     * @notice Get a list of deactivated adapters
+     */
+    function getDeactiveList() external view returns (AdapterInfo[] memory deactiveAdapters) {
+        deactiveAdapters = new AdapterInfo[](adapterList.length);
+
+        uint256 adaterCnt;
+        for (uint256 i; i < adapterList.length; ++i) {
+            if (adapterList[i].status) continue;
+
+            deactiveAdapters[adaterCnt] = adapterList[i];
+            ++adaterCnt;
+        }
     }
 
     /**
@@ -79,7 +102,7 @@ contract HedgepieAdapterList is HedgepieAccessControlled {
      * @param _adapters  array of adapter address
      */
     /// #if_succeeds {:msg "addAdapters failed"} _adapters.length > 0 ? (adapterList.length == old(adapterList.length) + _adapters.length && adapterActive[_adapters[_adapters.length - 1]] == true) : true;
-    function addAdapters(address[] memory _adapters) external onlyAdapterManager {
+    function addAdapters(address[] calldata _adapters) external onlyAdapterManager {
         for (uint256 i = 0; i < _adapters.length; i++) {
             require(!adapterActive[_adapters[i]], "Already added");
             require(_adapters[i] != address(0), "Invalid adapter address");
@@ -104,7 +127,7 @@ contract HedgepieAdapterList is HedgepieAccessControlled {
      * @param _status  array of adapter status
      */
     /// #if_succeeds {:msg "setAdapters failed"} _status.length > 0 ? (adapterList[_adapterId[_status.length - 1]].status == _status[_status.length - 1]) : true;
-    function setAdapters(uint256[] memory _adapterId, bool[] memory _status) external onlyAdapterManager {
+    function setAdapters(uint256[] calldata _adapterId, bool[] calldata _status) external onlyAdapterManager {
         require(_adapterId.length == _status.length, "Invalid array length");
 
         for (uint256 i = 0; i < _adapterId.length; i++) {
