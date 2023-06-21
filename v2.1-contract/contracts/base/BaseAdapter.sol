@@ -124,5 +124,9 @@ abstract contract BaseAdapter is HedgepieAccessControlled {
         require(success, "Failed to send bnb");
     }
 
+    function updateName(string calldata _name) external onlyAdapterManager {
+        name = _name;
+    }
+
     receive() external payable {}
 }
