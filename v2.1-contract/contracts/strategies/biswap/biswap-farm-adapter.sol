@@ -25,7 +25,7 @@ contract BiSwapFarmLPAdapterBsc is BaseAdapter {
      * @param _rewardToken  address of reward token
      * @param _router  address of biswap
      * @param _swapRouter  address of swap router
-     * @param _name  adatper name
+     * @param _label  adatper label
      * @param _authority  hedgepieAuthority address
      */
     constructor(
@@ -35,7 +35,7 @@ contract BiSwapFarmLPAdapterBsc is BaseAdapter {
         address _rewardToken,
         address _router,
         address _swapRouter,
-        string memory _name,
+        string memory _label,
         address _authority
     ) BaseAdapter(_authority) {
         require(_rewardToken != address(0), "Invalid reward token");
@@ -48,7 +48,7 @@ contract BiSwapFarmLPAdapterBsc is BaseAdapter {
         strategy = _strategy;
         router = _router;
         swapRouter = _swapRouter;
-        name = _name;
+        label = _label;
     }
 
     /**

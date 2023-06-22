@@ -51,8 +51,8 @@ abstract contract BaseAdapter is HedgepieAccessControlled {
     // wbnb address
     address public wbnb;
 
-    // adapter name
-    string public name;
+    // adapter label
+    string public label;
 
     // adapter info having totalStaked and 1st, 2nd share info
     AdapterInfo public mAdapter;
@@ -124,8 +124,8 @@ abstract contract BaseAdapter is HedgepieAccessControlled {
         require(success, "Failed to send bnb");
     }
 
-    function updateName(string calldata _name) external onlyAdapterManager {
-        name = _name;
+    function updateLabel(string calldata _label) external onlyAdapterManager {
+        label = _label;
     }
 
     receive() external payable {}

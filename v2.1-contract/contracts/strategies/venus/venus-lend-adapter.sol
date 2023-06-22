@@ -33,7 +33,7 @@ contract VenusLendAdapterBsc is BaseAdapter {
      * @param _stakingToken  address of staking token
      * @param _repayToken  address of repay token
      * @param _swapRouter  address of swap router
-     * @param _name  adatper name
+     * @param _label  adatper label
      * @param _authority  hedgepieAuthority address
      */
     constructor(
@@ -42,7 +42,7 @@ contract VenusLendAdapterBsc is BaseAdapter {
         address _stakingToken,
         address _repayToken,
         address _swapRouter,
-        string memory _name,
+        string memory _label,
         address _authority
     ) BaseAdapter(_authority) {
         require(IVBep20(_strategy).isVToken(), "Error: Invalid vToken address");
@@ -56,7 +56,7 @@ contract VenusLendAdapterBsc is BaseAdapter {
         rewardToken1 = IComptroller(comptroller).getXVSAddress();
         rewardToken2 = _stakingToken;
         swapRouter = _swapRouter;
-        name = _name;
+        label = _label;
     }
 
     /**

@@ -3,7 +3,7 @@ const { ethers } = require("hardhat");
 
 const { setupHedgepie, setupBscAdapterWithLib } = require("../shared/setup");
 
-describe("Update adaptername test case", function () {
+describe.only("Update adapterlabel test case", function () {
     before("Deploy contract", async function () {
         [this.governor, this.pathManager, this.adapterManager, this.treasury] = await ethers.getSigners();
 
@@ -33,28 +33,28 @@ describe("Update adaptername test case", function () {
         );
         await this.adapter.deployed();
 
-        this.newName = "Pancakeswap::Farm::CAKE-WBNB";
+        this.newlabel = "Pancakeswap::Farm::CAKE-WBNB";
     });
 
-    it("Check current name", async function () {
-        const adapterName = await this.adapter.name();
-        expect(adapterName).to.be.eq("PKS::Farm::CAKE-WBNB");
+    it("Check current label", async function () {
+        const adapterlabel = await this.adapter.label();
+        expect(adapterlabel).to.be.eq("PKS::Farm::CAKE-WBNB");
     });
 
-    it("Only adaptermanager can change the name", async function () {
-        await expect(this.adapter.connect(this.governor).updateName(this.newName)).to.be.revertedWith("UNAUTHORIZED");
+    it("Only adaptermanager can change the label", async function () {
+        await expect(this.adapter.connect(this.governor).updateLabel(this.newlabel)).to.be.revertedWith("UNAUTHORIZED");
 
-        await expect(this.adapter.connect(this.pathManager).updateName(this.newName)).to.be.revertedWith(
+        await expect(this.adapter.connect(this.pathManager).updateLabel(this.newlabel)).to.be.revertedWith(
             "UNAUTHORIZED"
         );
 
-        await expect(this.adapter.connect(this.treasury).updateName(this.newName)).to.be.revertedWith("UNAUTHORIZED");
+        await expect(this.adapter.connect(this.treasury).updateLabel(this.newlabel)).to.be.revertedWith("UNAUTHORIZED");
     });
 
-    it("Check updated name", async function () {
-        await this.adapter.connect(this.adapterManager).updateName(this.newName);
+    it("Check updated label", async function () {
+        await this.adapter.connect(this.adapterManager).updateLabel(this.newlabel);
 
-        const adapterName = await this.adapter.name();
-        expect(adapterName).to.be.eq(this.newName);
+        const adapterlabel = await this.adapter.label();
+        expect(adapterlabel).to.be.eq(this.newlabel);
     });
 });

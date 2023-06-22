@@ -11,7 +11,7 @@ interface IAdapter {
 
     function strategy() external view returns (address);
 
-    function name() external view returns (string memory);
+    function label() external view returns (string memory);
 
     function rewardToken1() external view returns (address);
 

@@ -20,7 +20,7 @@ contract PancakeStakeAdapterBsc is BaseAdapter {
      * @param _stakingToken  address of staking token
      * @param _swapRouter  address of swap router
      * @param _rewardToken  address of reward token
-     * @param _name  name of adapter
+     * @param _label  adaper label
      * @param _authority  hedgepieAuthority address
      */
     constructor(
@@ -28,7 +28,7 @@ contract PancakeStakeAdapterBsc is BaseAdapter {
         address _stakingToken,
         address _rewardToken,
         address _swapRouter,
-        string memory _name,
+        string memory _label,
         address _authority
     ) BaseAdapter(_authority) {
         require(_rewardToken != address(0), "Invalid reward token");
@@ -39,7 +39,7 @@ contract PancakeStakeAdapterBsc is BaseAdapter {
         rewardToken1 = _rewardToken;
         swapRouter = _swapRouter;
         strategy = _strategy;
-        name = _name;
+        label = _label;
     }
 
     /**

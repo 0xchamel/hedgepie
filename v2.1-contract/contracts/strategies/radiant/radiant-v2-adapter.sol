@@ -30,7 +30,7 @@ contract RadiantV2Bsc is BaseAdapter {
      * @param _repayToken  address of repay token
      * @param _swapRouter  address of swap router
      * @param _compounder  address of compounder
-     * @param _name  adatper name
+     * @param _label  adatper label
      * @param _authority  hedgepieAuthority address
      */
     constructor(
@@ -40,7 +40,7 @@ contract RadiantV2Bsc is BaseAdapter {
         address _repayToken,
         address _swapRouter,
         address _compounder,
-        string memory _name,
+        string memory _label,
         address _authority
     ) BaseAdapter(_authority) {
         require(_stakingToken != address(0), "Invalid staking token");
@@ -53,7 +53,7 @@ contract RadiantV2Bsc is BaseAdapter {
         repayToken = _repayToken;
         swapRouter = _swapRouter;
         compounder = _compounder;
-        name = _name;
+        label = _label;
     }
 
     /**

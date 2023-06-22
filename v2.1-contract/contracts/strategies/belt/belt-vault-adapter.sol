@@ -24,14 +24,14 @@ contract BeltVaultAdapterBsc is BaseAdapter {
      * @param _stakingToken  address of staking token
      * @param _repayToken  address of reward token
      * @param _swapRouter  address of swap router
-     * @param _name  adatper name
+     * @param _label  adatper label
      */
     constructor(
         address _strategy,
         address _stakingToken,
         address _repayToken,
         address _swapRouter,
-        string memory _name,
+        string memory _label,
         address _authority
     ) BaseAdapter(_authority) {
         require(_repayToken != address(0), "Invalid reward token");
@@ -42,7 +42,7 @@ contract BeltVaultAdapterBsc is BaseAdapter {
         repayToken = _repayToken;
         strategy = _strategy;
         swapRouter = _swapRouter;
-        name = _name;
+        label = _label;
     }
 
     /**
