@@ -256,10 +256,10 @@ contract YBNFT is ERC721, HedgepieAccessControlled {
                     require(!isExist[_tokenId][_adapterParams[i].addr], "Adapter already added");
 
                     // validate adapter params
-                    (address adapterAddr, , , bool status) = IHedgepieAdapterList(authority.hAdapterList())
+                    (address adapterAddr, , , bool isEnabled) = IHedgepieAdapterList(authority.hAdapterList())
                         .getAdapterInfo(_adapterParams[i].addr);
                     require(_adapterParams[i].addr == adapterAddr, "Adapter address mismatch");
-                    require(status, "Adapter is inactive");
+                    require(isEnabled, "Adapter is inactive");
 
                     // push new adapter
                     adapterParams[_tokenId].push(
@@ -296,14 +296,14 @@ contract YBNFT is ERC721, HedgepieAccessControlled {
      * @notice Check if adpaterParams are valid
      * @param _adapterParams  parameters of adapters
      */
-    function _validate(AdapterParam[] memory _adapterParams) internal {
+    function _validate(AdapterParam[] memory _adapterParams) internal view {
         uint256 length = _adapterParams.length;
         for (uint256 i; i < length; ) {
-            (address adapterAddr, , , bool status) = IHedgepieAdapterList(authority.hAdapterList()).getAdapterInfo(
+            (address adapterAddr, , , bool isEnabled) = IHedgepieAdapterList(authority.hAdapterList()).getAdapterInfo(
                 _adapterParams[i].addr
             );
             require(_adapterParams[i].addr == adapterAddr, "Adapter address mismatch");
-            require(status, "Adapter is inactive");
+            require(isEnabled, "Adapter is inactive");
             unchecked {
                 ++i;
             }

@@ -11,7 +11,7 @@ contract HedgepieAdapterList is HedgepieAccessControlled {
         address addr; // adapter address
         string name; // adapter name
         address stakingToken; // staking token of adapter
-        bool status; // adapter contract status
+        bool isEnabled; // adapter contract status
     }
 
     // list of adapters
@@ -38,10 +38,33 @@ contract HedgepieAdapterList is HedgepieAccessControlled {
     }
 
     /**
-     * @notice Get a list of adapters
+     * @notice Get a list of active adapters
      */
-    function getAdapterList() external view returns (AdapterInfo[] memory) {
-        return adapterList;
+    function getAdapterList() external view returns (AdapterInfo[] memory activeAdapters) {
+        activeAdapters = new AdapterInfo[](adapterList.length);
+
+        uint256 adaterCnt;
+        for (uint256 i; i < adapterList.length; ++i) {
+            if (!adapterList[i].isEnabled) continue;
+
+            activeAdapters[adaterCnt] = adapterList[i];
+            ++adaterCnt;
+        }
+    }
+
+    /**
+     * @notice Get a list of deactivated adapters
+     */
+    function getDeactiveList() external view returns (AdapterInfo[] memory deactiveAdapters) {
+        deactiveAdapters = new AdapterInfo[](adapterList.length);
+
+        uint256 adaterCnt;
+        for (uint256 i; i < adapterList.length; ++i) {
+            if (adapterList[i].isEnabled) continue;
+
+            deactiveAdapters[adaterCnt] = adapterList[i];
+            ++adaterCnt;
+        }
     }
 
     /**
@@ -50,13 +73,13 @@ contract HedgepieAdapterList is HedgepieAccessControlled {
      */
     function getAdapterInfo(
         address _adapterAddr
-    ) external view returns (address adapterAddr, string memory name, address stakingToken, bool status) {
+    ) external view returns (address adapterAddr, string memory name, address stakingToken, bool isEnabled) {
         for (uint256 i; i < adapterList.length; i++) {
-            if (adapterList[i].addr == _adapterAddr && adapterList[i].status) {
+            if (adapterList[i].addr == _adapterAddr && adapterList[i].isEnabled) {
                 adapterAddr = adapterList[i].addr;
                 name = adapterList[i].name;
                 stakingToken = adapterList[i].stakingToken;
-                status = adapterList[i].status;
+                isEnabled = adapterList[i].isEnabled;
 
                 break;
             }
@@ -79,7 +102,7 @@ contract HedgepieAdapterList is HedgepieAccessControlled {
      * @param _adapters  array of adapter address
      */
     /// #if_succeeds {:msg "addAdapters failed"} _adapters.length > 0 ? (adapterList.length == old(adapterList.length) + _adapters.length && adapterActive[_adapters[_adapters.length - 1]] == true) : true;
-    function addAdapters(address[] memory _adapters) external onlyAdapterManager {
+    function addAdapters(address[] calldata _adapters) external onlyAdapterManager {
         for (uint256 i = 0; i < _adapters.length; i++) {
             require(!adapterActive[_adapters[i]], "Already added");
             require(_adapters[i] != address(0), "Invalid adapter address");
@@ -89,7 +112,7 @@ contract HedgepieAdapterList is HedgepieAccessControlled {
                     addr: _adapters[i],
                     name: IAdapter(_adapters[i]).name(),
                     stakingToken: IAdapter(_adapters[i]).stakingToken(),
-                    status: true
+                    isEnabled: true
                 })
             );
             adapterActive[_adapters[i]] = true;
@@ -101,19 +124,19 @@ contract HedgepieAdapterList is HedgepieAccessControlled {
     /**
      * @notice Remove adapter
      * @param _adapterId  array of adapter id
-     * @param _status  array of adapter status
+     * @param _isEnabled  array of adapter activeness
      */
-    /// #if_succeeds {:msg "setAdapters failed"} _status.length > 0 ? (adapterList[_adapterId[_status.length - 1]].status == _status[_status.length - 1]) : true;
-    function setAdapters(uint256[] memory _adapterId, bool[] memory _status) external onlyAdapterManager {
-        require(_adapterId.length == _status.length, "Invalid array length");
+    /// #if_succeeds {:msg "setAdapters failed"} _isEnabled.length > 0 ? (adapterList[_adapterId[_isEnabled.length - 1]]._isEnabled == _isEnabled[_isEnabled.length - 1]) : true;
+    function setAdapters(uint256[] calldata _adapterId, bool[] calldata _isEnabled) external onlyAdapterManager {
+        require(_adapterId.length == _isEnabled.length, "Invalid array length");
 
         for (uint256 i = 0; i < _adapterId.length; i++) {
             require(_adapterId[i] < adapterList.length, "Invalid adapter address");
 
-            if (adapterList[_adapterId[i]].status != _status[i]) {
-                adapterList[_adapterId[i]].status = _status[i];
+            if (adapterList[_adapterId[i]].isEnabled != _isEnabled[i]) {
+                adapterList[_adapterId[i]].isEnabled = _isEnabled[i];
 
-                if (_status[i]) emit AdapterActivated(adapterList[_adapterId[i]].addr);
+                if (_isEnabled[i]) emit AdapterActivated(adapterList[_adapterId[i]].addr);
                 else emit AdapterDeactivated(adapterList[_adapterId[i]].addr);
             }
         }
