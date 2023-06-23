@@ -9,8 +9,8 @@ import "./HedgepieAccessControlled.sol";
 contract HedgepieAdapterList is HedgepieAccessControlled {
     struct AdapterInfo {
         address addr; // adapter address
-        string name; // adapter name
         address stakingToken; // staking token of adapter
+        string label; // adapter label
         bool isEnabled; // adapter contract status
     }
 
@@ -73,11 +73,11 @@ contract HedgepieAdapterList is HedgepieAccessControlled {
      */
     function getAdapterInfo(
         address _adapterAddr
-    ) external view returns (address adapterAddr, string memory name, address stakingToken, bool isEnabled) {
+    ) external view returns (address adapterAddr, string memory label, address stakingToken, bool isEnabled) {
         for (uint256 i; i < adapterList.length; i++) {
             if (adapterList[i].addr == _adapterAddr && adapterList[i].isEnabled) {
                 adapterAddr = adapterList[i].addr;
-                name = adapterList[i].name;
+                label = adapterList[i].label;
                 stakingToken = adapterList[i].stakingToken;
                 isEnabled = adapterList[i].isEnabled;
 
@@ -110,8 +110,8 @@ contract HedgepieAdapterList is HedgepieAccessControlled {
             adapterList.push(
                 AdapterInfo({
                     addr: _adapters[i],
-                    name: IAdapter(_adapters[i]).name(),
                     stakingToken: IAdapter(_adapters[i]).stakingToken(),
+                    label: IAdapter(_adapters[i]).label(),
                     isEnabled: true
                 })
             );

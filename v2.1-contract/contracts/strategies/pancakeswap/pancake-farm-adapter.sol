@@ -21,7 +21,7 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapter {
      * @param _stakingToken  address of staking token
      * @param _rewardToken  address of reward token
      * @param _router  address of router for lp token
-     * @param _name  adatper name
+     * @param _label  adatper label
      * @param _authority  hedgepieAuthority address
      */
     constructor(
@@ -30,7 +30,7 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapter {
         address _stakingToken,
         address _rewardToken,
         address _router,
-        string memory _name,
+        string memory _label,
         address _authority
     ) BaseAdapter(_authority) {
         require(_rewardToken != address(0), "Invalid reward token");
@@ -43,7 +43,7 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapter {
         strategy = _strategy;
         router = _router;
         swapRouter = _router;
-        name = _name;
+        label = _label;
     }
 
     /**

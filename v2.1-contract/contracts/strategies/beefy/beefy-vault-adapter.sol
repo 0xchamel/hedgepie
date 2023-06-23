@@ -28,7 +28,7 @@ contract BeefyVaultAdapterBsc is BaseAdapter {
      * @param _stakingToken  address of staking token
      * @param _router  address of router for LP
      * @param _swapRouter  address of swap router
-     * @param _name  adatper name
+     * @param _label  adatper label
      * @param _authority HedgepieAuthority address
      */
     constructor(
@@ -36,7 +36,7 @@ contract BeefyVaultAdapterBsc is BaseAdapter {
         address _stakingToken,
         address _router,
         address _swapRouter,
-        string memory _name,
+        string memory _label,
         address _authority
     ) BaseAdapter(_authority) {
         require(_stakingToken != address(0), "Invalid staking token");
@@ -47,7 +47,7 @@ contract BeefyVaultAdapterBsc is BaseAdapter {
         repayToken = _strategy;
         router = _router;
         swapRouter = _swapRouter;
-        name = _name;
+        label = _label;
     }
 
     /**
