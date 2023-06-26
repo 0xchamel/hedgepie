@@ -1,0 +1,404 @@
+const { expect } = require("chai");
+const { ethers } = require("hardhat");
+
+const { setPath, checkPendingWithClaim, forkBNBNetwork } = require("../../../../shared/utilities");
+const { setupHedgepie, setupBscAdapterWithLib, mintNFT } = require("../../../../shared/setup");
+
+const BigNumber = ethers.BigNumber;
+
+describe("Locked Adapters Integration Test", function () {
+    before("Deploy contract", async function () {
+        await forkBNBNetwork();
+
+        [
+            this.governor,
+            this.pathManager,
+            this.adapterManager,
+            this.treasury,
+            this.alice,
+            this.bob,
+            this.kyle,
+            this.jerry,
+            this.user1,
+            this.user2,
+        ] = await ethers.getSigners();
+
+        // Get base contracts
+        [this.investor, this.authority, this.ybNft, this.adapterList, this.pathFinder, this.lib] = await setupHedgepie(
+            this.governor,
+            this.pathManager,
+            this.adapterManager,
+            this.treasury
+        );
+
+        const wbnb = "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c";
+        const cake = "0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82";
+        const strategy = "0xa5f8C5Dbd5F286960b9d90548680aE5ebFf07652"; // MasterChef v2 pks
+        const lpToken = "0x0eD7e52944161450477ee417DE9Cd3a859b14fD0"; // WBNB-CAKE LP
+        const pksRouter = "0x10ED43C718714eb63d5aA57B78B54704E256024E";
+        const poolID = 2;
+        this.performanceFee = 500;
+        this.accRewardShare = BigNumber.from(0);
+
+        // Deploy PancakeSwapFarmLPAdapterBsc contract
+        const PancakeSwapFarmLPAdapterBsc = await setupBscAdapterWithLib("PancakeSwapFarmLPAdapterBsc", this.lib);
+        this.adapter = [0, 0];
+        this.adapter[0] = await PancakeSwapFarmLPAdapterBsc.deploy();
+        await this.adapter[0].deployed();
+        await this.adapter[0].initialize(
+            poolID, // pid
+            strategy,
+            lpToken,
+            cake,
+            pksRouter,
+            "PancakeSwap::Farm::CAKE-WBNB",
+            this.authority.address
+        );
+
+        // Deploy PancakeStakeAdapterBsc contract
+        const PancakeStakeAdapterBsc = await setupBscAdapterWithLib("PancakeStakeAdapterBsc", this.lib);
+
+        this.strategy = "0x08C9d626a2F0CC1ed9BD07eBEdeF8929F45B83d3";
+        this.stakingToken = "0x0e09fabb73bd3ade0a17ecc321fd13a19e81ce82"; // CAKE
+        this.rewardToken = "0x724A32dFFF9769A0a0e1F0515c0012d1fB14c3bd"; // SQUAD
+        this.swapRouter = "0x10ED43C718714eb63d5aA57B78B54704E256024E";
+        this.adapter[1] = await PancakeStakeAdapterBsc.deploy();
+        await this.adapter[1].deployed();
+        await this.adapter[1].initialize(
+            this.strategy,
+            this.stakingToken,
+            this.rewardToken,
+            this.swapRouter,
+            "PK::STAKE::SQUAD-ADAPTER",
+            this.authority.address
+        );
+
+        // register path to pathFinder contract
+        await setPath(this.pathFinder, this.pathManager, pksRouter, [wbnb, cake]);
+        await setPath(this.pathFinder, this.pathManager, pksRouter, [wbnb, cake, this.rewardToken]);
+
+        // add adapters to adapterList
+        await this.adapterList
+            .connect(this.adapterManager)
+            .addAdapters([this.adapter[0].address, this.adapter[1].address]);
+
+        // mint ybnft
+        await mintNFT(this.ybNft, [this.adapter[0].address, this.adapter[1].address], this.performanceFee);
+
+        this.checkAccRewardShare = async (tokenId) => {
+            expect(
+                BigNumber.from((await this.investor.tokenInfos(tokenId)).accRewardShare).gt(
+                    BigNumber.from(this.accRewardShare)
+                )
+            ).to.eq(true);
+
+            this.accRewardShare = (await this.investor.tokenInfos(tokenId)).accRewardShare;
+        };
+
+        console.log("Lib: ", this.lib.address);
+        console.log("YBNFT: ", this.ybNft.address);
+        console.log("Investor: ", this.investor.address);
+        console.log("Authority: ", this.authority.address);
+        console.log("AdapterList: ", this.adapterList.address);
+        console.log("PathFinder: ", this.pathFinder.address);
+        console.log("PancakeSwapFarmLPAdapterBsc: ", this.adapter[0].address);
+        console.log("PancakeStakeAdapterBsc: ", this.adapter[1].address);
+    });
+
+    describe("deposit() function test", function () {
+        it("(1) deposit should success for Alice", async function () {
+            const depositAmount = ethers.utils.parseEther("10");
+            await expect(
+                this.investor.connect(this.alice).deposit(1, {
+                    gasPrice: 21e9,
+                    value: depositAmount,
+                })
+            )
+                .to.emit(this.investor, "Deposited")
+                .withArgs(this.alice.address, this.ybNft.address, 1, depositAmount);
+
+            const aliceInfo = await this.investor.userInfos(1, this.alice.address);
+            const bnbPrice = BigNumber.from(await this.lib.getBNBPrice());
+            expect(aliceInfo.amount).to.eq(BigNumber.from(10).mul(bnbPrice));
+
+            const profitInfo = (await this.ybNft.tokenInfos(1)).profit;
+            expect(profitInfo).to.be.eq(0);
+        });
+
+        it("(2) deposit should success for Bob", async function () {
+            // wait 40 mins
+            for (let i = 0; i < 7200; i++) {
+                await ethers.provider.send("evm_mine", []);
+            }
+            await ethers.provider.send("evm_increaseTime", [3600 * 24]);
+            await ethers.provider.send("evm_mine", []);
+
+            const beforeAdapterInfos = await this.investor.tokenInfos(1);
+            const depositAmount = ethers.utils.parseEther("10");
+
+            await expect(
+                this.investor.connect(this.bob).deposit(1, {
+                    gasPrice: 21e9,
+                    value: depositAmount,
+                })
+            )
+                .to.emit(this.investor, "Deposited")
+                .withArgs(this.bob.address, this.ybNft.address, 1, depositAmount);
+
+            await expect(
+                this.investor.connect(this.bob).deposit(1, {
+                    gasPrice: 21e9,
+                    value: depositAmount,
+                })
+            )
+                .to.emit(this.investor, "Deposited")
+                .withArgs(this.bob.address, this.ybNft.address, 1, depositAmount);
+
+            const bobInfo = await this.investor.userInfos(1, this.bob.address);
+            const bnbPrice = BigNumber.from(await this.lib.getBNBPrice());
+            expect(bobInfo.amount).to.eq(BigNumber.from(20).mul(bnbPrice));
+
+            const afterAdapterInfos = await this.investor.tokenInfos(1);
+            expect(BigNumber.from(afterAdapterInfos.totalStaked).gt(beforeAdapterInfos.totalStaked)).to.eq(true);
+
+            await this.checkAccRewardShare(1);
+
+            // check profit
+            const profitInfo = (await this.ybNft.tokenInfos(1)).profit;
+            expect(profitInfo).to.be.gt(0);
+
+            const alicePending = await this.investor.pendingReward(1, this.alice.address);
+            expect(profitInfo).to.be.within(
+                alicePending.withdrawable.mul(99).div(100),
+                alicePending.withdrawable.mul(101).div(100)
+            );
+        });
+
+        it("(3) test TVL & participants", async function () {
+            const bnbPrice = BigNumber.from(await this.lib.getBNBPrice());
+            const nftInfo = await this.ybNft.tokenInfos(1);
+
+            expect(BigNumber.from(nftInfo.tvl).toString()).to.be.eq(BigNumber.from(30).mul(bnbPrice)) &&
+                expect(BigNumber.from(nftInfo.participant).toString()).to.be.eq("2");
+        });
+
+        it("(4) test setLocked", async function () {
+            await expect(this.adapterList.connect(this.adapterManager).setLocked([0], [true])).to.emit(
+                this.adapterList,
+                "AdapterLocked"
+            );
+        });
+    });
+
+    describe("withdrawBNB() function test", function () {
+        it("(1) revert when nft tokenId is invalid", async function () {
+            for (let i = 0; i < 10; i++) {
+                await ethers.provider.send("evm_mine", []);
+            }
+            await ethers.provider.send("evm_increaseTime", [3600 * 24]);
+            await ethers.provider.send("evm_mine", []);
+
+            // withdraw to nftID: 3
+            await expect(this.investor.connect(this.governor).withdraw(3, { gasPrice: 21e9 })).to.be.revertedWith(
+                "Error: nft tokenId is invalid"
+            );
+        });
+
+        it("(2) should receive the BNB successfully after withdraw function for Alice", async function () {
+            await ethers.provider.send("evm_increaseTime", [3600 * 24 * 30]);
+            await ethers.provider.send("evm_mine", []);
+
+            // withdraw from nftId: 1
+            const beforeProfit = (await this.ybNft.tokenInfos(1)).profit;
+            const beforeBNB = await ethers.provider.getBalance(this.alice.address);
+            await expect(this.investor.connect(this.alice).withdraw(1)).to.emit(this.investor, "Withdrawn");
+            const afterBNB = await ethers.provider.getBalance(this.alice.address);
+            expect(BigNumber.from(afterBNB).gt(BigNumber.from(beforeBNB))).to.eq(true);
+
+            // check withdrawn balance
+            expect(Number(ethers.utils.formatEther(afterBNB.sub(beforeBNB).toString()))).to.be.gt(4.9);
+
+            // check userInfo
+            let aliceInfo = await this.investor.userInfos(1, this.alice.address);
+            expect(aliceInfo.amount).to.eq(BigNumber.from(0));
+            expect((await this.investor.pWithdrawals(1, this.adapter[0].address, this.alice.address)).amount).to.gt(0);
+            expect((await this.investor.pWithdrawals(1, this.adapter[0].address, this.alice.address)).addr).to.eq(
+                this.adapter[0].address
+            );
+
+            //------- check bob info -----//
+            const bobInfo = await this.investor.userInfos(1, this.bob.address);
+            const bnbPrice = BigNumber.from(await this.lib.getBNBPrice());
+            expect(bobInfo.amount).to.eq(BigNumber.from(20).mul(bnbPrice));
+
+            await this.checkAccRewardShare(1);
+
+            const afterProfit = (await this.ybNft.tokenInfos(1)).profit;
+            const bobPending = (await this.investor.pendingReward(1, this.bob.address)).withdrawable;
+            expect(afterProfit.sub(beforeProfit)).to.be.gt(bobPending);
+        });
+
+        it("(3) test TVL & participants after Alice withdraw", async function () {
+            const bnbPrice = BigNumber.from(await this.lib.getBNBPrice());
+            const nftInfo = await this.ybNft.tokenInfos(1);
+
+            expect(BigNumber.from(nftInfo.tvl).toString()).to.be.eq(BigNumber.from(20).mul(bnbPrice)) &&
+                expect(BigNumber.from(nftInfo.participant).toString()).to.be.eq("1");
+        });
+
+        it("(4) should receive the BNB successfully after withdraw function for Bob", async function () {
+            await ethers.provider.send("evm_increaseTime", [3600 * 24 * 30]);
+            await ethers.provider.send("evm_mine", []);
+
+            // withdraw from nftId: 1
+            const beforeProfit = (await this.ybNft.tokenInfos(1)).profit;
+            const beforeBNB = await ethers.provider.getBalance(this.bob.address);
+
+            await expect(this.investor.connect(this.bob).withdraw(1)).to.emit(this.investor, "Withdrawn");
+
+            const afterBNB = await ethers.provider.getBalance(this.bob.address);
+            expect(BigNumber.from(afterBNB).gt(BigNumber.from(beforeBNB))).to.eq(true);
+
+            // check withdrawn balance
+            expect(Number(ethers.utils.formatEther(afterBNB.sub(beforeBNB).toString()))).to.be.gt(9.8);
+
+            let bobInfo = await this.investor.userInfos(1, this.bob.address);
+            expect(bobInfo.amount).to.eq(BigNumber.from(0));
+            expect((await this.investor.pWithdrawals(1, this.adapter[0].address, this.bob.address)).amount).to.gt(0);
+            expect((await this.investor.pWithdrawals(1, this.adapter[0].address, this.bob.address)).addr).to.eq(
+                this.adapter[0].address
+            );
+
+            await this.checkAccRewardShare(1);
+
+            const afterProfit = (await this.ybNft.tokenInfos(1)).profit;
+            expect(afterProfit).to.be.gt(beforeProfit);
+        });
+
+        it("(5) test TVL & participants after Alice & Bob withdraw", async function () {
+            const nftInfo = await this.ybNft.tokenInfos(1);
+
+            expect(BigNumber.from(nftInfo.tvl).toString()).to.be.eq("0");
+            expect(BigNumber.from(nftInfo.participant).toString()).to.be.eq("0");
+        });
+
+        it("(6) should receive the BNB successfully after locked pool is unlocked", async function () {
+            await ethers.provider.send("evm_increaseTime", [3600 * 24 * 30]);
+            await ethers.provider.send("evm_mine", []);
+
+            await this.adapterList.connect(this.adapterManager).setLocked([0], [false]);
+
+            // withdraw from nftId: 1 - alice
+            let beforeBNB = await ethers.provider.getBalance(this.alice.address);
+            await expect(this.investor.connect(this.alice).withdraw(1)).to.emit(this.investor, "Withdrawn");
+            let afterBNB = await ethers.provider.getBalance(this.alice.address);
+            expect(BigNumber.from(afterBNB).gt(BigNumber.from(beforeBNB))).to.eq(true);
+            // check withdrawn balance
+            expect(Number(ethers.utils.formatEther(afterBNB.sub(beforeBNB).toString()))).to.be.gt(4.8);
+
+            // withdraw from nftId: 1 - bob
+            beforeBNB = await ethers.provider.getBalance(this.bob.address);
+            await expect(this.investor.connect(this.bob).withdraw(1)).to.emit(this.investor, "Withdrawn");
+            afterBNB = await ethers.provider.getBalance(this.bob.address);
+            expect(BigNumber.from(afterBNB).gt(BigNumber.from(beforeBNB))).to.eq(true);
+            // check withdrawn balance
+            expect(Number(ethers.utils.formatEther(afterBNB.sub(beforeBNB).toString()))).to.be.gt(9.8);
+
+            // locked again
+            await this.adapterList.connect(this.adapterManager).setLocked([0], [true]);
+        });
+    });
+
+    describe("pendingReward(), claim() function tests and protocol-fee test", function () {
+        it("check if pendingReward is zero for new users", async function () {
+            const pending = await this.investor.pendingReward(1, this.user1.address);
+
+            expect(pending[0]).to.be.eq(0);
+            expect(pending[1]).to.be.eq(0);
+        });
+        it("test with token1 and token2", async function () {
+            await this.investor.connect(this.kyle).deposit(1, {
+                gasPrice: 21e9,
+                value: ethers.utils.parseEther("10"),
+            });
+
+            await this.investor.connect(this.jerry).deposit(2, {
+                gasPrice: 21e9,
+                value: ethers.utils.parseEther("100"),
+            });
+
+            // wait 40 mins
+            for (let i = 0; i < 7200; i++) {
+                await ethers.provider.send("evm_mine", []);
+            }
+            await ethers.provider.send("evm_increaseTime", [3600 * 24]);
+            await ethers.provider.send("evm_mine", []);
+
+            // deposit from other user to update accTokenPerShare values
+            await this.investor.connect(this.alice).deposit(2, {
+                gasPrice: 21e9,
+                value: ethers.utils.parseEther("1"),
+            });
+
+            // check pending rewards
+            await checkPendingWithClaim(this.investor, this.ybNft, this.kyle, 1, this.performanceFee);
+            await checkPendingWithClaim(this.investor, this.ybNft, this.jerry, 2, this.performanceFee);
+
+            // Successfully withdraw
+            await expect(this.investor.connect(this.kyle).withdraw(1)).to.emit(this.investor, "Withdrawn");
+
+            await expect(this.investor.connect(this.jerry).withdraw(2)).to.emit(this.investor, "Withdrawn");
+        });
+    });
+
+    describe("Edit fund flow", function () {
+        it("test possibility to set zero percent", async function () {
+            await this.ybNft.connect(this.governor).updateAllocations(1, [
+                [0, this.adapter[0].address],
+                [10000, this.adapter[1].address],
+            ]);
+        });
+
+        it("test with token1 and token2 - updateAllocations", async function () {
+            await this.investor.connect(this.user1).deposit(1, {
+                gasPrice: 21e9,
+                value: ethers.utils.parseEther("10"),
+            });
+
+            await this.investor.connect(this.user2).deposit(2, {
+                gasPrice: 21e9,
+                value: ethers.utils.parseEther("100"),
+            });
+
+            // wait 40 mins
+            for (let i = 0; i < 7200; i++) {
+                await ethers.provider.send("evm_mine", []);
+            }
+            await ethers.provider.send("evm_increaseTime", [3600 * 24]);
+            await ethers.provider.send("evm_mine", []);
+        });
+
+        it("revert when allocation change for locked pool", async function () {
+            // Check reward increase after updateAllocation
+            const allocation = [
+                [2000, this.adapter[0].address],
+                [8000, this.adapter[1].address],
+            ];
+            await expect(this.ybNft.connect(this.governor).updateAllocations(2, allocation)).to.be.revertedWith(
+                "Error: Invalid alloc for locked"
+            );
+        });
+
+        it("test claimed rewards after allocation change", async function () {
+            // Check pending reward by claim
+            await checkPendingWithClaim(this.investor, this.ybNft, this.user1, 1, this.performanceFee);
+            await checkPendingWithClaim(this.investor, this.ybNft, this.user2, 2, this.performanceFee);
+        });
+
+        it("test withdraw after allocation change", async function () {
+            // Successfully withdraw
+            await expect(this.investor.connect(this.user1).withdraw(1)).to.emit(this.investor, "Withdrawn");
+            await expect(this.investor.connect(this.user2).withdraw(2)).to.emit(this.investor, "Withdrawn");
+        });
+    });
+});

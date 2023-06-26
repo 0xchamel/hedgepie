@@ -11,7 +11,7 @@ contract HedgepieAdapterList is HedgepieAccessControlled {
         address addr; // adapter address
         string name; // adapter name
         address stakingToken; // staking token of adapter
-        bool status; // adapter contract status
+        bool status; // adapter contract status true: active, false: inactive
     }
 
     // list of adapters
@@ -20,10 +20,15 @@ contract HedgepieAdapterList is HedgepieAccessControlled {
     // existing status of adapters
     mapping(address => bool) public adapterActive;
 
+    // lock status of adapters
+    mapping(address => bool) public locked;
+
     /// @dev events
     event AdapterAdded(address indexed adapter);
     event AdapterActivated(address indexed strategy);
     event AdapterDeactivated(address indexed strategy);
+    event AdapterLocked(address indexed adapter);
+    event AdapterUnlocked(address indexed adapter);
 
     /**
      * @notice initialize
@@ -118,6 +123,25 @@ contract HedgepieAdapterList is HedgepieAccessControlled {
                 if (_status[i]) emit AdapterActivated(adapterList[_adapterId[i]].addr);
                 else emit AdapterDeactivated(adapterList[_adapterId[i]].addr);
             }
+        }
+    }
+
+    /**
+     * @notice Set locked status to adapter
+     * @param _adapterId  array of adapter id
+     * @param _status  locked status
+     */
+    /// #if_succeeds {:msg "setAdapters failed"} _status.length > 0 ? (adapterList[_adapterId[_status.length - 1]].status == _status[_status.length - 1]) : true;
+    function setLocked(uint256[] memory _adapterId, bool[] memory _status) external onlyAdapterManager {
+        require(_adapterId.length == _status.length, "Invalid array length");
+
+        for (uint256 i = 0; i < _adapterId.length; i++) {
+            require(_adapterId[i] < adapterList.length, "Invalid adapter address");
+
+            locked[adapterList[_adapterId[i]].addr] = _status[i];
+
+            if (_status[i]) emit AdapterLocked(adapterList[_adapterId[i]].addr);
+            else emit AdapterUnlocked(adapterList[_adapterId[i]].addr);
         }
     }
 }

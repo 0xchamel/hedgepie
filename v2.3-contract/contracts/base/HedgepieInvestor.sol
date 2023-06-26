@@ -10,11 +10,18 @@ import "../libraries/HedgepieLibraryBsc.sol";
 import "../interfaces/IYBNFT.sol";
 import "../interfaces/IAdapter.sol";
 import "../interfaces/IHedgepieAuthority.sol";
+import "../interfaces/IHedgepieAdapterList.sol";
 
 import "./HedgepieAccessControlled.sol";
 
 contract HedgepieInvestor is ReentrancyGuardUpgradeable, HedgepieAccessControlled {
     using SafeERC20 for IERC20;
+
+    struct PendingWithdraw {
+        address addr; // adapter address
+        uint256 amount; // total invested to adapter in usd
+        uint256 totalStaked; // total staked to adapter
+    }
 
     struct UserInfo {
         uint256 userShare; // user share amount
@@ -32,6 +39,9 @@ contract HedgepieInvestor is ReentrancyGuardUpgradeable, HedgepieAccessControlle
 
     // address => user info
     mapping(uint256 => mapping(address => UserInfo)) public userInfos;
+
+    // token id => adapter address => user address => pending withdraw info
+    mapping(uint256 => mapping(address => mapping(address => PendingWithdraw))) public pWithdrawals;
 
     // treasury address
     address public treasury;
@@ -81,15 +91,26 @@ contract HedgepieInvestor is ReentrancyGuardUpgradeable, HedgepieAccessControlle
         // 2. deposit to adapters
         IYBNFT.AdapterParam[] memory adapterInfos = IYBNFT(authority.hYBNFT()).getTokenAdapterParams(_tokenId);
 
+        uint256 totalUsed;
         for (uint8 i; i < adapterInfos.length; i++) {
             IYBNFT.AdapterParam memory adapter = adapterInfos[i];
 
             uint256 amountIn = (msg.value * adapter.allocation) / 1e4;
-            if (amountIn != 0) IAdapter(adapter.addr).deposit{value: amountIn}(_tokenId);
+            bool locked = IHedgepieAdapterList(IHedgepieAuthority(authority).hAdapterList()).locked(adapter.addr);
+
+            if (amountIn != 0) {
+                if (locked) {
+                    (bool success, ) = payable(msg.sender).call{value: amountIn}("");
+                    require(success, "Error: refund");
+                } else {
+                    IAdapter(adapter.addr).deposit{value: amountIn}(_tokenId);
+                    totalUsed += amountIn;
+                }
+            }
         }
 
         // 3. update user & token info saved in investor
-        uint256 investedUSDT = (msg.value * HedgepieLibraryBsc.getBNBPrice()) / 1e18;
+        uint256 investedUSDT = (totalUsed * HedgepieLibraryBsc.getBNBPrice()) / 1e18;
         userInfo.amount += investedUSDT;
         tokenInfo.totalStaked += investedUSDT;
 
@@ -97,7 +118,7 @@ contract HedgepieInvestor is ReentrancyGuardUpgradeable, HedgepieAccessControlle
         IYBNFT(authority.hYBNFT()).updateInfo(IYBNFT.UpdateInfo(_tokenId, investedUSDT, msg.sender, true));
 
         // 5. emit events
-        emit Deposited(msg.sender, authority.hYBNFT(), _tokenId, msg.value);
+        emit Deposited(msg.sender, authority.hYBNFT(), _tokenId, totalUsed);
     }
 
     /**
@@ -118,11 +139,39 @@ contract HedgepieInvestor is ReentrancyGuardUpgradeable, HedgepieAccessControlle
         uint256 amountOut;
         uint256 beforeAmt = address(this).balance;
         for (uint8 i; i < adapterInfos.length; i++) {
+            PendingWithdraw storage pendingWithdraw = pWithdrawals[_tokenId][adapterInfos[i].addr][msg.sender];
+
             uint256 tAmount = IAdapter(adapterInfos[i].addr).getUserAmount(_tokenId);
-            amountOut += IAdapter(adapterInfos[i].addr).withdraw(
-                _tokenId,
-                (tAmount * userInfo.amount) / tokenInfo.totalStaked
+            bool locked = IHedgepieAdapterList(IHedgepieAuthority(authority).hAdapterList()).locked(
+                adapterInfos[i].addr
             );
+
+            // when pool is unlocked
+            if (!locked && pendingWithdraw.amount != 0) {
+                amountOut += IAdapter(adapterInfos[i].addr).withdraw(
+                    _tokenId,
+                    (tAmount * pendingWithdraw.amount) / pendingWithdraw.totalStaked
+                );
+
+                pendingWithdraw.amount = 0;
+                pendingWithdraw.addr = address(0);
+                pendingWithdraw.totalStaked = 0;
+            }
+
+            // when pool is locked
+            if (locked && pendingWithdraw.amount == 0) {
+                pendingWithdraw.amount = userInfo.amount;
+                pendingWithdraw.addr = adapterInfos[i].addr;
+                pendingWithdraw.totalStaked = tokenInfo.totalStaked;
+                continue;
+            }
+
+            // normal case
+            if (userInfo.amount != 0)
+                amountOut += IAdapter(adapterInfos[i].addr).withdraw(
+                    _tokenId,
+                    (tAmount * userInfo.amount) / tokenInfo.totalStaked
+                );
         }
         require(amountOut == address(this).balance - beforeAmt, "Failed to withdraw");
 
@@ -160,7 +209,13 @@ contract HedgepieInvestor is ReentrancyGuardUpgradeable, HedgepieAccessControlle
         IYBNFT.AdapterParam[] memory adapterInfos = IYBNFT(authority.hYBNFT()).getTokenAdapterParams(_tokenId);
 
         uint256 pending = address(this).balance;
-        for (uint8 i; i < adapterInfos.length; i++) IAdapter(adapterInfos[i].addr).claim(_tokenId);
+        for (uint8 i; i < adapterInfos.length; i++) {
+            bool locked = IHedgepieAdapterList(IHedgepieAuthority(authority).hAdapterList()).locked(
+                adapterInfos[i].addr
+            );
+
+            if (!locked) IAdapter(adapterInfos[i].addr).claim(_tokenId);
+        }
         pending = address(this).balance - pending;
 
         if (pending != 0) {
@@ -192,9 +247,15 @@ contract HedgepieInvestor is ReentrancyGuardUpgradeable, HedgepieAccessControlle
         IYBNFT.AdapterParam[] memory adapterInfos = IYBNFT(authority.hYBNFT()).getTokenAdapterParams(_tokenId);
 
         for (uint8 i; i < adapterInfos.length; i++) {
-            (uint256 _amountOut, uint256 _withdrawable) = IAdapter(adapterInfos[i].addr).pendingReward(_tokenId);
-            amountOut += _amountOut;
-            withdrawable += _withdrawable;
+            bool locked = IHedgepieAdapterList(IHedgepieAuthority(authority).hAdapterList()).locked(
+                adapterInfos[i].addr
+            );
+
+            if (!locked) {
+                (uint256 _amountOut, uint256 _withdrawable) = IAdapter(adapterInfos[i].addr).pendingReward(_tokenId);
+                amountOut += _amountOut;
+                withdrawable += _withdrawable;
+            }
         }
 
         // 2. update accRewardShares
@@ -233,8 +294,12 @@ contract HedgepieInvestor is ReentrancyGuardUpgradeable, HedgepieAccessControlle
 
         uint256 _amount = address(this).balance;
         for (uint8 i; i < adapterInfos.length; i++) {
+            bool locked = IHedgepieAdapterList(IHedgepieAuthority(authority).hAdapterList()).locked(
+                adapterInfos[i].addr
+            );
+
             IYBNFT.AdapterParam memory adapter = adapterInfos[i];
-            IAdapter(adapter.addr).removeFunds(_tokenId);
+            if (!locked) IAdapter(adapter.addr).removeFunds(_tokenId);
         }
         _amount = address(this).balance - _amount;
 
@@ -244,6 +309,10 @@ contract HedgepieInvestor is ReentrancyGuardUpgradeable, HedgepieAccessControlle
             IYBNFT.AdapterParam memory adapter = adapterInfos[i];
 
             uint256 amountIn = (_amount * adapter.allocation) / 1e4;
+            bool locked = IHedgepieAdapterList(IHedgepieAuthority(authority).hAdapterList()).locked(adapter.addr);
+
+            if (locked && amountIn != 0) revert("Error: Invalid alloc for locked");
+
             if (amountIn != 0) IAdapter(adapter.addr).updateFunds{value: amountIn}(_tokenId);
         }
     }
@@ -317,7 +386,11 @@ contract HedgepieInvestor is ReentrancyGuardUpgradeable, HedgepieAccessControlle
 
         // claim rewards from adapters
         for (uint8 i; i < adapterInfos.length; i++) {
-            IAdapter(adapterInfos[i].addr).claim(_tokenId);
+            bool locked = IHedgepieAdapterList(IHedgepieAuthority(authority).hAdapterList()).locked(
+                adapterInfos[i].addr
+            );
+
+            if (!locked) IAdapter(adapterInfos[i].addr).claim(_tokenId);
         }
     }
 
