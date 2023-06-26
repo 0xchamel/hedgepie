@@ -7,4 +7,8 @@ interface IHedgepieAdapterList {
     function getAdapterInfo(address _adapter) external view returns (address, string memory, address, bool);
 
     function investor() external view returns (address);
+
+    function adapterActive(address _adapter) external view returns (bool);
+
+    function locked(address _adapter) external view returns (bool);
 }
