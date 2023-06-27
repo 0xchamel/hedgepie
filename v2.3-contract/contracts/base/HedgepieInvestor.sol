@@ -141,15 +141,26 @@ contract HedgepieInvestor is ReentrancyGuardUpgradeable, HedgepieAccessControlle
         // 2. deposit to adapters
         IYBNFT.AdapterParam[] memory adapterInfos = IYBNFT(authority.hYBNFT()).getTokenAdapterParams(_tokenId);
 
+        uint256 totalUsed;
         for (uint8 i; i < adapterInfos.length; i++) {
             IYBNFT.AdapterParam memory adapter = adapterInfos[i];
 
             uint256 amountIn = (msg.value * adapter.allocation) / 1e4;
-            if (amountIn != 0) IAdapter(adapter.addr).deposit{value: amountIn}(_tokenId);
+            bool locked = IHedgepieAdapterList(IHedgepieAuthority(authority).hAdapterList()).locked(adapter.addr);
+
+            if (amountIn != 0) {
+                if (locked) {
+                    (bool success, ) = payable(_user).call{value: amountIn}("");
+                    require(success, "Error: refund");
+                } else {
+                    IAdapter(adapter.addr).deposit{value: amountIn}(_tokenId);
+                    totalUsed += amountIn;
+                }
+            }
         }
 
         // 3. update user & token info saved in investor
-        uint256 investedUSDT = (msg.value * HedgepieLibraryBsc.getBNBPrice()) / 1e18;
+        uint256 investedUSDT = (totalUsed * HedgepieLibraryBsc.getBNBPrice()) / 1e18;
         userInfo.amount += investedUSDT;
         tokenInfo.totalStaked += investedUSDT;
 
@@ -157,7 +168,7 @@ contract HedgepieInvestor is ReentrancyGuardUpgradeable, HedgepieAccessControlle
         IYBNFT(authority.hYBNFT()).updateInfo(IYBNFT.UpdateInfo(_tokenId, investedUSDT, _user, true));
 
         // 5. emit events
-        emit Deposited(_user, authority.hYBNFT(), _tokenId, msg.value);
+        emit Deposited(_user, authority.hYBNFT(), _tokenId, totalUsed);
     }
 
     /**
