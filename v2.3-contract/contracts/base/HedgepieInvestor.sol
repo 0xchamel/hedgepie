@@ -216,6 +216,8 @@ contract HedgepieInvestor is ReentrancyGuardUpgradeable, HedgepieAccessControlle
                 continue;
             }
 
+            tAmount = IAdapter(adapterInfos[i].addr).getUserAmount(_tokenId);
+
             // normal case
             if (userInfo.amount != 0)
                 amountOut += IAdapter(adapterInfos[i].addr).withdraw(
