@@ -11,10 +11,11 @@ import "../interfaces/IYBNFT.sol";
 import "../interfaces/IAdapter.sol";
 import "../interfaces/IHedgepieAuthority.sol";
 import "../interfaces/IHedgepieAdapterList.sol";
+import "../interfaces/IStargateReceiver.sol";
 
 import "./HedgepieAccessControlled.sol";
 
-contract HedgepieInvestor is ReentrancyGuardUpgradeable, HedgepieAccessControlled {
+contract HedgepieInvestor is ReentrancyGuardUpgradeable, HedgepieAccessControlled, IStargateReceiver {
     using SafeERC20 for IERC20;
 
     struct PendingWithdraw {
@@ -51,6 +52,7 @@ contract HedgepieInvestor is ReentrancyGuardUpgradeable, HedgepieAccessControlle
     event Withdrawn(address indexed user, address nft, uint256 nftId, uint256 amount);
     event Claimed(address indexed user, uint256 amount);
     event TreasuryUpdated(address treasury);
+    event sgReceived(uint16 chainId, bytes srcAddress, uint256 nonce, address token, uint256 amount, bytes payload);
 
     modifier onlyValidNFT(uint256 _tokenId) {
         require(IYBNFT(authority.hYBNFT()).exists(_tokenId), "Error: nft tokenId is invalid");
@@ -119,6 +121,54 @@ contract HedgepieInvestor is ReentrancyGuardUpgradeable, HedgepieAccessControlle
 
         // 5. emit events
         emit Deposited(msg.sender, authority.hYBNFT(), _tokenId, totalUsed);
+    }
+
+    /**
+     * @notice Deposit with BNB instead of other user
+     * @param _tokenId  YBNft token id
+     */
+    function depositOnBehalf(
+        uint256 _tokenId,
+        address _user
+    ) public payable whenNotPaused nonReentrant onlyValidNFT(_tokenId) {
+        require(msg.value != 0, "Error: Insufficient BNB");
+        UserInfo storage userInfo = userInfos[_tokenId][_user];
+        TokenInfo storage tokenInfo = tokenInfos[_tokenId];
+
+        // 1. claim reward from adapters
+        _calcReward(_tokenId);
+
+        // 2. deposit to adapters
+        IYBNFT.AdapterParam[] memory adapterInfos = IYBNFT(authority.hYBNFT()).getTokenAdapterParams(_tokenId);
+
+        uint256 totalUsed;
+        for (uint8 i; i < adapterInfos.length; i++) {
+            IYBNFT.AdapterParam memory adapter = adapterInfos[i];
+
+            uint256 amountIn = (msg.value * adapter.allocation) / 1e4;
+            bool locked = IHedgepieAdapterList(IHedgepieAuthority(authority).hAdapterList()).locked(adapter.addr);
+
+            if (amountIn != 0) {
+                if (locked) {
+                    (bool success, ) = payable(_user).call{value: amountIn}("");
+                    require(success, "Error: refund");
+                } else {
+                    IAdapter(adapter.addr).deposit{value: amountIn}(_tokenId);
+                    totalUsed += amountIn;
+                }
+            }
+        }
+
+        // 3. update user & token info saved in investor
+        uint256 investedUSDT = (totalUsed * HedgepieLibraryBsc.getBNBPrice()) / 1e18;
+        userInfo.amount += investedUSDT;
+        tokenInfo.totalStaked += investedUSDT;
+
+        // 4. update token info in YBNFT
+        IYBNFT(authority.hYBNFT()).updateInfo(IYBNFT.UpdateInfo(_tokenId, investedUSDT, _user, true));
+
+        // 5. emit events
+        emit Deposited(_user, authority.hYBNFT(), _tokenId, totalUsed);
     }
 
     /**
@@ -392,6 +442,66 @@ contract HedgepieInvestor is ReentrancyGuardUpgradeable, HedgepieAccessControlle
 
             if (!locked) IAdapter(adapterInfos[i].addr).claim(_tokenId);
         }
+    }
+
+    /**
+     * @notice sgReceive from layerzero
+     * @param _chainId stargate chain id
+     * @param _srcAddress SRC address
+     * @param _nonce nonce
+     * @param _token recieve token
+     * @param _amount token amount recieved
+     * @param _payload payload
+     */
+    function sgReceive(
+        uint16 _chainId,
+        bytes memory _srcAddress,
+        uint256 _nonce,
+        address _token,
+        uint256 _amount,
+        bytes calldata _payload
+    ) external payable override {
+        (uint256 _tokenId, address _userAddress, address _router) = abi.decode(
+            _payload[4:],
+            (uint256, address, address)
+        );
+
+        // get function selector
+        bytes4 fSig;
+        fSig = fSig | _payload[3];
+        fSig = (fSig >> 8) | _payload[2];
+        fSig = (fSig >> 8) | _payload[1];
+        fSig = (fSig >> 8) | _payload[0];
+
+        // Swap receive token to ether
+        address[] memory path = IPathFinder(IHedgepieAuthority(authority).pathFinder()).getPaths(
+            _router,
+            _token,
+            HedgepieLibraryBsc.WBNB
+        );
+
+        // Approve token to swapRouter
+        uint256 _bal = address(this).balance;
+        IERC20(_token).approve(_router, 0);
+        IERC20(_token).approve(_router, _amount);
+
+        // Swap token to ether
+        IPancakeRouter(_router).swapExactTokensForETHSupportingFeeOnTransferTokens(
+            _amount,
+            0,
+            path,
+            address(this),
+            block.timestamp
+        );
+        _bal = address(this).balance - _bal;
+
+        emit sgReceived(_chainId, _srcAddress, _nonce, _token, _amount, _payload);
+
+        // Deposit onBehalf or Withdraw onBehalf
+        (bool success, ) = address(this).call{value: _bal}(
+            abi.encodeWithSignature("depositOnBehalf(uint256,address)", _tokenId, _userAddress)
+        );
+        require(success, "Failed to low call");
     }
 
     receive() external payable {}

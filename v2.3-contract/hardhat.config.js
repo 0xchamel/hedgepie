@@ -34,7 +34,7 @@ module.exports = {
         },
         mainnet: {
             chainId: 1,
-            url: `https://mainnet.infura.io/v3/${process.env.INFURA_MAINNET_KEY}`,
+            url: `https://rpc.ankr.com/eth`,
             accounts: [process.env.MAINNET_PRIVKEY],
         },
         rinkeby: {
@@ -46,6 +46,11 @@ module.exports = {
         mumbai: {
             chainId: 80001,
             url: "https://rpc-mumbai.maticvigil.com/",
+            accounts: [process.env.TESTNET_PRIVKEY],
+        },
+        matic: {
+            chainId: 137,
+            url: "https://rpc.ankr.com/polygon",
             accounts: [process.env.TESTNET_PRIVKEY],
         },
         bsc: {
