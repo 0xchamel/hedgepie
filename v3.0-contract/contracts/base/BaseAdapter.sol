@@ -54,12 +54,13 @@ abstract contract BaseAdapter is HedgepieAccessControlled {
     // adapter name
     string public name;
 
-    // adapter info having totalStaked and 1st, 2nd share info
-    AdapterInfo public mAdapter;
+    // mAdapter informations
+    // pid or strategy => mAdapter
+    mapping(uint256 => AdapterInfo) public mAdapters;
 
     // adapter info for each nft
-    // nft id => UserAdapterInfo
-    mapping(uint256 => UserAdapterInfo) public userAdapterInfos;
+    // nft id => pid or strategy => UserAdapterInfo
+    mapping(uint256 => mapping(uint256 => UserAdapterInfo)) public userAdapterInfos;
 
     /**
      * @notice initialize
