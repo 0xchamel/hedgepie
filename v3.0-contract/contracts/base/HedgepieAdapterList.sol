@@ -7,18 +7,28 @@ import "../interfaces/IHedgepieAuthority.sol";
 import "./HedgepieAccessControlled.sol";
 
 contract HedgepieAdapterList is HedgepieAccessControlled {
-    struct AdapterInfo {
-        address addr; // adapter address
-        string name; // adapter name
-        address stakingToken; // staking token of adapter
-        bool status; // adapter contract status true: active, false: inactive
+    enum AdapterStatus {
+        ACTIVE,
+        INACTIVE,
+        LOCKED
     }
 
-    // list of adapters
-    AdapterInfo[] public adapterList;
+    struct AdapterInfo {
+        string[] names; // adapter names
+        address[] strategies; // strategy addresses
+        uint256[] pids; // pool ids of stratgy
+        bool[] types; // types of pid or strategy adapter
+        AdapterStatus[] status; // 0: active, 1: inactive, 2: locked
+    }
+
+    // list of adapter addresses
+    address[] public list;
+
+    // mapping for adapter info
+    mapping(address => AdapterInfo) public infos;
 
     // existing status of adapters
-    mapping(address => bool) public adapterActive;
+    mapping(address => bool) public added;
 
     // lock status of adapters
     mapping(address => bool) public locked;
@@ -27,8 +37,8 @@ contract HedgepieAdapterList is HedgepieAccessControlled {
     event AdapterAdded(address indexed adapter);
     event AdapterActivated(address indexed strategy);
     event AdapterDeactivated(address indexed strategy);
-    event AdapterLocked(address indexed adapter);
-    event AdapterUnlocked(address indexed adapter);
+    event AdapterLocked(address indexed adapter, uint256 index);
+    event AdapterUnlocked(address indexed adapter, uint256 index);
 
     /**
      * @notice initialize
@@ -40,44 +50,35 @@ contract HedgepieAdapterList is HedgepieAccessControlled {
 
     /// @dev modifier for active adapters
     modifier onlyActiveAdapter(address _adapter) {
-        require(adapterActive[_adapter], "Error: Adapter is not active");
+        require(added[_adapter], "Error: Adapter is not active");
         _;
     }
 
     /**
      * @notice Get a list of adapters
      */
-    function getAdapterList() external view returns (AdapterInfo[] memory) {
-        return adapterList;
+    function getAdapterList() external view returns (address[] memory) {
+        return list;
     }
 
     /**
      * @notice Get adapter infor
-     * @param _adapterAddr address of adapter that need to get information
+     * @param _adapterAddr adapter address
      */
     function getAdapterInfo(
         address _adapterAddr
-    ) external view returns (address adapterAddr, string memory name, address stakingToken, bool status) {
-        for (uint256 i; i < adapterList.length; i++) {
-            if (adapterList[i].addr == _adapterAddr && adapterList[i].status) {
-                adapterAddr = adapterList[i].addr;
-                name = adapterList[i].name;
-                stakingToken = adapterList[i].stakingToken;
-                status = adapterList[i].status;
-
-                break;
-            }
-        }
+    ) external view onlyActiveAdapter(_adapterAddr) returns (AdapterInfo memory) {
+        return infos[_adapterAddr];
     }
 
     /**
      * @notice Get strategy address of adapter contract
-     * @param _adapter  adapter address
+     * @param _adapterAddr  adapter address
      */
     function getAdapterStrat(
-        address _adapter
-    ) external view onlyActiveAdapter(_adapter) returns (address adapterStrat) {
-        adapterStrat = IAdapter(_adapter).strategy();
+        address _adapterAddr
+    ) external view onlyActiveAdapter(_adapterAddr) returns (address[] strategies) {
+        return infos[_adapterAddr].strategies;
     }
 
     // ===== AdapterManager functions =====
@@ -88,60 +89,100 @@ contract HedgepieAdapterList is HedgepieAccessControlled {
     /// #if_succeeds {:msg "addAdapters failed"} _adapters.length > 0 ? (adapterList.length == old(adapterList.length) + _adapters.length && adapterActive[_adapters[_adapters.length - 1]] == true) : true;
     function addAdapters(address[] memory _adapters) external onlyAdapterManager {
         for (uint256 i = 0; i < _adapters.length; i++) {
-            require(!adapterActive[_adapters[i]], "Already added");
+            require(!added[_adapters[i]], "Already added");
             require(_adapters[i] != address(0), "Invalid adapter address");
 
-            adapterList.push(
-                AdapterInfo({
-                    addr: _adapters[i],
-                    name: IAdapter(_adapters[i]).name(),
-                    stakingToken: IAdapter(_adapters[i]).stakingToken(),
-                    status: true
-                })
-            );
-            adapterActive[_adapters[i]] = true;
+            list.push(_adapters[i]);
+            added[_adapters[i]] = true;
 
             emit AdapterAdded(_adapters[i]);
         }
     }
 
     /**
-     * @notice Remove adapter
-     * @param _adapterId  array of adapter id
+     * @notice Add information for adapter
+     * @param _adapter  array of adapter address
+     * @param _names  array of adapter name
+     * @param _strategies  array of adapter strategy
+     * @param _pids  array of adapter pool id
+     * @param _types  array of adapter type
      * @param _status  array of adapter status
      */
-    /// #if_succeeds {:msg "setAdapters failed"} _status.length > 0 ? (adapterList[_adapterId[_status.length - 1]].status == _status[_status.length - 1]) : true;
-    function setAdapters(uint256[] memory _adapterId, bool[] memory _status) external onlyAdapterManager {
-        require(_adapterId.length == _status.length, "Invalid array length");
+    function addInfo(
+        address _adapter,
+        string[] memory _names,
+        address[] memory _strategies,
+        uint256[] _pids,
+        bool[] memory _types,
+        AdapterStatus[] memory _status
+    ) external onlyActiveAdapter(_adapter) onlyAdapterManager {
+        require(
+            _names.length == _strategies.length &&
+                _strategies.length == _pids.length &&
+                _pids.length == _types.length &&
+                _types.length == _status.length,
+            "Invalid array length"
+        );
 
-        for (uint256 i = 0; i < _adapterId.length; i++) {
-            require(_adapterId[i] < adapterList.length, "Invalid adapter address");
+        for (uint i; i < _names.length; ) {
+            infos[_adapter].names.push(_names[i]);
+            infos[_adapter].strategies.push(_strategies[i]);
+            infos[_adapter].pids.push(_pids[i]);
+            infos[_adapter].types.push(_types[i]);
+            infos[_adapter].status.push(_status[i]);
 
-            if (adapterList[_adapterId[i]].status != _status[i]) {
-                adapterList[_adapterId[i]].status = _status[i];
-
-                if (_status[i]) emit AdapterActivated(adapterList[_adapterId[i]].addr);
-                else emit AdapterDeactivated(adapterList[_adapterId[i]].addr);
+            unchecked {
+                ++i;
             }
         }
     }
 
     /**
-     * @notice Set locked status to adapter
-     * @param _adapterId  array of adapter id
-     * @param _status  locked status
+     * @notice Remove adapter
+     * @param _adapter address of adapter
+     * @param _index index of AdapterInfo
+     * @param _name  adapter name
+     * @param _strategy  adapter strategy
+     * @param _pid  pool id
+     * @param _type  adapter type
+     * @param _status  adapter status
      */
     /// #if_succeeds {:msg "setAdapters failed"} _status.length > 0 ? (adapterList[_adapterId[_status.length - 1]].status == _status[_status.length - 1]) : true;
-    function setLocked(uint256[] memory _adapterId, bool[] memory _status) external onlyAdapterManager {
-        require(_adapterId.length == _status.length, "Invalid array length");
+    function setAdapters(
+        address _adapter,
+        uint256 _index,
+        string memory _name,
+        address _strategy,
+        uint256 _pid,
+        bool _type,
+        AdapterStatus memory _status
+    ) external onlyActiveAdapter(_adapter) onlyAdapterManager {
+        require(_index < infos[_adapter].names.length, "Invalid array length");
 
-        for (uint256 i = 0; i < _adapterId.length; i++) {
-            require(_adapterId[i] < adapterList.length, "Invalid adapter address");
+        infos[_adapter].names[_index] = _name;
+        infos[_adapter].strategies[_index] = _strategy;
+        infos[_adapter].pids[_index] = _pid;
+        infos[_adapter].types[_index] = _type;
+        infos[_adapter].status[_index] = _status;
+    }
 
-            locked[adapterList[_adapterId[i]].addr] = _status[i];
+    /**
+     * @notice Set locked status to adapter
+     * @param _adapter address of adapter
+     * @param _index index of AdapterInfo
+     * @param _locked  locked status
+     */
+    /// #if_succeeds {:msg "setAdapters failed"} _status.length > 0 ? (adapterList[_adapterId[_status.length - 1]].status == _status[_status.length - 1]) : true;
+    function setLocked(
+        address _adapter,
+        uint256 _index,
+        AdapterStatus memory _locked
+    ) external onlyActiveAdapter(_adapter) onlyAdapterManager {
+        require(_index < infos[_adapter].names.length, "Invalid array length");
 
-            if (_status[i]) emit AdapterLocked(adapterList[_adapterId[i]].addr);
-            else emit AdapterUnlocked(adapterList[_adapterId[i]].addr);
-        }
+        infos[_adapter].status[_index] = _locked;
+
+        if (_locked == AdapterStatus.LOCKED) emit AdapterLocked(_adapter, _index);
+        else emit AdapterLocked(_adapter, _index);
     }
 }
