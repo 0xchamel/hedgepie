@@ -25,13 +25,10 @@ contract HedgepieAdapterList is HedgepieAccessControlled {
     address[] public list;
 
     // mapping for adapter info
-    mapping(address => AdapterInfo) public infos;
+    mapping(address => AdapterInfo) private _infos;
 
     // existing status of adapters
     mapping(address => bool) public added;
-
-    // lock status of adapters
-    mapping(address => bool) public locked;
 
     /// @dev events
     event AdapterAdded(address indexed adapter);
@@ -64,11 +61,30 @@ contract HedgepieAdapterList is HedgepieAccessControlled {
     /**
      * @notice Get adapter infor
      * @param _adapterAddr adapter address
+     * @param _index index of array
      */
     function getAdapterInfo(
-        address _adapterAddr
-    ) external view onlyActiveAdapter(_adapterAddr) returns (AdapterInfo memory) {
-        return infos[_adapterAddr];
+        address _adapterAddr,
+        uint256 _index
+    )
+        external
+        view
+        onlyActiveAdapter(_adapterAddr)
+        returns (
+            address adapterAddr,
+            string memory name,
+            uint256 pid,
+            address strategy,
+            bool adapterType,
+            AdapterStatus status
+        )
+    {
+        adapterAddr = _adapterAddr;
+        name = _infos[_adapterAddr].names[_index];
+        pid = _infos[_adapterAddr].pids[_index];
+        strategy = _infos[_adapterAddr].strategies[_index];
+        adapterType = _infos[_adapterAddr].types[_index];
+        status = _infos[_adapterAddr].status[_index];
     }
 
     /**
@@ -77,8 +93,17 @@ contract HedgepieAdapterList is HedgepieAccessControlled {
      */
     function getAdapterStrat(
         address _adapterAddr
-    ) external view onlyActiveAdapter(_adapterAddr) returns (address[] strategies) {
-        return infos[_adapterAddr].strategies;
+    ) external view onlyActiveAdapter(_adapterAddr) returns (address[] memory) {
+        return _infos[_adapterAddr].strategies;
+    }
+
+    /**
+     * @notice Get locked status
+     * @param _adapterAddr  adapter address
+     * @param _index index of array
+     */
+    function locked(address _adapterAddr, uint256 _index) external view onlyActiveAdapter(_adapterAddr) returns (bool) {
+        return _infos[_adapterAddr].status[_index] == AdapterStatus.LOCKED;
     }
 
     // ===== AdapterManager functions =====
@@ -112,7 +137,7 @@ contract HedgepieAdapterList is HedgepieAccessControlled {
         address _adapter,
         string[] memory _names,
         address[] memory _strategies,
-        uint256[] _pids,
+        uint256[] memory _pids,
         bool[] memory _types,
         AdapterStatus[] memory _status
     ) external onlyActiveAdapter(_adapter) onlyAdapterManager {
@@ -125,11 +150,11 @@ contract HedgepieAdapterList is HedgepieAccessControlled {
         );
 
         for (uint i; i < _names.length; ) {
-            infos[_adapter].names.push(_names[i]);
-            infos[_adapter].strategies.push(_strategies[i]);
-            infos[_adapter].pids.push(_pids[i]);
-            infos[_adapter].types.push(_types[i]);
-            infos[_adapter].status.push(_status[i]);
+            _infos[_adapter].names.push(_names[i]);
+            _infos[_adapter].strategies.push(_strategies[i]);
+            _infos[_adapter].pids.push(_pids[i]);
+            _infos[_adapter].types.push(_types[i]);
+            _infos[_adapter].status.push(_status[i]);
 
             unchecked {
                 ++i;
@@ -155,15 +180,15 @@ contract HedgepieAdapterList is HedgepieAccessControlled {
         address _strategy,
         uint256 _pid,
         bool _type,
-        AdapterStatus memory _status
+        AdapterStatus _status
     ) external onlyActiveAdapter(_adapter) onlyAdapterManager {
-        require(_index < infos[_adapter].names.length, "Invalid array length");
+        require(_index < _infos[_adapter].names.length, "Invalid array length");
 
-        infos[_adapter].names[_index] = _name;
-        infos[_adapter].strategies[_index] = _strategy;
-        infos[_adapter].pids[_index] = _pid;
-        infos[_adapter].types[_index] = _type;
-        infos[_adapter].status[_index] = _status;
+        _infos[_adapter].names[_index] = _name;
+        _infos[_adapter].strategies[_index] = _strategy;
+        _infos[_adapter].pids[_index] = _pid;
+        _infos[_adapter].types[_index] = _type;
+        _infos[_adapter].status[_index] = _status;
     }
 
     /**
@@ -176,11 +201,11 @@ contract HedgepieAdapterList is HedgepieAccessControlled {
     function setLocked(
         address _adapter,
         uint256 _index,
-        AdapterStatus memory _locked
+        AdapterStatus _locked
     ) external onlyActiveAdapter(_adapter) onlyAdapterManager {
-        require(_index < infos[_adapter].names.length, "Invalid array length");
+        require(_index < _infos[_adapter].names.length, "Invalid array length");
 
-        infos[_adapter].status[_index] = _locked;
+        _infos[_adapter].status[_index] = _locked;
 
         if (_locked == AdapterStatus.LOCKED) emit AdapterLocked(_adapter, _index);
         else emit AdapterLocked(_adapter, _index);
