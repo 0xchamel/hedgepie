@@ -23,9 +23,14 @@ interface IAdapter {
 
     function authority() external view returns (address);
 
-    function userAdapterInfos(uint256 _tokenId) external view returns (BaseAdapter.UserAdapterInfo memory);
+    function userAdapterInfos(
+        uint256 _tokenId,
+        uint256 _index
+    ) external view returns (BaseAdapter.UserAdapterInfo memory);
 
-    function mAdapter() external view returns (BaseAdapter.AdapterInfo memory);
+    function mAdapters(uint256 _index) external view returns (BaseAdapter.AdapterInfo memory);
+
+    function adapterDetails(uint256 _index) external view returns (BaseAdapter.AdapterDetail memory);
 
     /**
      * @notice deposit to strategy

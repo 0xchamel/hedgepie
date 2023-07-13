@@ -76,6 +76,7 @@ contract PancakeStakeAdapterBsc is BaseAdapter {
             );
         } else {
             amountOut = HedgepieLibraryBsc.getLP(
+                aDetail,
                 IYBNFT.AdapterParam(0, address(this), _index),
                 aDetail.stakingToken,
                 _amountIn
@@ -152,6 +153,7 @@ contract PancakeStakeAdapterBsc is BaseAdapter {
             );
         } else {
             amountOut = HedgepieLibraryBsc.withdrawLP(
+                aDetail,
                 IYBNFT.AdapterParam(0, address(this), _index),
                 aDetail.stakingToken,
                 amountOut
@@ -159,7 +161,7 @@ contract PancakeStakeAdapterBsc is BaseAdapter {
         }
 
         // 4. get user's rewards
-        (uint256 reward, ) = HedgepieLibraryBsc.getMRewards(_tokenId, address(this));
+        (uint256 reward, ) = HedgepieLibraryBsc.getMRewards(_tokenId, _index, adapterDetails[_index], address(this));
 
         // 5. swap reward to bnb
         uint256 rewardBnb;
@@ -201,7 +203,7 @@ contract PancakeStakeAdapterBsc is BaseAdapter {
         }
 
         // 2. get reward amount
-        (uint256 reward, ) = HedgepieLibraryBsc.getMRewards(_tokenId, address(this));
+        (uint256 reward, ) = HedgepieLibraryBsc.getMRewards(_tokenId, _index, adapterDetails[_index], address(this));
 
         // 3. update user info
         userInfo.userShare1 = mAdapters[_index].accTokenPerShare1;
@@ -301,6 +303,7 @@ contract PancakeStakeAdapterBsc is BaseAdapter {
             );
         } else {
             amountOut = HedgepieLibraryBsc.withdrawLP(
+                aDetail,
                 IYBNFT.AdapterParam(0, address(this), _index),
                 aDetail.stakingToken,
                 amountOut
@@ -342,6 +345,7 @@ contract PancakeStakeAdapterBsc is BaseAdapter {
             );
         } else {
             amountOut = HedgepieLibraryBsc.getLP(
+                aDetail,
                 IYBNFT.AdapterParam(0, address(this), _index),
                 aDetail.stakingToken,
                 msg.value

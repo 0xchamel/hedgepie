@@ -102,28 +102,27 @@ library HedgepieLibraryBsc {
     /**
      * @notice Get the reward amount of user from adapter
      * @param _tokenId  tokenID
+     * @param _index index of strategies
+     * @param _aDetail AdapterDetail from BaseAdapter
      * @param _adapterAddr  address of adapter
      */
-    function getMRewards(uint256 _tokenId, address _adapterAddr) public view returns (uint256 reward, uint256 reward1) {
-        BaseAdapter.AdapterInfo memory adapterInfo = IAdapter(_adapterAddr).mAdapter();
-        BaseAdapter.UserAdapterInfo memory userInfo = IAdapter(_adapterAddr).userAdapterInfos(_tokenId);
+    function getMRewards(
+        uint256 _tokenId,
+        uint256 _index,
+        BaseAdapter.AdapterDetail memory _aDetail,
+        address _adapterAddr
+    ) public view returns (uint256 reward, uint256 reward1) {
+        BaseAdapter.AdapterInfo memory adapterInfo = IAdapter(_adapterAddr).mAdapters(_index);
+        BaseAdapter.UserAdapterInfo memory userInfo = IAdapter(_adapterAddr).userAdapterInfos(_tokenId, _index);
 
-        if (
-            IAdapter(_adapterAddr).rewardToken1() != address(0) &&
-            adapterInfo.totalStaked != 0 &&
-            adapterInfo.accTokenPerShare1 != 0
-        ) {
+        if (_aDetail.rewardToken1 != address(0) && adapterInfo.totalStaked != 0 && adapterInfo.accTokenPerShare1 != 0) {
             reward =
                 (userInfo.amount * (adapterInfo.accTokenPerShare1 - userInfo.userShare1)) /
                 1e12 +
                 userInfo.rewardDebt1;
         }
 
-        if (
-            IAdapter(_adapterAddr).rewardToken2() != address(0) &&
-            adapterInfo.totalStaked != 0 &&
-            adapterInfo.accTokenPerShare2 != 0
-        ) {
+        if (_aDetail.rewardToken2 != address(0) && adapterInfo.totalStaked != 0 && adapterInfo.accTokenPerShare2 != 0) {
             reward1 =
                 (userInfo.amount * (adapterInfo.accTokenPerShare2 - userInfo.userShare2)) /
                 1e12 +
@@ -133,11 +132,13 @@ library HedgepieLibraryBsc {
 
     /**
      * @notice Get LP token
+     * @param _aDetail AdapterDetail from BaseAdapter
      * @param _adapter  AdapterInfo
      * @param _stakingToken  address of staking token
      * @param _amountIn  amount of BNB
      */
     function getLP(
+        BaseAdapter.AdapterDetail memory _aDetail,
         IYBNFT.AdapterParam memory _adapter,
         address _stakingToken,
         uint256 _amountIn
@@ -145,7 +146,7 @@ library HedgepieLibraryBsc {
         address[2] memory tokens;
         tokens[0] = IPancakePair(_stakingToken).token0();
         tokens[1] = IPancakePair(_stakingToken).token1();
-        address _router = IAdapter(_adapter.addr).router();
+        address _router = _aDetail.router;
 
         uint256[2] memory tokenAmount;
         unchecked {
@@ -194,11 +195,13 @@ library HedgepieLibraryBsc {
 
     /**
      * @notice Withdraw LP token
+     * @param _aDetail AdapterDetail from BaseAdapter
      * @param _adapter  AdapterInfo
      * @param _stakingToken  address of staking token
      * @param _amountIn  amount of LP
      */
     function withdrawLP(
+        BaseAdapter.AdapterDetail memory _aDetail,
         IYBNFT.AdapterParam memory _adapter,
         address _stakingToken,
         uint256 _amountIn
@@ -207,8 +210,8 @@ library HedgepieLibraryBsc {
         tokens[0] = IPancakePair(_stakingToken).token0();
         tokens[1] = IPancakePair(_stakingToken).token1();
 
-        address _router = IAdapter(_adapter.addr).router();
-        address swapRouter = IAdapter(_adapter.addr).swapRouter();
+        address _router = _aDetail.router;
+        address swapRouter = _aDetail.swapRouter;
 
         IERC20(_stakingToken).safeApprove(_router, 0);
         IERC20(_stakingToken).safeApprove(_router, _amountIn);

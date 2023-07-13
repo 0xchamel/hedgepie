@@ -27,6 +27,8 @@ abstract contract BaseAdapter is HedgepieAccessControlled {
     struct AdapterDetail {
         // LP pool id - should be 0 when stakingToken is not LP
         uint256 pid;
+        // strategy where we deposit staking token
+        address strategy;
         // staking token
         address stakingToken;
         // first reward token
@@ -35,8 +37,6 @@ abstract contract BaseAdapter is HedgepieAccessControlled {
         address rewardToken2;
         // repay token which we will receive after deposit - optional
         address repayToken;
-        // strategy where we deposit staking token
-        address strategy;
         // router address for LP token
         address router;
         // swap router address for ERC20 token swap

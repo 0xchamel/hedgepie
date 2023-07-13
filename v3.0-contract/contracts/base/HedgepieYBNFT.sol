@@ -310,7 +310,7 @@ contract YBNFT is ERC721Upgradeable, HedgepieAccessControlled {
      * @notice Check if adpaterParams are valid
      * @param _adapterParams  parameters of adapters
      */
-    function _validate(AdapterParam[] memory _adapterParams) internal {
+    function _validate(AdapterParam[] memory _adapterParams) internal view {
         uint256 length = _adapterParams.length;
         for (uint256 i; i < length; ) {
             (address adapterAddr, , , , , uint8 status) = IHedgepieAdapterList(authority.hAdapterList()).getAdapterInfo(

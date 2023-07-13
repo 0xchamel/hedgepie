@@ -72,6 +72,7 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapter {
             amountOut = HedgepieLibraryBsc.swapOnRouter(msg.value, address(this), aDetail.stakingToken, aDetail.router);
         } else {
             amountOut = HedgepieLibraryBsc.getLP(
+                aDetail,
                 IYBNFT.AdapterParam(0, address(this), _index),
                 aDetail.stakingToken,
                 msg.value
@@ -148,6 +149,7 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapter {
             );
         } else {
             amountOut = HedgepieLibraryBsc.withdrawLP(
+                aDetail,
                 IYBNFT.AdapterParam(0, address(this), _index),
                 aDetail.stakingToken,
                 amountOut
@@ -155,7 +157,7 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapter {
         }
 
         // 4. get user's rewards
-        (uint256 reward, ) = HedgepieLibraryBsc.getMRewards(_tokenId, address(this));
+        (uint256 reward, ) = HedgepieLibraryBsc.getMRewards(_tokenId, _index, adapterDetails[_index], address(this));
 
         // 5. swap reward to bnb
         uint256 rewardBnb;
@@ -197,7 +199,7 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapter {
         }
 
         // 2. get reward amount
-        (uint256 reward, ) = HedgepieLibraryBsc.getMRewards(_tokenId, address(this));
+        (uint256 reward, ) = HedgepieLibraryBsc.getMRewards(_tokenId, _index, adapterDetails[_index], address(this));
 
         // 3. update user info
         userInfo.userShare1 = mAdapters[_index].accTokenPerShare1;
@@ -296,6 +298,7 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapter {
             );
         } else {
             amountOut = HedgepieLibraryBsc.withdrawLP(
+                aDetail,
                 IYBNFT.AdapterParam(0, address(this), _index),
                 aDetail.stakingToken,
                 amountOut
@@ -337,6 +340,7 @@ contract PancakeSwapFarmLPAdapterBsc is BaseAdapter {
             );
         } else {
             amountOut = HedgepieLibraryBsc.getLP(
+                aDetail,
                 IYBNFT.AdapterParam(0, address(this), _index),
                 aDetail.stakingToken,
                 msg.value
