@@ -19,6 +19,7 @@ contract YBNFT is ERC721Upgradeable, HedgepieAccessControlled {
     struct AdapterParam {
         uint256 allocation; // allocation percent for adapter
         address addr; // adapter address
+        uint256 index;
     }
 
     struct AdapterDate {
@@ -48,8 +49,8 @@ contract YBNFT is ERC721Upgradeable, HedgepieAccessControlled {
     mapping(uint256 => mapping(address => bool)) public participants;
     // tokenId => performanceFee
     mapping(uint256 => uint256) public performanceFee;
-    // tokenId => adapter address => boolean for existance
-    mapping(uint256 => mapping(address => bool)) public isExist;
+    // tokenId => adapter address => index => boolean for existance
+    mapping(uint256 => mapping(address => mapping(uint256 => bool))) public isExist;
 
     /// @dev events
     event Mint(address indexed minter, uint256 indexed tokenId);
@@ -236,12 +237,16 @@ contract YBNFT is ERC721Upgradeable, HedgepieAccessControlled {
     function _setAdapterInfo(uint256 _tokenId, AdapterParam[] memory _adapterParams) internal {
         if (adapterParams[_tokenId].length == 0) {
             for (uint256 i; i < _adapterParams.length; ) {
-                require(!isExist[_tokenId][_adapterParams[i].addr], "Adapter already added");
+                require(!isExist[_tokenId][_adapterParams[i].addr][_adapterParams[i].index], "Adapter already added");
 
                 adapterParams[_tokenId].push(
-                    AdapterParam({allocation: _adapterParams[i].allocation, addr: _adapterParams[i].addr})
+                    AdapterParam({
+                        allocation: _adapterParams[i].allocation,
+                        addr: _adapterParams[i].addr,
+                        index: _adapterParams[i].index
+                    })
                 );
-                isExist[_tokenId][_adapterParams[i].addr] = true;
+                isExist[_tokenId][_adapterParams[i].addr][_adapterParams[i].index] = true;
 
                 unchecked {
                     ++i;
@@ -255,19 +260,26 @@ contract YBNFT is ERC721Upgradeable, HedgepieAccessControlled {
             uint256 curLen = adapterParams[_tokenId].length;
             for (uint256 i; i < _adapterParams.length; ) {
                 if (i >= curLen) {
-                    require(!isExist[_tokenId][_adapterParams[i].addr], "Adapter already added");
+                    require(
+                        !isExist[_tokenId][_adapterParams[i].addr][_adapterParams[i].index],
+                        "Adapter already added"
+                    );
 
                     // validate adapter params
-                    (address adapterAddr, , , bool status) = IHedgepieAdapterList(authority.hAdapterList())
-                        .getAdapterInfo(_adapterParams[i].addr);
+                    (address adapterAddr, , , , , uint8 status) = IHedgepieAdapterList(authority.hAdapterList())
+                        .getAdapterInfo(_adapterParams[i].addr, _adapterParams[i].index);
                     require(_adapterParams[i].addr == adapterAddr, "Adapter address mismatch");
-                    require(status, "Adapter is inactive");
+                    require(status == 0, "Adapter is inactive");
 
                     // push new adapter
                     adapterParams[_tokenId].push(
-                        AdapterParam({allocation: _adapterParams[i].allocation, addr: _adapterParams[i].addr})
+                        AdapterParam({
+                            allocation: _adapterParams[i].allocation,
+                            addr: _adapterParams[i].addr,
+                            index: _adapterParams[i].index
+                        })
                     );
-                    isExist[_tokenId][adapterAddr] = true;
+                    isExist[_tokenId][adapterAddr][_adapterParams[i].index] = true;
                 } else {
                     adapterParams[_tokenId][i].allocation = _adapterParams[i].allocation;
                 }
@@ -298,14 +310,15 @@ contract YBNFT is ERC721Upgradeable, HedgepieAccessControlled {
      * @notice Check if adpaterParams are valid
      * @param _adapterParams  parameters of adapters
      */
-    function _validate(AdapterParam[] memory _adapterParams) internal {
+    function _validate(AdapterParam[] memory _adapterParams) internal view {
         uint256 length = _adapterParams.length;
         for (uint256 i; i < length; ) {
-            (address adapterAddr, , , bool status) = IHedgepieAdapterList(authority.hAdapterList()).getAdapterInfo(
-                _adapterParams[i].addr
+            (address adapterAddr, , , , , uint8 status) = IHedgepieAdapterList(authority.hAdapterList()).getAdapterInfo(
+                _adapterParams[i].addr,
+                _adapterParams[i].index
             );
             require(_adapterParams[i].addr == adapterAddr, "Adapter address mismatch");
-            require(status, "Adapter is inactive");
+            require(status == 0, "Adapter is inactive");
             unchecked {
                 ++i;
             }

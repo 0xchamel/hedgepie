@@ -98,14 +98,17 @@ contract HedgepieInvestor is ReentrancyGuardUpgradeable, HedgepieAccessControlle
             IYBNFT.AdapterParam memory adapter = adapterInfos[i];
 
             uint256 amountIn = (msg.value * adapter.allocation) / 1e4;
-            bool locked = IHedgepieAdapterList(IHedgepieAuthority(authority).hAdapterList()).locked(adapter.addr);
+            bool locked = IHedgepieAdapterList(IHedgepieAuthority(authority).hAdapterList()).locked(
+                adapter.addr,
+                adapter.index
+            );
 
             if (amountIn != 0) {
                 if (locked) {
                     (bool success, ) = payable(msg.sender).call{value: amountIn}("");
                     require(success, "Error: refund");
                 } else {
-                    IAdapter(adapter.addr).deposit{value: amountIn}(_tokenId);
+                    IAdapter(adapter.addr).deposit{value: amountIn}(_tokenId, adapter.index);
                     totalUsed += amountIn;
                 }
             }
@@ -146,14 +149,17 @@ contract HedgepieInvestor is ReentrancyGuardUpgradeable, HedgepieAccessControlle
             IYBNFT.AdapterParam memory adapter = adapterInfos[i];
 
             uint256 amountIn = (msg.value * adapter.allocation) / 1e4;
-            bool locked = IHedgepieAdapterList(IHedgepieAuthority(authority).hAdapterList()).locked(adapter.addr);
+            bool locked = IHedgepieAdapterList(IHedgepieAuthority(authority).hAdapterList()).locked(
+                adapter.addr,
+                adapter.index
+            );
 
             if (amountIn != 0) {
                 if (locked) {
                     (bool success, ) = payable(_user).call{value: amountIn}("");
                     require(success, "Error: refund");
                 } else {
-                    IAdapter(adapter.addr).deposit{value: amountIn}(_tokenId);
+                    IAdapter(adapter.addr).deposit{value: amountIn}(_tokenId, adapter.index);
                     totalUsed += amountIn;
                 }
             }
@@ -191,15 +197,17 @@ contract HedgepieInvestor is ReentrancyGuardUpgradeable, HedgepieAccessControlle
         for (uint8 i; i < adapterInfos.length; i++) {
             PendingWithdraw storage pendingWithdraw = pWithdrawals[_tokenId][adapterInfos[i].addr][msg.sender];
 
-            uint256 tAmount = IAdapter(adapterInfos[i].addr).getUserAmount(_tokenId);
+            uint256 tAmount = IAdapter(adapterInfos[i].addr).getUserAmount(_tokenId, adapterInfos[i].index);
             bool locked = IHedgepieAdapterList(IHedgepieAuthority(authority).hAdapterList()).locked(
-                adapterInfos[i].addr
+                adapterInfos[i].addr,
+                adapterInfos[i].index
             );
 
             // when pool is unlocked
             if (!locked && pendingWithdraw.amount != 0) {
                 amountOut += IAdapter(adapterInfos[i].addr).withdraw(
                     _tokenId,
+                    adapterInfos[i].index,
                     (tAmount * pendingWithdraw.amount) / pendingWithdraw.totalStaked
                 );
 
@@ -216,12 +224,13 @@ contract HedgepieInvestor is ReentrancyGuardUpgradeable, HedgepieAccessControlle
                 continue;
             }
 
-            tAmount = IAdapter(adapterInfos[i].addr).getUserAmount(_tokenId);
+            tAmount = IAdapter(adapterInfos[i].addr).getUserAmount(_tokenId, adapterInfos[i].index);
 
             // normal case
             if (userInfo.amount != 0)
                 amountOut += IAdapter(adapterInfos[i].addr).withdraw(
                     _tokenId,
+                    adapterInfos[i].index,
                     (tAmount * userInfo.amount) / tokenInfo.totalStaked
                 );
         }
@@ -263,10 +272,11 @@ contract HedgepieInvestor is ReentrancyGuardUpgradeable, HedgepieAccessControlle
         uint256 pending = address(this).balance;
         for (uint8 i; i < adapterInfos.length; i++) {
             bool locked = IHedgepieAdapterList(IHedgepieAuthority(authority).hAdapterList()).locked(
-                adapterInfos[i].addr
+                adapterInfos[i].addr,
+                adapterInfos[i].index
             );
 
-            if (!locked) IAdapter(adapterInfos[i].addr).claim(_tokenId);
+            if (!locked) IAdapter(adapterInfos[i].addr).claim(_tokenId, adapterInfos[i].index);
         }
         pending = address(this).balance - pending;
 
@@ -300,11 +310,15 @@ contract HedgepieInvestor is ReentrancyGuardUpgradeable, HedgepieAccessControlle
 
         for (uint8 i; i < adapterInfos.length; i++) {
             bool locked = IHedgepieAdapterList(IHedgepieAuthority(authority).hAdapterList()).locked(
-                adapterInfos[i].addr
+                adapterInfos[i].addr,
+                adapterInfos[i].index
             );
 
             if (!locked) {
-                (uint256 _amountOut, uint256 _withdrawable) = IAdapter(adapterInfos[i].addr).pendingReward(_tokenId);
+                (uint256 _amountOut, uint256 _withdrawable) = IAdapter(adapterInfos[i].addr).pendingReward(
+                    _tokenId,
+                    adapterInfos[i].index
+                );
                 amountOut += _amountOut;
                 withdrawable += _withdrawable;
             }
@@ -347,11 +361,12 @@ contract HedgepieInvestor is ReentrancyGuardUpgradeable, HedgepieAccessControlle
         uint256 _amount = address(this).balance;
         for (uint8 i; i < adapterInfos.length; i++) {
             bool locked = IHedgepieAdapterList(IHedgepieAuthority(authority).hAdapterList()).locked(
-                adapterInfos[i].addr
+                adapterInfos[i].addr,
+                adapterInfos[i].index
             );
 
             IYBNFT.AdapterParam memory adapter = adapterInfos[i];
-            if (!locked) IAdapter(adapter.addr).removeFunds(_tokenId);
+            if (!locked) IAdapter(adapter.addr).removeFunds(_tokenId, adapter.index);
         }
         _amount = address(this).balance - _amount;
 
@@ -361,11 +376,14 @@ contract HedgepieInvestor is ReentrancyGuardUpgradeable, HedgepieAccessControlle
             IYBNFT.AdapterParam memory adapter = adapterInfos[i];
 
             uint256 amountIn = (_amount * adapter.allocation) / 1e4;
-            bool locked = IHedgepieAdapterList(IHedgepieAuthority(authority).hAdapterList()).locked(adapter.addr);
+            bool locked = IHedgepieAdapterList(IHedgepieAuthority(authority).hAdapterList()).locked(
+                adapter.addr,
+                adapter.index
+            );
 
             if (locked && amountIn != 0) revert("Error: Invalid alloc for locked");
 
-            if (amountIn != 0) IAdapter(adapter.addr).updateFunds{value: amountIn}(_tokenId);
+            if (amountIn != 0) IAdapter(adapter.addr).updateFunds{value: amountIn}(_tokenId, adapter.index);
         }
     }
 
@@ -439,10 +457,11 @@ contract HedgepieInvestor is ReentrancyGuardUpgradeable, HedgepieAccessControlle
         // claim rewards from adapters
         for (uint8 i; i < adapterInfos.length; i++) {
             bool locked = IHedgepieAdapterList(IHedgepieAuthority(authority).hAdapterList()).locked(
-                adapterInfos[i].addr
+                adapterInfos[i].addr,
+                adapterInfos[i].index
             );
 
-            if (!locked) IAdapter(adapterInfos[i].addr).claim(_tokenId);
+            if (!locked) IAdapter(adapterInfos[i].addr).claim(_tokenId, adapterInfos[i].index);
         }
     }
 

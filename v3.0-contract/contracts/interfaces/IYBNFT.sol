@@ -5,6 +5,7 @@ interface IYBNFT {
     struct AdapterParam {
         uint256 allocation;
         address addr;
+        uint256 index;
     }
 
     struct UpdateInfo {

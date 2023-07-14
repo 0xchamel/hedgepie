@@ -24,42 +24,37 @@ abstract contract BaseAdapter is HedgepieAccessControlled {
         uint256 totalStaked; // Total staked staking token
     }
 
-    // LP pool id - should be 0 when stakingToken is not LP
-    uint256 public pid;
+    struct AdapterDetail {
+        // LP pool id - should be 0 when stakingToken is not LP
+        uint256 pid;
+        // strategy where we deposit staking token
+        address strategy;
+        // staking token
+        address stakingToken;
+        // first reward token
+        address rewardToken1;
+        // second reward token - optional
+        address rewardToken2;
+        // repay token which we will receive after deposit - optional
+        address repayToken;
+        // router address for LP token
+        address router;
+        // swap router address for ERC20 token swap
+        address swapRouter;
+        // adapter name
+        string name;
+    }
 
-    // staking token
-    address public stakingToken;
+    // Adapter Detail array
+    AdapterDetail[] public adapterDetails;
 
-    // first reward token
-    address public rewardToken1;
-
-    // second reward token - optional
-    address public rewardToken2;
-
-    // repay token which we will receive after deposit - optional
-    address public repayToken;
-
-    // strategy where we deposit staking token
-    address public strategy;
-
-    // router address for LP token
-    address public router;
-
-    // swap router address for ERC20 token swap
-    address public swapRouter;
-
-    // wbnb address
-    address public wbnb;
-
-    // adapter name
-    string public name;
-
-    // adapter info having totalStaked and 1st, 2nd share info
-    AdapterInfo public mAdapter;
+    // mAdapter informations
+    // index => mAdapter
+    mapping(uint256 => AdapterInfo) public mAdapters;
 
     // adapter info for each nft
-    // nft id => UserAdapterInfo
-    mapping(uint256 => UserAdapterInfo) public userAdapterInfos;
+    // nft id => index => UserAdapterInfo
+    mapping(uint256 => mapping(uint256 => UserAdapterInfo)) public userAdapterInfos;
 
     /**
      * @notice initialize
@@ -70,46 +65,59 @@ abstract contract BaseAdapter is HedgepieAccessControlled {
     }
 
     /** @notice get user staked amount */
-    function getUserAmount(uint256 _tokenId) external view returns (uint256 amount) {
-        return userAdapterInfos[_tokenId].amount;
+    function getUserAmount(uint256 _tokenId, uint256 _index) external view returns (uint256 amount) {
+        return userAdapterInfos[_tokenId][_index].amount;
     }
 
     /**
      * @notice deposit to strategy
      * @param _tokenId YBNFT token id
+     * @param _index index of strategies
      */
-    function deposit(uint256 _tokenId) external payable virtual returns (uint256 amountOut) {}
+    function deposit(uint256 _tokenId, uint256 _index) external payable virtual returns (uint256 amountOut) {}
 
     /**
      * @notice withdraw from strategy
      * @param _tokenId YBNFT token id
+     * @param _index index of strategies
      * @param _amount amount of staking tokens to withdraw
      */
-    function withdraw(uint256 _tokenId, uint256 _amount) external payable virtual returns (uint256 amountOut) {}
+    function withdraw(
+        uint256 _tokenId,
+        uint256 _index,
+        uint256 _amount
+    ) external payable virtual returns (uint256 amountOut) {}
 
     /**
      * @notice claim reward from strategy
      * @param _tokenId YBNFT token id
+     * @param _index index of strategies
      */
-    function claim(uint256 _tokenId) external payable virtual returns (uint256 amountOut) {}
+    function claim(uint256 _tokenId, uint256 _index) external payable virtual returns (uint256 amountOut) {}
 
     /**
      * @notice Remove funds
      * @param _tokenId YBNFT token id
+     * @param _index index of strategies
      */
-    function removeFunds(uint256 _tokenId) external payable virtual returns (uint256 amountOut) {}
+    function removeFunds(uint256 _tokenId, uint256 _index) external payable virtual returns (uint256 amountOut) {}
 
     /**
      * @notice Update funds
      * @param _tokenId YBNFT token id
+     * @param _index index of strategies
      */
-    function updateFunds(uint256 _tokenId) external payable virtual returns (uint256 amountOut) {}
+    function updateFunds(uint256 _tokenId, uint256 _index) external payable virtual returns (uint256 amountOut) {}
 
     /**
      * @notice Get pending token reward
      * @param _tokenId YBNFT token id
+     * @param _index index of strategies
      */
-    function pendingReward(uint256 _tokenId) external view virtual returns (uint256 reward, uint256 withdrawable) {}
+    function pendingReward(
+        uint256 _tokenId,
+        uint256 _index
+    ) external view virtual returns (uint256 reward, uint256 withdrawable) {}
 
     /**
      * @notice Charge Fee and send BNB to investor
@@ -131,6 +139,23 @@ abstract contract BaseAdapter is HedgepieAccessControlled {
 
         (success, ) = payable(msg.sender).call{value: _amount - _reward}("");
         require(success, "Failed to send bnb");
+    }
+
+    /**
+     * @notice Add adapter detail
+     * @param _detail AdapterDetail parameter
+     */
+    function addAdapterDetail(AdapterDetail memory _detail) external onlyAdapterManager {
+        adapterDetails.push(_detail);
+    }
+
+    /**
+     * @notice Set adapter detail
+     * @param _detail AdapterDetail parameter
+     */
+    function setAdapterDetail(uint256 _index, AdapterDetail memory _detail) external onlyAdapterManager {
+        require(_index < adapterDetails.length, "Invalid index number");
+        adapterDetails[_index] = _detail;
     }
 
     receive() external payable {}
