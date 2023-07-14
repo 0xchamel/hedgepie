@@ -20,7 +20,7 @@ contract HedgepieFounderToken is ERC20, Ownable, ReentrancyGuard {
     uint256 public maxSupply = 5_000_000 ether; // 5 million
 
     // HPFT sale price in usd with 8 decimal
-    uint256 public salePrice = 5_000_000; // $0.5
+    uint256 public salePrice = 50_000_000; // $0.5
 
     // treasury address
     address public treasury;

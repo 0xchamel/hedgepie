@@ -22,7 +22,7 @@ async function deploy() {
      ** dev: 0x2498B5162206E86a9DB305709B1f8DAC71789815
      ** prod: 0x3Eda5A38dda554879D1e1e984e27Ee3d6d816d99
      */
-    const treauryAddr = "0x2498B5162206E86a9DB305709B1f8DAC71789815";
+    const treauryAddr = "0x3Eda5A38dda554879D1e1e984e27Ee3d6d816d99";
 
     // deploy HedgepieFounderToken contract
     const HPFT = await ethers.getContractFactory("HedgepieFounderToken");
