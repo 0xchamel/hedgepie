@@ -28,7 +28,7 @@ describe("HedgePie Founder token Test", function () {
         const DAI_USD = "0x132d3C0B1D2cEa0BC552588063bdBb210FDeecfA";
 
         const MAX_SUPPLY = 5000000; // 5 million
-        const SALE_PRICE = 0.5; // $0.5
+        const SALE_PRICE = 0.05; // $0.5
 
         // set token
         this.bnb = BNB;
@@ -94,13 +94,27 @@ describe("HedgePie Founder token Test", function () {
         it("(5) check availableCanPurchase amount", async function () {
             expect(await this.hpft.availableCanPurchase()).to.eq(this.maxSupply);
         });
+        it("(6) check getSaleTokenAmountFromPayToken amount", async function () {
+            const payToken = this.usdt;
+            const payTokemAmountRaw = 1000;
+            const payTokemAmount = utils.parseUnits(String(payTokemAmountRaw));
+
+            const hpftAmount = await this.hpft.getSaleTokenAmountFromPayToken(payTokemAmount, payToken);
+
+            console.log("Pay token: ", payToken);
+            console.log("Pay token amount: ", payTokemAmount);
+            console.log("HPFT token amount: ", hpftAmount);
+
+            // approxiamately in 1% range
+            expect(hpftAmount).to.closeTo(payTokemAmount.mul(20), payTokemAmount.mul(20).div(2000));
+        });
     });
 
     describe("Check purchase function", function () {
         it("(1) should be reverted when purchase amount is bigger than available", async function () {
             const avaialbleAmount = await this.hpft.availableCanPurchase();
             const purchaseAmount = avaialbleAmount.add(BigNumber.from(1));
-            const requiredPayTokenAmount = await this.hpft.getRequiredPayTokenAmount(purchaseAmount, this.bnb);
+            const requiredPayTokenAmount = await this.hpft.getPayTokenAmountFromSaleToken(purchaseAmount, this.bnb);
 
             console.log("Avvailable amount: ", avaialbleAmount);
             console.log("Purchase amount: ", purchaseAmount);
@@ -117,7 +131,7 @@ describe("HedgePie Founder token Test", function () {
         it("(2) should be reverted when pay token is not listed", async function () {
             const avaialbleAmount = await this.hpft.availableCanPurchase();
             const purchaseAmount = avaialbleAmount;
-            const requiredPayTokenAmount = await this.hpft.getRequiredPayTokenAmount(purchaseAmount, this.busd);
+            const requiredPayTokenAmount = await this.hpft.getPayTokenAmountFromSaleToken(purchaseAmount, this.busd);
 
             console.log("Avvailable amount: ", avaialbleAmount);
             console.log("Purchase amount: ", purchaseAmount);
@@ -132,7 +146,7 @@ describe("HedgePie Founder token Test", function () {
         it("(3) should be reverted when pay token amount is insufficient", async function () {
             const avaialbleAmount = await this.hpft.availableCanPurchase();
             const purchaseAmount = avaialbleAmount;
-            const requiredPayTokenAmount = await this.hpft.getRequiredPayTokenAmount(purchaseAmount, this.bnb);
+            const requiredPayTokenAmount = await this.hpft.getPayTokenAmountFromSaleToken(purchaseAmount, this.bnb);
             const payTokenAmount = requiredPayTokenAmount.sub(BigNumber.from(1));
 
             console.log("Avvailable amount: ", avaialbleAmount);
@@ -152,7 +166,7 @@ describe("HedgePie Founder token Test", function () {
             const avaialbleAmount = await this.hpft.availableCanPurchase();
             const purchaseAmountRaw = 1000;
             const purchaseAmount = utils.parseUnits(String(purchaseAmountRaw));
-            const requiredPayTokenAmount = await this.hpft.getRequiredPayTokenAmount(purchaseAmount, this.bnb);
+            const requiredPayTokenAmount = await this.hpft.getPayTokenAmountFromSaleToken(purchaseAmount, this.bnb);
             const payTokenAmount = requiredPayTokenAmount;
 
             console.log("Avvailable amount: ", avaialbleAmount);
@@ -182,7 +196,7 @@ describe("HedgePie Founder token Test", function () {
         it("(5) should be able to purchase with USDC", async function () {
             const purchaseAmountRaw = 1000;
             const purchaseAmount = utils.parseUnits(String(purchaseAmountRaw));
-            const payTokenAmount = await this.hpft.getRequiredPayTokenAmount(purchaseAmount, this.usdc);
+            const payTokenAmount = await this.hpft.getPayTokenAmountFromSaleToken(purchaseAmount, this.usdc);
 
             const payToken = await ethers.getContractAt(ERC20Abi, this.usdc);
             await payToken.connect(this.whale).transfer(this.user1.address, payTokenAmount);
@@ -206,7 +220,7 @@ describe("HedgePie Founder token Test", function () {
         it("(6) should be able to purchase with USDT", async function () {
             const purchaseAmountRaw = 1000;
             const purchaseAmount = utils.parseUnits(String(purchaseAmountRaw));
-            const payTokenAmount = await this.hpft.getRequiredPayTokenAmount(purchaseAmount, this.usdt);
+            const payTokenAmount = await this.hpft.getPayTokenAmountFromSaleToken(purchaseAmount, this.usdt);
 
             const payToken = await ethers.getContractAt(ERC20Abi, this.usdt);
             await payToken.connect(this.whale).transfer(this.user1.address, payTokenAmount);
@@ -226,7 +240,7 @@ describe("HedgePie Founder token Test", function () {
         it("(7) should be able to purchase with DAI", async function () {
             const purchaseAmountRaw = 1000;
             const purchaseAmount = utils.parseUnits(String(purchaseAmountRaw));
-            const payTokenAmount = await this.hpft.getRequiredPayTokenAmount(purchaseAmount, this.dai);
+            const payTokenAmount = await this.hpft.getPayTokenAmountFromSaleToken(purchaseAmount, this.dai);
 
             const payToken = await ethers.getContractAt(ERC20Abi, this.dai);
             await payToken.connect(this.whale).transfer(this.user1.address, payTokenAmount);

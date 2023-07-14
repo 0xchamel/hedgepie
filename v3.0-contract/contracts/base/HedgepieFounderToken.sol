@@ -58,15 +58,29 @@ contract HedgepieFounderToken is ERC20, Ownable, ReentrancyGuard {
     }
 
     /**
-     * @notice Required amount of pay token to purchase HPFT
+     * @notice Get amount of pay token to purchase HPFT
      * @param _amount  amount of HPFT to purchase
      * @param _payToken address of pay token
      */
-    function getRequiredPayTokenAmount(uint256 _amount, address _payToken) public view returns (uint256) {
+    function getPayTokenAmountFromSaleToken(uint256 _amount, address _payToken) public view returns (uint256) {
         PayTokenInfo memory payToken = payTokenList[_payToken];
         if (payToken.chainlinkPriceFeed != address(0)) {
             (, int payTokenPrice, , , ) = AggregatorV3Interface(payToken.chainlinkPriceFeed).latestRoundData();
             return (_amount * salePrice) / uint256(payTokenPrice);
+        }
+        return 0;
+    }
+
+    /**
+     * @notice Get amount of HPFT token from pay token
+     * @param _amount  amount of pay token
+     * @param _payToken address of pay token
+     */
+    function getSaleTokenAmountFromPayToken(uint256 _amount, address _payToken) public view returns (uint256) {
+        PayTokenInfo memory payToken = payTokenList[_payToken];
+        if (payToken.chainlinkPriceFeed != address(0)) {
+            (, int payTokenPrice, , , ) = AggregatorV3Interface(payToken.chainlinkPriceFeed).latestRoundData();
+            return (_amount * uint256(payTokenPrice)) / salePrice;
         }
         return 0;
     }
@@ -80,16 +94,16 @@ contract HedgepieFounderToken is ERC20, Ownable, ReentrancyGuard {
         require(payTokenList[_payToken].status, "Error: not listed token");
         require(availableCanPurchase() >= _amount, "Error: insufficient sale token");
 
-        // get required amount
-        uint256 requirePayTokenAmount = getRequiredPayTokenAmount(_amount, _payToken);
+        // get pay token amount
+        uint256 payTokenAmount = getPayTokenAmountFromSaleToken(_amount, _payToken);
 
         // transfer pay token from sender to treasury
         if (_payToken == address(0)) {
-            require(msg.value >= requirePayTokenAmount, "Error: insufficient BNB");
+            require(msg.value >= payTokenAmount, "Error: insufficient BNB");
             (bool success, ) = payable(treasury).call{value: msg.value}("");
             require(success, "Error: treasury transfer");
         } else {
-            IERC20(_payToken).safeTransferFrom(msg.sender, treasury, requirePayTokenAmount);
+            IERC20(_payToken).safeTransferFrom(msg.sender, treasury, payTokenAmount);
         }
 
         // mint token to sender
