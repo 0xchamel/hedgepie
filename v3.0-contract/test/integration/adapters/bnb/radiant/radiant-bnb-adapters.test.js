@@ -87,9 +87,22 @@ describe("RadiantV2 BNB Adapters Integration Test", function () {
         await this.adapterList
             .connect(this.adapterManager)
             .addAdapters([this.adapter[0].address, this.adapter[1].address]);
+        await this.adapterList
+            .connect(this.adapterManager)
+            .addInfo(this.adapter[0].address, [name], [strategy], [0], [0], [0]);
+        await this.adapterList
+            .connect(this.adapterManager)
+            .addInfo(
+                this.adapter[1].address,
+                ["PK::STAKE::SQUAD-ADAPTER"],
+                ["0x08C9d626a2F0CC1ed9BD07eBEdeF8929F45B83d3"],
+                [0],
+                [0],
+                [0]
+            );
 
         // mint ybnft
-        await mintNFT(this.ybNft, [this.adapter[0].address, this.adapter[1].address], this.performanceFee);
+        await mintNFT(this.ybNft, [this.adapter[0].address, this.adapter[1].address], [0, 0], this.performanceFee);
 
         this.checkAccRewardShare = async (tokenId) => {
             expect(
@@ -390,8 +403,8 @@ describe("RadiantV2 BNB Adapters Integration Test", function () {
     describe("Edit fund flow", function () {
         it("test possibility to set zero percent", async function () {
             await this.ybNft.connect(this.governor).updateAllocations(1, [
-                [0, this.adapter[0].address],
-                [10000, this.adapter[1].address],
+                [0, this.adapter[0].address, 0],
+                [10000, this.adapter[1].address, 0],
             ]);
         });
 
@@ -417,11 +430,11 @@ describe("RadiantV2 BNB Adapters Integration Test", function () {
         it("test pendingReward, invested amount ratio after allocation change", async function () {
             // Check reward increase after updateAllocation
             const allocation = [
-                [2000, this.adapter[0].address],
-                [8000, this.adapter[1].address],
+                [2000, this.adapter[0].address, 0],
+                [8000, this.adapter[1].address, 0],
             ];
-            const bTokenInfo1 = await this.adapter[0].userAdapterInfos(2);
-            const bTokenInfo2 = await this.adapter[1].userAdapterInfos(2);
+            const bTokenInfo1 = await this.adapter[0].userAdapterInfos(2, 0);
+            const bTokenInfo2 = await this.adapter[1].userAdapterInfos(2, 0);
             const bPending1 = await this.investor.pendingReward(1, this.user1.address);
             const bPending2 = await this.investor.pendingReward(2, this.user2.address);
             await this.ybNft.connect(this.governor).updateAllocations(2, allocation);
@@ -433,8 +446,8 @@ describe("RadiantV2 BNB Adapters Integration Test", function () {
             expect(aPending2[0]).gte(bPending2[0]) && expect(aPending2[1]).gte(bPending2[1]);
 
             // check invested amount
-            const aTokenInfo1 = await this.adapter[0].userAdapterInfos(2);
-            const aTokenInfo2 = await this.adapter[1].userAdapterInfos(2);
+            const aTokenInfo1 = await this.adapter[0].userAdapterInfos(2, 0);
+            const aTokenInfo2 = await this.adapter[1].userAdapterInfos(2, 0);
             expect(BigNumber.from(bTokenInfo1.amount).div(50)).to.be.gt(
                 BigNumber.from(aTokenInfo1.amount).div(allocation[0][0]).mul(95).div(100)
             );
