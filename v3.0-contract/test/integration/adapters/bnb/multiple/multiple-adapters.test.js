@@ -181,16 +181,38 @@ describe("Multiple Adapters Integration Test", function () {
                 this.adapter[6].address,
             ]);
 
+        await this.adapterList
+            .connect(this.adapterManager)
+            .addInfo(this.adapter[0].address, ["PancakeSwap::Farm::CAKE-WBNB"], [pksMasterChef], [2], [0], [0]);
+        await this.adapterList
+            .connect(this.adapterManager)
+            .addInfo(this.adapter[1].address, ["PK::STAKE::SQUAD-ADAPTER"], [pksStakeStrategy], [0], [0], [0]);
+        await this.adapterList
+            .connect(this.adapterManager)
+            .addInfo(this.adapter[2].address, ["Biswap::Farm::USDT-BSW"], [biswapStrategy], [9], [0], [0]);
+        await this.adapterList
+            .connect(this.adapterManager)
+            .addInfo(this.adapter[3].address, ["Biswap::Pool::BSW"], [biswapStrategy], [0], [0], [0]);
+        await this.adapterList
+            .connect(this.adapterManager)
+            .addInfo(this.adapter[4].address, ["AutoFarm::Vault::WBNB-CAKE"], [autofarmStrategy], [619], [0], [0]);
+        await this.adapterList
+            .connect(this.adapterManager)
+            .addInfo(this.adapter[5].address, ["Belt::Vault::BUSD"], [beltStrategy], [0], [0], [0]);
+        await this.adapterList
+            .connect(this.adapterManager)
+            .addInfo(this.adapter[6].address, ["Beefy::Vault::Biswap USDT-BUSD"], [beefyStrategy], [0], [0], [0]);
+
         // mint ybnft
         await this.ybNft.mint(
             [
-                [1500, this.adapter[0].address],
-                [1500, this.adapter[1].address],
-                [1500, this.adapter[2].address],
-                [1500, this.adapter[3].address],
-                [1500, this.adapter[4].address],
-                [1500, this.adapter[5].address],
-                [1000, this.adapter[6].address],
+                [1500, this.adapter[0].address, 0],
+                [1500, this.adapter[1].address, 0],
+                [1500, this.adapter[2].address, 0],
+                [1500, this.adapter[3].address, 0],
+                [1500, this.adapter[4].address, 0],
+                [1500, this.adapter[5].address, 0],
+                [1000, this.adapter[6].address, 0],
             ],
             this.performanceFee,
             "test tokenURI1"
@@ -198,13 +220,13 @@ describe("Multiple Adapters Integration Test", function () {
 
         await this.ybNft.mint(
             [
-                [1000, this.adapter[0].address],
-                [1500, this.adapter[1].address],
-                [1500, this.adapter[2].address],
-                [1500, this.adapter[3].address],
-                [1500, this.adapter[4].address],
-                [1000, this.adapter[5].address],
-                [2000, this.adapter[6].address],
+                [1000, this.adapter[0].address, 0],
+                [1500, this.adapter[1].address, 0],
+                [1500, this.adapter[2].address, 0],
+                [1500, this.adapter[3].address, 0],
+                [1500, this.adapter[4].address, 0],
+                [1000, this.adapter[5].address, 0],
+                [2000, this.adapter[6].address, 0],
             ],
             this.performanceFee,
             "test tokenURI2"
@@ -467,13 +489,13 @@ describe("Multiple Adapters Integration Test", function () {
     describe("Edit fund flow", function () {
         it("test possibility to set zero percent", async function () {
             await this.ybNft.connect(this.governor).updateAllocations(1, [
-                [0, this.adapter[0].address],
-                [0, this.adapter[1].address],
-                [0, this.adapter[2].address],
-                [0, this.adapter[3].address],
-                [0, this.adapter[4].address],
-                [10000, this.adapter[5].address],
-                [0, this.adapter[6].address],
+                [0, this.adapter[0].address, 0],
+                [0, this.adapter[1].address, 0],
+                [0, this.adapter[2].address, 0],
+                [0, this.adapter[3].address, 0],
+                [0, this.adapter[4].address, 0],
+                [10000, this.adapter[5].address, 0],
+                [0, this.adapter[6].address, 0],
             ]);
         });
 
@@ -499,16 +521,16 @@ describe("Multiple Adapters Integration Test", function () {
         it("test pendingReward, invested amount ratio after allocation change", async function () {
             // Check reward increase after updateAllocation
             const allocation = [
-                [2000, this.adapter[0].address],
-                [1000, this.adapter[1].address],
-                [1000, this.adapter[2].address],
-                [2000, this.adapter[3].address],
-                [2000, this.adapter[4].address],
-                [2000, this.adapter[5].address],
-                [0, this.adapter[6].address],
+                [2000, this.adapter[0].address, 0],
+                [1000, this.adapter[1].address, 0],
+                [1000, this.adapter[2].address, 0],
+                [2000, this.adapter[3].address, 0],
+                [2000, this.adapter[4].address, 0],
+                [2000, this.adapter[5].address, 0],
+                [0, this.adapter[6].address, 0],
             ];
-            const bTokenInfo1 = await this.adapter[0].userAdapterInfos(2);
-            const bTokenInfo2 = await this.adapter[1].userAdapterInfos(2);
+            const bTokenInfo1 = await this.adapter[0].userAdapterInfos(2, 0);
+            const bTokenInfo2 = await this.adapter[1].userAdapterInfos(2, 0);
             const bPending1 = await this.investor.pendingReward(1, this.user1.address);
             const bPending2 = await this.investor.pendingReward(2, this.user2.address);
             await this.ybNft.connect(this.governor).updateAllocations(2, allocation);
@@ -520,8 +542,8 @@ describe("Multiple Adapters Integration Test", function () {
             expect(aPending2[0]).gte(bPending2[0]) && expect(aPending2[1]).gte(bPending2[1]);
 
             // check invested amount
-            const aTokenInfo1 = await this.adapter[0].userAdapterInfos(2);
-            const aTokenInfo2 = await this.adapter[1].userAdapterInfos(2);
+            const aTokenInfo1 = await this.adapter[0].userAdapterInfos(2, 0);
+            const aTokenInfo2 = await this.adapter[1].userAdapterInfos(2, 0);
             expect(BigNumber.from(bTokenInfo1.amount).div(50)).to.be.gt(
                 BigNumber.from(aTokenInfo1.amount).div(allocation[0][0]).mul(95).div(100)
             );
