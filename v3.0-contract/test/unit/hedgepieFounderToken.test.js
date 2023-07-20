@@ -28,7 +28,7 @@ describe("HedgePie Founder token Test", function () {
         const DAI_USD = "0x132d3C0B1D2cEa0BC552588063bdBb210FDeecfA";
 
         const MAX_SUPPLY = 5000000; // 5 million
-        const SALE_PRICE = 0.05; // $0.5
+        const SALE_PRICE = 0.5; // $0.5
 
         // set token
         this.bnb = BNB;
@@ -106,7 +106,7 @@ describe("HedgePie Founder token Test", function () {
             console.log("HPFT token amount: ", hpftAmount);
 
             // approxiamately in 1% range
-            expect(hpftAmount).to.closeTo(payTokemAmount.mul(20), payTokemAmount.mul(20).div(2000));
+            expect(hpftAmount).to.closeTo(payTokemAmount.mul(2), payTokemAmount.mul(10).div(2000));
         });
     });
 
