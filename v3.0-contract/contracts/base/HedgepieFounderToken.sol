@@ -4,7 +4,7 @@ pragma solidity ^0.8.4;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 
@@ -66,7 +66,9 @@ contract HedgepieFounderToken is ERC20, Ownable, ReentrancyGuard {
         PayTokenInfo memory payToken = payTokenList[_payToken];
         if (payToken.chainlinkPriceFeed != address(0)) {
             (, int payTokenPrice, , , ) = AggregatorV3Interface(payToken.chainlinkPriceFeed).latestRoundData();
-            return (_amount * salePrice) / uint256(payTokenPrice);
+            uint8 payTokenDecimal = _payToken == address(0) ? 18 : IERC20Metadata(_payToken).decimals();
+
+            return ((10 ** payTokenDecimal) * (_amount * salePrice)) / uint256(payTokenPrice) / 1e18;
         }
         return 0;
     }
@@ -80,7 +82,9 @@ contract HedgepieFounderToken is ERC20, Ownable, ReentrancyGuard {
         PayTokenInfo memory payToken = payTokenList[_payToken];
         if (payToken.chainlinkPriceFeed != address(0)) {
             (, int payTokenPrice, , , ) = AggregatorV3Interface(payToken.chainlinkPriceFeed).latestRoundData();
-            return (_amount * uint256(payTokenPrice)) / salePrice;
+            uint8 payTokenDecimal = _payToken == address(0) ? 18 : IERC20Metadata(_payToken).decimals();
+
+            return (1e18 * _amount * uint256(payTokenPrice)) / salePrice / (10 ** payTokenDecimal);
         }
         return 0;
     }
