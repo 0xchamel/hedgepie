@@ -64,8 +64,10 @@ module.exports = {
         },
     },
     etherscan: {
-        // bnb network
-        apiKey: process.env.BSCSCAN_API_KEY,
+        apiKey: {
+            mainnet: process.env.BSCSCAN_API_KEY,
+            bsc: process.env.ETHERSCAN_API_KEY,
+        },
     },
     gasReporter: {
         gasPrice: 5,

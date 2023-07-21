@@ -1,9 +1,11 @@
 const { expect } = require("chai");
-const { ethers } = require("hardhat");
+const hre = require("hardhat");
+// const { ethers } = require("hardhat");
 const { forkBNBNetwork, unlockAccount } = require("../shared/utilities");
 const { utils } = require("ethers");
 const ERC20Abi = require("../shared/abi/ERC20.json");
 
+const { ethers } = hre;
 const BigNumber = ethers.BigNumber;
 
 describe("HedgePie Founder token Test", function () {
@@ -28,7 +30,7 @@ describe("HedgePie Founder token Test", function () {
         const DAI_USD = "0x132d3C0B1D2cEa0BC552588063bdBb210FDeecfA";
 
         const MAX_SUPPLY = 5000000; // 5 million
-        const SALE_PRICE = 0.05; // $0.5
+        const SALE_PRICE = 0.5; // $0.5
 
         // set token
         this.bnb = BNB;
@@ -96,6 +98,7 @@ describe("HedgePie Founder token Test", function () {
         });
         it("(6) check getSaleTokenAmountFromPayToken amount", async function () {
             const payToken = this.usdt;
+            const payTokenDecimal = 18;
             const payTokemAmountRaw = 1000;
             const payTokemAmount = utils.parseUnits(String(payTokemAmountRaw));
 
@@ -106,7 +109,10 @@ describe("HedgePie Founder token Test", function () {
             console.log("HPFT token amount: ", hpftAmount);
 
             // approxiamately in 1% range
-            expect(hpftAmount).to.closeTo(payTokemAmount.mul(20), payTokemAmount.mul(20).div(2000));
+            expect(hpftAmount.div(10 ** (18 - payTokenDecimal))).to.closeTo(
+                payTokemAmount.mul(2),
+                payTokemAmount.mul(20).div(2000)
+            );
         });
     });
 
