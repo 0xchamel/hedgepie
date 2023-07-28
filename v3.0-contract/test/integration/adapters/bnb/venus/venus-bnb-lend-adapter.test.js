@@ -96,6 +96,8 @@ describe("VenusLend Adapter BNB Integration Test", function () {
         // mint ybnft
         await mintNFT(this.ybNft, [this.adapter[0].address, this.adapter[1].address], [0, 0], this.performanceFee);
 
+        await this.ybNft.connect(this.adapterManager).updateOutputToken(1, venus, pksRouter);
+
         this.checkAccRewardShare = async (tokenId) => {
             expect(
                 BigNumber.from((await this.investor.tokenInfos(tokenId)).accRewardShare).gt(

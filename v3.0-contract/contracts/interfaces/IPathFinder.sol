@@ -9,4 +9,10 @@ interface IPathFinder {
      * @param _outToken output token address
      */
     function getPaths(address _router, address _inToken, address _outToken) external view returns (address[] memory);
+
+    /**
+     * @notice Get Router Existance
+     * @param _router swap router address
+     */
+    function routers(address _router) external view returns (bool);
 }

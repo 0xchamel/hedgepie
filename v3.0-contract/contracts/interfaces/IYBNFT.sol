@@ -15,11 +15,18 @@ interface IYBNFT {
         bool isDeposit; // deposit or withdraw
     }
 
+    struct OutputTokenInfo {
+        address token;
+        address router;
+    }
+
     function exists(uint256) external view returns (bool);
 
     function getCurrentTokenId() external view returns (uint256);
 
     function ownerOf(uint256) external view returns (address);
+
+    function opTokenInfos(uint256) external view returns (OutputTokenInfo memory);
 
     function performanceFee(uint256 tokenId) external view returns (uint256);
 

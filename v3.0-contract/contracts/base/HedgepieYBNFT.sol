@@ -9,6 +9,7 @@ import "../interfaces/IHedgepieAdapterList.sol";
 import "../interfaces/IHedgepieInvestor.sol";
 import "../interfaces/IYBNFT.sol";
 import "../interfaces/IHedgepieAuthority.sol";
+import "../interfaces/IPathFinder.sol";
 
 import "./HedgepieAccessControlled.sol";
 
@@ -34,6 +35,11 @@ contract YBNFT is ERC721Upgradeable, HedgepieAccessControlled {
         uint256 profit; // total profit amount in usd
     }
 
+    struct OutputTokenInfo {
+        address token;
+        address router;
+    }
+
     // current max tokenId
     CountersUpgradeable.Counter private _tokenIdPointer;
 
@@ -51,10 +57,13 @@ contract YBNFT is ERC721Upgradeable, HedgepieAccessControlled {
     mapping(uint256 => uint256) public performanceFee;
     // tokenId => adapter address => index => boolean for existance
     mapping(uint256 => mapping(address => mapping(uint256 => bool))) public isExist;
+    // tokenId => yield output token address
+    mapping(uint256 => OutputTokenInfo) public opTokenInfos;
 
     /// @dev events
     event Mint(address indexed minter, uint256 indexed tokenId);
     event AdapterInfoUpdated(uint256 indexed tokenId, uint256 participant, uint256 traded, uint256 profit);
+    event OutputTokenUpdated(uint256 indexed tokenId, address opToken, address router);
 
     modifier onlyNftOwner(uint256 tokenId) {
         require(msg.sender == ownerOf(tokenId), "Invalid NFT Owner");
@@ -214,6 +223,20 @@ contract YBNFT is ERC721Upgradeable, HedgepieAccessControlled {
     function updateProfitInfo(uint256 _tokenId, uint256 _value) external onlyInvestor {
         tokenInfos[_tokenId].profit += _value;
         _emitEvent(_tokenId);
+    }
+
+    /**
+     * @notice Update output token
+     * @param _tokenId YBNFT tokenID
+     * @param _opToken Address of output token
+     * @param _router Address of swapRouter
+     */
+    function updateOutputToken(uint256 _tokenId, address _opToken, address _router) external onlyAdapterManager {
+        require(IPathFinder(authority.pathFinder()).routers(_router), "Invalid router");
+
+        opTokenInfos[_tokenId].token = _opToken;
+        opTokenInfos[_tokenId].router = _router;
+        emit OutputTokenUpdated(_tokenId, _opToken, _router);
     }
 
     /* ========== Internal ========== */

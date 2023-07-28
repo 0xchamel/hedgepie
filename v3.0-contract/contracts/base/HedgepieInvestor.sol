@@ -427,6 +427,7 @@ contract HedgepieInvestor is ReentrancyGuardUpgradeable, HedgepieAccessControlle
     function _withdrawReward(uint256 _tokenId) internal {
         UserInfo storage userInfo = userInfos[_tokenId][msg.sender];
         TokenInfo memory tokenInfo = tokenInfos[_tokenId];
+        IYBNFT.OutputTokenInfo memory opTokenInfo = IYBNFT(authority.hYBNFT()).opTokenInfos(_tokenId);
 
         // 1. calc reward amount stored in investor
         uint256 rewardAmt = (userInfo.amount * (tokenInfo.accRewardShare - userInfo.userShare)) /
@@ -439,8 +440,18 @@ contract HedgepieInvestor is ReentrancyGuardUpgradeable, HedgepieAccessControlle
 
         // 3. withdraw rewards
         if (rewardAmt != 0) {
-            (bool success, ) = payable(msg.sender).call{value: rewardAmt}("");
-            require(success, "Failed to withdraw reward");
+            if (opTokenInfo.token == address(0)) {
+                (bool success, ) = payable(msg.sender).call{value: rewardAmt}("");
+                require(success, "Failed to withdraw reward");
+            } else {
+                uint256 amountOut = HedgepieLibraryBsc.swapOnRouter(
+                    rewardAmt,
+                    address(this),
+                    opTokenInfo.token,
+                    opTokenInfo.router
+                );
+                IERC20(opTokenInfo.token).safeTransfer(msg.sender, amountOut);
+            }
 
             // 4. emit events
             emit Claimed(msg.sender, rewardAmt);

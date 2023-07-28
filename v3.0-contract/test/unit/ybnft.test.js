@@ -93,8 +93,22 @@ describe("YBNFT Unit Test", function () {
             .connect(this.adapterManager)
             .addAdapters([this.adapter[0].address, this.adapter[1].address]);
 
+        await this.adapterList
+            .connect(this.adapterManager)
+            .addInfo(this.adapter[0].address, ["PK::STAKE::SQUAD-ADAPTER"], [this.strategy], [0], [0], [0]);
+        await this.adapterList
+            .connect(this.adapterManager)
+            .addInfo(
+                this.adapter[1].address,
+                ["PK::STAKE::SQUAD-ADAPTER"],
+                ["0x08C9d626a2F0CC1ed9BD07eBEdeF8929F45B83d3"],
+                [0],
+                [0],
+                [0]
+            );
+
         // mint ybnft
-        await mintNFT(this.ybNft, [this.adapter[0].address, this.adapter[1].address], this.performanceFee);
+        await mintNFT(this.ybNft, [this.adapter[0].address, this.adapter[1].address], [0, 0], this.performanceFee);
 
         console.log("Lib: ", this.lib.address);
         console.log("YBNFT: ", this.ybNft.address);

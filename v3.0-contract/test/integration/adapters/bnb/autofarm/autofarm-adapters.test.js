@@ -120,6 +120,8 @@ describe("AutoFarm Adapters Integration Test", function () {
         // mint ybnft
         await mintNFT(this.ybNft, [this.adapter[0].address, this.adapter[1].address], [0, 0], this.performanceFee);
 
+        await this.ybNft.connect(this.adapterManager).updateOutputToken(1, cake, this.swapRouter);
+
         this.checkAccRewardShare = async (tokenId) => {
             expect(
                 BigNumber.from((await this.investor.tokenInfos(tokenId)).accRewardShare).gt(
@@ -341,7 +343,7 @@ describe("AutoFarm Adapters Integration Test", function () {
             expect(BigNumber.from(afterBNB).gt(BigNumber.from(beforeBNB))).to.eq(true);
 
             // check withdrawn balance
-            expect(Number(ethers.utils.formatEther(afterBNB.sub(beforeBNB).toString()))).to.be.gt(29);
+            expect(Number(ethers.utils.formatEther(afterBNB.sub(beforeBNB).toString()))).to.be.gt(19);
 
             let bobInfo = await this.investor.userInfos(1, this.bob.address);
             expect(bobInfo.amount).to.eq(BigNumber.from(0));

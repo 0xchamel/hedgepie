@@ -81,9 +81,22 @@ describe("Locked Adapters Integration Test", function () {
         await this.adapterList
             .connect(this.adapterManager)
             .addAdapters([this.adapter[0].address, this.adapter[1].address]);
+        await this.adapterList
+            .connect(this.adapterManager)
+            .addInfo(this.adapter[0].address, ["PancakeSwap::Farm::CAKE-WBNB"], [strategy], [poolID], [0], [0]);
+        await this.adapterList
+            .connect(this.adapterManager)
+            .addInfo(
+                this.adapter[1].address,
+                ["PK::STAKE::SQUAD-ADAPTER"],
+                ["0x08C9d626a2F0CC1ed9BD07eBEdeF8929F45B83d3"],
+                [0],
+                [0],
+                [0]
+            );
 
         // mint ybnft
-        await mintNFT(this.ybNft, [this.adapter[0].address, this.adapter[1].address], this.performanceFee);
+        await mintNFT(this.ybNft, [this.adapter[0].address, this.adapter[1].address], [0, 0], this.performanceFee);
 
         this.checkAccRewardShare = async (tokenId) => {
             expect(
@@ -183,10 +196,9 @@ describe("Locked Adapters Integration Test", function () {
         });
 
         it("(4) test setLocked", async function () {
-            await expect(this.adapterList.connect(this.adapterManager).setLocked([0], [true])).to.emit(
-                this.adapterList,
-                "AdapterLocked"
-            );
+            await expect(
+                this.adapterList.connect(this.adapterManager).setLocked(this.adapter[0].address, 0, 2)
+            ).to.emit(this.adapterList, "AdapterLocked");
         });
     });
 
@@ -286,7 +298,7 @@ describe("Locked Adapters Integration Test", function () {
             await ethers.provider.send("evm_increaseTime", [3600 * 24 * 30]);
             await ethers.provider.send("evm_mine", []);
 
-            await this.adapterList.connect(this.adapterManager).setLocked([0], [false]);
+            await this.adapterList.connect(this.adapterManager).setLocked(this.adapter[0].address, 0, 0);
 
             // withdraw from nftId: 1 - alice
             let beforeBNB = await ethers.provider.getBalance(this.alice.address);
@@ -305,7 +317,7 @@ describe("Locked Adapters Integration Test", function () {
             expect(Number(ethers.utils.formatEther(afterBNB.sub(beforeBNB).toString()))).to.be.gt(9.8);
 
             // locked again
-            await this.adapterList.connect(this.adapterManager).setLocked([0], [true]);
+            await this.adapterList.connect(this.adapterManager).setLocked(this.adapter[0].address, 0, 2);
         });
     });
 
@@ -354,8 +366,8 @@ describe("Locked Adapters Integration Test", function () {
     describe("Edit fund flow", function () {
         it("test possibility to set zero percent", async function () {
             await this.ybNft.connect(this.governor).updateAllocations(1, [
-                [0, this.adapter[0].address],
-                [10000, this.adapter[1].address],
+                [0, this.adapter[0].address, 0],
+                [10000, this.adapter[1].address, 0],
             ]);
         });
 
@@ -381,8 +393,8 @@ describe("Locked Adapters Integration Test", function () {
         it("revert when allocation change for locked pool", async function () {
             // Check reward increase after updateAllocation
             const allocation = [
-                [2000, this.adapter[0].address],
-                [8000, this.adapter[1].address],
+                [2000, this.adapter[0].address, 0],
+                [8000, this.adapter[1].address, 0],
             ];
             await expect(this.ybNft.connect(this.governor).updateAllocations(2, allocation)).to.be.revertedWith(
                 "Error: Invalid alloc for locked"
