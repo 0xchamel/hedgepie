@@ -166,13 +166,13 @@ describe("YBNFT Unit Test", function () {
             await expect(
                 this.ybNft.mint(
                     [
-                        [5000, this.adapter[0].address],
-                        [5000, this.adapter[1].address],
+                        [5000, this.adapter[0].address, 0],
+                        [5000, this.adapter[1].address, 0],
                     ],
-                    1001,
+                    3001,
                     "test tokenURI1"
                 )
-            ).to.be.revertedWith("Fee should be less than 10%");
+            ).to.be.revertedWith("Fee should be less than 30%");
         });
 
         it("(2) test adapterParam length validation", async function () {
@@ -185,9 +185,9 @@ describe("YBNFT Unit Test", function () {
             await expect(
                 this.ybNft.mint(
                     [
-                        [5000, this.adapter[0].address],
-                        [2500, this.adapter[1].address],
-                        [2500, this.adapter[1].address],
+                        [5000, this.adapter[0].address, 0],
+                        [2500, this.adapter[1].address, 0],
+                        [2500, this.adapter[1].address, 0],
                     ],
                     900,
                     "test tokenURI1"
@@ -199,8 +199,8 @@ describe("YBNFT Unit Test", function () {
             await expect(
                 this.ybNft.mint(
                     [
-                        [5000, this.adapter[0].address],
-                        [6000, this.adapter[1].address],
+                        [5000, this.adapter[0].address, 0],
+                        [6000, this.adapter[1].address, 0],
                     ],
                     this.performanceFee,
                     "test tokenURI1"
@@ -210,8 +210,8 @@ describe("YBNFT Unit Test", function () {
     });
 
     describe("Check update performance fee", function () {
-        it("(1) revert when performance fee is bigger than 10%", async function () {
-            await expect(this.ybNft.updatePerformanceFee(1, 10001)).to.be.revertedWith("Fee should be under 10%");
+        it("(1) revert when performance fee is bigger than 30%", async function () {
+            await expect(this.ybNft.updatePerformanceFee(1, 10001)).to.be.revertedWith("Fee should be under 30%");
         });
 
         it("(2) revert when performance fee isn't being updated from owner", async function () {
@@ -243,14 +243,14 @@ describe("YBNFT Unit Test", function () {
         it("(1) revert when allocation isn't being updated from owner", async function () {
             await expect(
                 this.ybNft.connect(this.bob).updateAllocations(1, [
-                    [1000, this.adapter[0].address],
-                    [9000, this.adapter[1].address],
+                    [1000, this.adapter[0].address, 0],
+                    [9000, this.adapter[1].address, 0],
                 ])
             ).to.be.revertedWith("Invalid NFT Owner");
         });
 
         it("(2) revert when adapter length is mismatch", async function () {
-            await expect(this.ybNft.updateAllocations(1, [[9000, this.adapter[1].address]])).to.be.revertedWith(
+            await expect(this.ybNft.updateAllocations(1, [[9000, this.adapter[1].address, 0]])).to.be.revertedWith(
                 "Invalid allocation length"
             );
         });
@@ -258,8 +258,8 @@ describe("YBNFT Unit Test", function () {
         it("(3) revert when allocaion is not fully set", async function () {
             await expect(
                 this.ybNft.updateAllocations(1, [
-                    [1000, this.adapter[0].address],
-                    [9001, this.adapter[1].address],
+                    [1000, this.adapter[0].address, 0],
+                    [9001, this.adapter[1].address, 0],
                 ])
             ).to.be.revertedWith("Incorrect adapter allocation");
         });
@@ -267,31 +267,41 @@ describe("YBNFT Unit Test", function () {
         it("(4) revert when adding adapter not listed", async function () {
             await expect(
                 this.ybNft.updateAllocations(1, [
-                    [1000, this.adapter[0].address],
-                    [2000, this.adapter[1].address],
-                    [7000, this.adapter[2].address],
+                    [1000, this.adapter[0].address, 0],
+                    [2000, this.adapter[1].address, 0],
+                    [7000, this.adapter[2].address, 0],
                 ])
-            ).to.be.revertedWith("Adapter address mismatch");
+            ).to.be.revertedWith("Error: Adapter is not active");
         });
 
         it("(5) revert when adding the duplicated adapter", async function () {
             // add adapters to adapterList
             await this.adapterList.connect(this.adapterManager).addAdapters([this.adapter[2].address]);
+            await this.adapterList
+                .connect(this.adapterManager)
+                .addInfo(
+                    this.adapter[2].address,
+                    ["PK::STAKE::SQUAD-ADAPTER"],
+                    ["0x08C9d626a2F0CC1ed9BD07eBEdeF8929F45B83d3"],
+                    [0],
+                    [0],
+                    [0]
+                );
 
             await expect(
                 this.ybNft.updateAllocations(1, [
-                    [1000, this.adapter[0].address],
-                    [2000, this.adapter[1].address],
-                    [7000, this.adapter[0].address],
+                    [1000, this.adapter[0].address, 0],
+                    [2000, this.adapter[1].address, 0],
+                    [7000, this.adapter[0].address, 0],
                 ])
             ).to.be.revertedWith("Adapter already added");
         });
 
         it("(6) test updating allocation", async function () {
             await this.ybNft.updateAllocations(1, [
-                [1000, this.adapter[0].address],
-                [2000, this.adapter[1].address],
-                [7000, this.adapter[2].address],
+                [1000, this.adapter[0].address, 0],
+                [2000, this.adapter[1].address, 0],
+                [7000, this.adapter[2].address, 0],
             ]);
 
             const param10 = await this.ybNft.adapterParams(1, 0);

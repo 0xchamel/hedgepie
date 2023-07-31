@@ -120,7 +120,7 @@ contract YBNFT is ERC721Upgradeable, HedgepieAccessControlled {
      */
     /// #if_succeeds {:msg "Mint failed"} getCurrentTokenId() == old(getCurrentTokenId()) + 1;
     function mint(AdapterParam[] memory _adapterParams, uint256 _performanceFee, string memory _tokenURI) external {
-        require(_performanceFee < 1e3, "Fee should be less than 10%");
+        require(_performanceFee <= 3e3, "Fee should be less than 30%");
         require(_adapterParams.length != 0, "Mismatched adapters");
         require(address(authority.hAdapterList()) != address(0), "AdaterList not set");
 
@@ -151,7 +151,7 @@ contract YBNFT is ERC721Upgradeable, HedgepieAccessControlled {
      */
     /// #if_succeeds {:msg "updatePerformanceFee failed"}  performanceFee[_tokenId] == _performanceFee;
     function updatePerformanceFee(uint256 _tokenId, uint256 _performanceFee) external onlyNftOwner(_tokenId) {
-        require(_performanceFee < 5e3 && _performanceFee >= 1e2, "Fee should be under 10%");
+        require(_performanceFee <= 3e3 && _performanceFee >= 1e2, "Fee should be under 30%");
 
         performanceFee[_tokenId] = _performanceFee;
         _setModifiedDate(_tokenId);
